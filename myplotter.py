@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+__author__ = "Jacob Isbell"
+
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import numpy as np
@@ -5,6 +9,18 @@ from glob import glob
 from scipy.optimize import curve_fit
 from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
 import sys
+
+def shell_main():
+    """
+    This function's sole purpose is to enable the plotter to work in the shell
+    """
+    try:
+        dirname = sys.argv[1]
+    except:
+        print("Usage: python3 myplotter.py /path/to/target/data/dir/")
+        sys.exit(1)
+
+    do_plot(dirname=dirname, do_fit=True)
 
 def gaussian(spat_freq, D):
     """
@@ -39,11 +55,6 @@ def do_plot(dirname, do_fit: bool = False) -> None:
         Returns:
             None
     """
-    # This makes the plotter function by itself with shell input
-    try:
-            dirname = sys.argv[1]
-    except:
-        print("No shell input given. Proceeding with arguments")
 
     # Sorts the 'CAL_INT*.fits'-files
     files = np.sort( glob(dirname + '/*CAL_INT*.fits')  )
@@ -153,9 +164,13 @@ def do_plot(dirname, do_fit: bool = False) -> None:
         #plt.show()
 
 if __name__ == ('__main__'):
+    # Tests
     #do_plot("2020-03-14T07_57_12.HAWAII-2RG.rb_with_2020-03-14T08_31_10.HAWAII-2RG.rb_CALIBRATED/", do_fit=True)
     #hdu = fits.open("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/lband/mat_raw_estimates.2019-03-24T09_01_46.HAWAII-2RG.rb/TARGET_RAW_INT_0001.fits")
     #print(hdu[2].data["tel_name"])
     #print(hdu["oi_array"].data["tel_name"])
 
-    do_plot("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib/20190324/calTarSTD1", do_fit=True)
+    # do_plot("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib/20190324/calTarSTD1", do_fit=True)
+
+    # Main process for shell usage
+    shell_main()

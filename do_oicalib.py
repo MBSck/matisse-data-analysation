@@ -1,4 +1,8 @@
-m from glob import glob
+#!/usr/bin/env python3
+
+__author__ = "Jacob Isbell"
+
+from glob import glob
 import numpy as np
 from astropy.io import fits
 from subprocess import call
