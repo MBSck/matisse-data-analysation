@@ -10,17 +10,17 @@ _Is currently being worked on_
 * [Ressources](#Ressources)
 * [Credit](#Credit)
 
-# Data-Reduction
-## Basic reduction
+## Data-Reduction
+### Basic reduction
 1. Edit `fn_call.sh` to have correct settings and directories
 2. `bash fn_call.sh`
 
-## Overnight reduction
+### Overnight reduction
 1. Edit `fn_call.sh` to have correct settings and directories
 2. `nohup bash fn_call.sh &`
 
-# Ressources
-## Jupyter notebook
+## Ressources
+### Jupyter notebook
 1. ON astro-node `jupyter notebook --no-browser`
 2. ON local computer `ssh -N -L localhost:8000:localhost:8888 astro-node11`
 3. Then open browser to localhost:8000
@@ -30,5 +30,5 @@ _Is currently being worked on_
 ## Credit
 ### Author
 Jacob Isbell
-### Contributors:
+### Contributors
 [Marten Scheuck](#https://github.com/MBSck/)
