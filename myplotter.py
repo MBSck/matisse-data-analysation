@@ -57,12 +57,12 @@ def do_plot(dirname, do_fit: bool = False) -> None:
         t3phi = hdu['oi_t3'].data['t3phi']          # Use 't3phi', closure phase, as 't3amp' carries no real info
         t3phierr = hdu['oi_t3'].data['t3phierr']
 
-        #
-        loops = hdu['oi_t3'].data['sta_index']      # What is sta_index?, was hdu['OI_T3']
-        tel_names = hdu['oi_array'].data['tel_name']    # Was hdu[2]
-        sta_name = hdu['oi_array'].data['sta_index']
-        all_tels = ['A0', 'B2', 'C0', 'D1']  + ['UT1', 'UT2', 'UT3', 'UT4']
-        all_stas = [1,  5, 13, 10] + [ 32,33,34,35]
+        # Gets the baseline configuration of the telescopes
+        loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
+        tel_names = hdu[2].data['tel_name']
+        sta_name = hdu[2].data['sta_index']
+        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + [] + ['UT1', 'UT2', 'UT3', 'UT4']  # Different baseline-configurations short AT, , , UT
+        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [] + [32, 33, 34, 35]                               # 'sta_index'of telescopes
         telescopes = []
         for trio in loops:
             t1 = trio[0]#tel_names[np.where(sta_name == trio[0])[0]]
@@ -70,20 +70,19 @@ def do_plot(dirname, do_fit: bool = False) -> None:
             t3 = trio[2]#tel_names[np.where(sta_name == trio[2])[0]]
             telescopes.append('%s-%s-%s'%(all_tels[all_stas.index(t1)], all_tels[all_stas.index(t2)], all_tels[all_stas.index(t3)])) #[t1[0],t2[0],t3[0]])
 
-
         telnames_t3 = np.array(telescopes)
 
-        # Plots the squared visibility
+        # Sets the range for the squared visibility plots
         all_obs = [[],[],[],[],[],[]]
         for b in range(len(vis2data)):
             axis = axarr[0, b%6  ]
             axis.errorbar(wl * 1e6, vis2data[b],yerr=vis2err[b],marker='s',capsize=0.,alpha=0.5)
-            axis.set_ylim([0,0.045])
+            axis.set_ylim([0,2.])  # 0.045 formerly
             axis.set_ylabel('vis2')
             axis.set_xlabel('wl [micron]')
             all_obs[b%6].append(vis2data[b])
 
-        #
+        # Plots the squared visibility for different degrees and metres
         for b in range(6):
             axis = axarr[0, b%6  ]
             pas = (np.degrees(np.arctan2(vcoord[b],ucoord[b])) - 90) * -1
@@ -151,3 +150,5 @@ if __name__ == ('__main__'):
     #hdu = fits.open("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/lband/mat_raw_estimates.2019-03-24T09_01_46.HAWAII-2RG.rb/TARGET_RAW_INT_0001.fits")
     #print(hdu[2].data["tel_name"])
     #print(hdu["oi_array"].data["tel_name"])
+
+    do_plot("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib/20190324/calTarSTD1", do_fit=True)

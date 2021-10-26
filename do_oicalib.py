@@ -1,13 +1,13 @@
-from glob import glob
+m from glob import glob
 import numpy as np
-from astropy.io import fits 
-from subprocess import call 
-from sys import argv 
+from astropy.io import fits
+from subprocess import call
+from sys import argv
 import myplotter as plotter
 import sys
 
 try:
-    script, targdir, calibdir = argv 
+    script, targdir, calibdir = argv
 except:
     print("Usage: python3 do_oicalib.py /path/to/target/data/dir/ /path/to/calibrator/data/dir/")
     sys.exit(1)
@@ -21,12 +21,12 @@ mysof = open(outname + '.sof', 'w'   )
 try:
     print('Trying to make dir %s'%(outname))
     call('mkdir %s'%(outname), shell=True)
-  
-except: 
+
+except:
     print('Directory %s exists, continuing...')
 
 
-#for file in the targ dir, write to sof 
+#for file in the targ dir, write to sof
 targ_files = np.sort( glob(targdir + '/*RAW_INT_*.fits')  )
 for tf in targ_files:
     print(tf)
