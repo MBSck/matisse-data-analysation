@@ -4,6 +4,7 @@ import numpy as np
 from glob import glob
 from scipy.optimize import curve_fit
 from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
+import sys
 
 def gaussian(spat_freq, D):
     """
@@ -38,6 +39,12 @@ def do_plot(dirname, do_fit: bool = False) -> None:
         Returns:
             None
     """
+    # This makes the plotter function by itself with shell input
+    try:
+            dirname = sys.argv[1]
+    except:
+        print("No shell input given. Proceeding with arguments")
+
     # Sorts the 'CAL_INT*.fits'-files
     files = np.sort( glob(dirname + '/*CAL_INT*.fits')  )
     for f in files[:]:
