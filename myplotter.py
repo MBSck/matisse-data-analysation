@@ -79,8 +79,8 @@ def do_plot(dirname, do_fit: bool = False) -> None:
         loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
         tel_names = hdu[2].data['tel_name']
         sta_name = hdu[2].data['sta_index']
-        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + [] + ['UT1', 'UT2', 'UT3', 'UT4']  # Different baseline-configurations short AT, , , UT
-        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [] + [32, 33, 34, 35]                               # 'sta_index'of telescopes
+        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']  # Different baseline-configurations short-, medium-, large AT, UT
+        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                               # 'sta_index'of telescopes
         telescopes = []
         for trio in loops:
             t1 = trio[0]#tel_names[np.where(sta_name == trio[0])[0]]
