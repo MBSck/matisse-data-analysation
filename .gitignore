@@ -1,3 +1,6 @@
 __pycache__/
 oca_pipeline/
 obmaking/
+
+!obmaking/main.py
+!obmaking/scratch.py
