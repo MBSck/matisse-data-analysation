@@ -1,6 +1,8 @@
+# Ignored folder
 __pycache__/
 oca_pipeline/
-obmaking/
+/obmaking/
 
-!obmaking/main.py
-!obmaking/scratch.py
+# Files from ignored folder that need to be pushed
+!/obmaking/main.py
+!/obmaking/scratch.py
