@@ -1,0 +1,3 @@
+# '.sof'-file needs to be edited yourself if you don't use the autoPipeline -> Use '.xml'-files for that
+
+esorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/test/ mat_raw_estimates --cumulBlock=FALSE --corrFlux=TRUE --useOpdMod=FALSE --coherentAlgo=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/test_DRS/hd163296/*.sof

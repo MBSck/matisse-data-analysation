@@ -1,0 +1,9 @@
+
+Start time     : 2021-11-10T11:10:40
+Program name   : esorex
+Severity level : [ INFO  ] 
+
+11:10:40 [ INFO  ] : [tid=000] This is EsoRex, version 3.13.1
+11:10:40 [ INFO  ] : [tid=000] using the libraries: CPL = 7.1, CFITSIO = 3.36, WCSLIB = 4.24, FFTW (normal precision) = 3.3.4-sse2, FFTW (single precision) = 3.3.4-sse2, CPL FLOP counting is unavailable, enable with -DCPL_ADD_FLOPS, OPENMP = 201107
+11:10:40 [ INFO  ] : [tid=000] Invocation command line was: esorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/test/ mat_raw_estimates --cumulBlock=FALSE --corrFlux=TRUE --useOpdMod=FALSE --coherentAlgo=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/test_DRS/hd163296
+11:10:41 [ INFO  ] mat_raw_estimates_create: [tid=000] Parameters created.

@@ -25,22 +25,36 @@ def shell_main():
 def gaussian(spat_freq, D):
     """
     A gaussian fit described by the 0th-order Bessel function
-        Parameters:
-            spat_freq ():
-            D ():
-        Returns:
-            gaussian_fit (ndarray): Gaussian fit
+
+    Parameters
+    ----------
+    spat_freq: float
+        Spatial frequency
+    D: float
+        Distance
+
+    Returns
+    -------
+    gaussian_fit: ndarray
+        Gaussian fit
     """
     return np.exp( - np.square(np.pi* D * spat_freq) / (4* np.log(2) )  )
 
 def airy(spat_freq, D):
     """
     An airy disk fit described by the 1st-order Bessel function
-        Parameters:
-            spat_freq ():
-            D ():
-        Returns:
-            airy_disk_fit (ndarray): Airy disk fit
+
+    Parameters
+    ----------
+    spat_freq: float
+        Spatial frequency
+    D: float
+        Distance
+
+    Returns
+    -------
+    airy_disk_fit: ndarray
+        Airy disk fit
     """
     radial_dist = spat_freq * D
     return  2* j1( np.pi *radial_dist )/ radial_dist / np.pi
@@ -48,12 +62,17 @@ def airy(spat_freq, D):
 def do_plot(dirname, do_fit: bool = False) -> None:
     """
     Plots the
-        Parameters:
-            dirname:        Path to the directory, which files' are to be plotted
-            do_fit (bool):  Bool that determines if fit is applied or not
 
-        Returns:
-            None
+    Parameters
+    ----------
+    dirname:
+        Path to the directory, which files' are to be plotted
+    do_fit: bool
+        Bool that determines if fit is applied or not
+
+    Returns
+    -------
+    None
     """
 
     # Sorts the 'CAL_INT*.fits'-files

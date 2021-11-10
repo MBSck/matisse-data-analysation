@@ -2,6 +2,7 @@
 __pycache__/
 oca_pipeline/
 /obmaking/*
+*.log
 
 # Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
 !/obmaking/main.py
