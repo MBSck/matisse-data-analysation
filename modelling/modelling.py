@@ -40,6 +40,10 @@ def model_generation(model, *args):
 
     return model(x, y, *args)
 
+def uvcoords_to_model(model, u: list, v: list):
+    """Transforms the uv-coordinates to the right format so they can be applied
+    to the Fourier transformed picture/model"""
+    ...
 
 if __name__ == "__main__":
     plt.imshow(model_generation(ring2d, 0.9, 1.))
