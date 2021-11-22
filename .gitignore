@@ -1,8 +1,16 @@
 # Ignored folder
 __pycache__/
+.idea/
 oca_pipeline/
-/obmaking/*
+dataReduction/filesJozsef/
+GTO-Proposals/
+observation/
+
+# Ignored files
+.DS_Store
 *.log
+/obmaking/*
+dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
 
 # Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
 !/obmaking/main.py
