@@ -7,3 +7,4 @@ oca_pipeline/
 # Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
 !/obmaking/main.py
 !/obmaking/scratch.py
+!/obmaking/autoscrapper.py
