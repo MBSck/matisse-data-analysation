@@ -58,30 +58,23 @@ class ReadoutFits:
         """Fetches the u, v coord-lists and merges them as well as the individual components"""
         return np.array([i for i in zip(self.get_data(4, "ucoord"), self.get_data(4, "vcoord"))])
 
-    def convert_uvcoords_vis2_to_rads(self, wavelength: float = 8*10**(-6)):
-        """Calculates the radians of the projected baselines"""
-        return np.array((self.get_uvcoords_vis2/wavelength)*(np.pi/180))
-
-    def get_u_coords(self, uvcoords: np.array):
+    @staticmethod
+    def get_ucoords(uvcoords: np.array):
         """Splits a 2D-np.array into its 1D-components, in this case the u-coords"""
         return np.array([item[0] for item in uvcoords])
 
-    def get_v_coords(self, uvcoords: np.array):
+    @staticmethod
+    def get_vcoords(uvcoords: np.array):
         """Splits a 2D-np.array into its 1D-components, in this case the v-coords"""
         return np.array([item[1] for item in uvcoords])
 
-    def do_uv_plot(self, uvcoords: np.array):
-        """Does a simple plot of the uv-coords"""
-        plt.scatter(np.fft.fftshift(self.get_u_coords(uvcoords)), np.fft.fftshift(self.get_v_coords(uvcoords)))
-        plt.show()
 
 if __name__ == "__main__":
     readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
     img_proc = ImageProcessing("Michelson.png")
 
     print(readout.get_uvcoords_vis2, "uvcoords")
-    print(readout.convert_uvcoords_vis2_to_rads(), "uvcoords converted to radians")
     # print(img_proc.get_img_size)
     readout.do_uv_plot(readout.get_uvcoords_vis2)
-    readout.do_uv_plot(readout.convert_uvcoords_vis2_to_rads())
+    print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
 
