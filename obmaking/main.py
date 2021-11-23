@@ -1,12 +1,31 @@
 __author__ = "Marten Scheuck"
 
+import os
 import MATISSE_create_OB_2 as ob
 
 # TODO: Add comments and replenish this file
+def shell_main():
+    """
+    This function's sole purpose is to enable the plotter to work in the shell
+    """
+    try:
+        sci_lst, cal_lst, tag_lst, interferometric_array_config, sci_or_cal  = sys.argv[1:5]
+    except:
+        try:
+            sci_lst, interferometric_array_config, sci_or_cal = sys,argv[1:3]
+        except:
+            print("Usage: python3 myplotter.py /sci_lst/ /cal_lst/ /tar_lst/ /sci/cal/") 
+            sys.exit(1)
+
+    if sci_or_cal == "sci":
+        make_sci_obs(sci_lst, interferometric_array_config, outdir=os.getcwd())
+
+    if sci_or_cal == "cal":
+        make_cal_obs(cal_lst, sci_lst, tag_lst, interferometric_array_config, outdir=os.getcwd())
 
 def make_sci_obs(sci_lst, interferometric_array_config, outdir) -> None:
     """Gets the inputs from a list and calls the 'mat_gen_ob' for every list element
-      
+
     Parameters
     ----------
     sci_lst: list
@@ -51,7 +70,7 @@ def make_cal_obs(cal_lst, sci_lst, tag_lst, interferometric_array_config, outdir
             for j, l in enumerate(o):
                 ob.mat_gen_ob(l, interferometric_array_config, 'CAL', outdir=outdir,
                     obs_tpls=[ob.obs_ft_tpl], acq_tpl=ob.acq_ft_tpl, sci_name=sci_lst[i], tag=tag_lst[i][j])
-        else:            
+        else:
             ob.mat_gen_ob(o, interferometric_array_config, 'CAL', outdir=outdir,
                 obs_tpls=[ob.obs_ft_tpl], acq_tpl=ob.acq_ft_tpl, sci_name=sci_lst[i],tag=tag_lst[i])
 
@@ -71,8 +90,11 @@ if __name__ == "__main__":
     # make_sci_obs(["R_Scl", "HD72106", "HD87643", "HD98922"], "small", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking")
 
     # Make calibs for sci-file
-    sci_lst_backup = ["R_Scl", "HD87643", "HD72106", "HD98922"]
-    cal_lst_backup = [["HD6595", "HD9053"], "HD84810", "HD66435", "HD92436"]
-    tag_lst_backup = [["L", "N"], "LN", "LN", "LN"]
-    make_cal_obs(cal_lst_backup, sci_lst_backup, tag_lst_backup, "medium", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.backup_medium")
+    # sci_lst_backup = ["R_Scl", "HD87643", "HD72106", "HD98922"]
+    # cal_lst_backup = [["HD6595", "HD9053"], "HD84810", "HD66435", "HD92436"]
+    # tag_lst_backup = [["L", "N"], "LN", "LN", "LN"]
+    # make_cal_obs(cal_lst_backup, sci_lst_backup, tag_lst_backup, "medium", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.backup_medium")
+
+    # For shell implementation
+    shell_main()
 
