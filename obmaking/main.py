@@ -87,7 +87,7 @@ if __name__ == "__main__":
     #make_cal_obs(cal_lst_003, sci_lst_003, tag_lst_003, "medium",  "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.003_medium")
 
     # Make sci-file
-    # make_sci_obs(["R_Scl", "HD72106", "HD87643", "HD98922"], "small", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking")
+    make_sci_obs(["Z_CMa"], "medium", "/Users/scheuck/Documents/matisse_stuff/obmaking")
 
     # Make calibs for sci-file
     # sci_lst_backup = ["R_Scl", "HD87643", "HD72106", "HD98922"]
@@ -96,5 +96,5 @@ if __name__ == "__main__":
     # make_cal_obs(cal_lst_backup, sci_lst_backup, tag_lst_backup, "medium", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.backup_medium")
 
     # For shell implementation
-    shell_main()
+    # shell_main()
 

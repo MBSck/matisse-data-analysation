@@ -17,7 +17,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
 
-# TODO: Rework the gauss fit and make it more generally applicable
 # TODO: Work data like RA, DEC, and flux into the script
 # TODO: Use the delta functions to integrate up to a disk
 
@@ -27,8 +26,24 @@ def delta_fct(x: float, y: float):
     """Dirac Delta measure"""
     return 1 if x == y else 0
 
-def gauss2d(size, fwhm, flux: float = 1, RA = None, DEC = None, center = None):
-    """2D symmetric gaussian model"""
+def set_size(size: float, major: float, step: float,  center = None):
+    """
+    Sets the size of the model and its centre
+
+    Parameters
+    ----------
+    size: float
+        Sets the size of the model image and implicitly the x-, y-axis
+    major: float
+        Sets the constant radius of the model (e.g., fwhm for a gauss model)
+    step: float
+        The step size of the np.arange, that defines the axes
+
+    Returns
+    -------
+    radius: np.array
+        The radius of the object
+    """
     x = np.arange(0, size, 1, float)
     y = x[:, np.newaxis]
 
@@ -38,53 +53,32 @@ def gauss2d(size, fwhm, flux: float = 1, RA = None, DEC = None, center = None):
         x0 = center[0]
         y0 = center[1]
 
-    r_sq = (x-x0)**2 + (y-y0)**2
+    return np.sqrt((x-x0)**2 + (y-y0)**2)
 
-    return (flux/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*(np.exp(-4*np.log(2)*r_sq/fwhm**2))
 
-def uniform_disk(size, major, flux: float = 1, RA = None, DEC = None, center = None):
+
+def gauss2d(size: float, fwhm: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None):
+    """2D symmetric gaussian model"""
+    r = set_size(size, fwhm, step, center)
+
+    return (flux/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*(np.exp(-4*np.log(2)*r**2/fwhm**2))
+
+def uniform_disk(size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None):
     """Uniformly bright disc"""
-    x = np.arange(0, size, 1, float)
-    y = x[:, np.newaxis]
-
-    if center is None:
-        x0 = y0 = size/2
-    else:
-        x0 = center[0]
-        y0 = center[1]
-
-    r = np.sqrt((x-x0)**2+(y-y0)**2)
+    r = set_size(size, major, step, center)
 
     return np.array([[4*flux/(np.pi*major**2) if j <= major/2 else 0 for j in i] for i in r])
 
-def ring2d(size, major, step: float  = 1,  flux: float = 1, RA = None, DEC = None, center = None):
+def ring2d(size: float, major: float, step: float  = 1.,  flux: float = 1., RA = None, DEC = None, center = None):
     """Infinitesimal thin ring"""
     # TODO: Fix the problem that the ring is not complete?
-    x = np.arange(0, size, step, float)
-    y = x[:, np.newaxis]
-
-    if center is None:
-        x0 = y0 = size/2
-    else:
-        x0 = center[0]
-        y0 = center[1]
-
-    r = np.sqrt((x-x0)**2+(y-y0)**2)
+    r = set_size(size, major, step, center)
 
     return np.array([[(flux/(np.pi*major))*delta_fct(j, major/2) for j in i] for i in r])
 
-def optically_thin_sphere(size, major, flux: float = 1, RA = None, DEC = None, center = None):
+def optically_thin_sphere(size: float, major: float, step: float = 1, flux: float = 1., RA = None, DEC = None, center = None):
     """Optically thin sphere"""
-    x = np.arange(0, size, 0.5, float)
-    y = x[:, np.newaxis]
-
-    if center is None:
-        x0 = y0 = size/2
-    else:
-        x0 = center[0]
-        y0 = center[1]
-
-    r = np.sqrt((x-x0)**2+(y-y0)**2)
+    r = set_size(size, major, step, center)
 
     return np.array([[(flux*6/(np.pi*major**2))*np.sqrt(1-(2*j/major)**2) if j <= major/2 else 0 for j in i] for i in r])
 
@@ -95,5 +89,5 @@ def do_model_plot(*args):
     plt.show()
 
 if __name__ == "__main__":
-    do_model_plot(gauss2d)
+    do_model_plot(optically_thin_sphere)
 

@@ -10,13 +10,9 @@ observation/
 .DS_Store
 *.log
 obmaking/*
-observation/scripts/*
-observation/P108/
-observation/manualsESO/
 dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
 
 # Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
 !/obmaking/main.py
 !/obmaking/scratch.py
 !/obmaking/autoscrapper.py
-!/observation/scripts/query.py
