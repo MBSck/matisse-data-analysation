@@ -28,25 +28,14 @@ class FFT:
     # TODO: Write good documentation
     # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
     # TODO: Remove staticmethods and make them outside of class
-    def __init__(self, path_to_image, fits_file_path, wavelength: float = 8*10**(-6), step_size_fft: float = 1.0, greyscale: bool =False):
-        # Checks if the input is an image or a model, i.e. an array
-        try:
-            self.img_proc = ImageProcessing(path_to_image)
- 
-            # Takes the first of both axis as the image's size
-            self.img_size = self.img_proc.get_img_size[0]
-        except:
-            self.img_size = len(path_to_image)
+    # TODO: Rename variables to make it clearer
+    def __init__(self, model, fits_file_path, wavelength: float = 8*10**(-6), step_size_fft: float = 1.0, greyscale: bool = False) -> None:
 
-        self.readout = ReadoutFits(fits_file_path)
+        self.img_array = model.eval_model()                                         # Evaluates the model
+        self.img_size = len(self.img_array)                                         # Gets the size of the model's image
 
-        if greyscale:
-            # Converts the image to a numpy array and drops the alpha channel (greyscale)
-            self.img_array = self.img_proc.read_image_into_nparray()[:, :, :3].mean(axis=2)
-            plt.set_cmap("gray")
-        else:
-            # Checks if the input is a np.array and if not converts it to one
-            self.img_array = self.img_proc.read_image_into_nparray()
+        self.readout = ReadoutFits(fits_file_path)                                  # Initializes the readout for '.fits'-files
+
 
         # General variables
         self.fftfreq = fft.fftfreq(self.img_size, d=step_size_fft)                  # x-axis of the FFT corresponding to px/img_size
@@ -58,13 +47,15 @@ class FFT:
         self.uvcoords = self.readout.get_uvcoords_vis2                              # Gets the uvcoords of vis2
         self.wavelength = wavelength                                                # The set wavelength for scaling
 
+        self.name = type(model).__name__                                            # Gets the classes name for naming the plots
+
         # Conversion units
         self.mas2rad = np.deg2rad(1/3600000) # mas per rad
 
         # Initiate the pipeline
         print(self.fft_pipeline())
  
-    def fft_pipeline(self):
+    def fft_pipeline(self) -> [float, np.array, float, float]:
         """A pipeline function that calls the functions of the FFT in order and
         avoids double calling of single functions"""
         ft = self.do_fft2()
@@ -75,23 +66,23 @@ class FFT:
         fft_value = FFT.get_fft_values(ft, uv_ind)
         return fft_value, FFT.get_ft_amp_phase(fft_value), uv_ind, rescaling_factor
 
-    def do_fft2(self):
+    def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT"""
         return fft.fftshift(fft.fft2(fft.ifftshift(self.img_array)))
 
-    def do_ifft2(self):
+    def do_ifft2(self) -> np.array:
         """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
         return fft.fftshift(fft.ifft2(fft.fftshift(self.img_array))).real
 
-    def get_scaling_px2metr(self):
+    def get_scaling_px2metr(self) -> float:
         """Calculates the frequency scaling from an input image/model and returns it in meters baseline per pixel"""
         return (self.fftscale/self.mas2rad) * self.wavelength
 
-    def rescale_uvcoords(self, uvcoords: np.array):
+    def rescale_uvcoords(self, uvcoords: np.array) -> np.array:
         """Rescaled the uv-coords with the scaling factor and the max image size"""
         return uvcoords/(self.get_scaling_px2metr()*self.img_size)
 
-    def distance(self, uvcoords: np.array):
+    def distance(self, uvcoords: np.array) -> np.array:
         """Calculates the norm for a point. Takes the freq and checks both the u and v coords against it
         (works only for models/image that have the same lenght in both dimensions).
 
@@ -103,7 +94,7 @@ class FFT:
         indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in freq_distance_lst]
         return np.ndarray.flatten(np.array(indices_lst))
 
-    def correspond_fft2freq(self, rescaled_uvcoords: np.array):
+    def correspond_fft2freq(self, rescaled_uvcoords: np.array) -> list:
         """This calculates the closest point in the scaled, transformed uv-coords to the FFT result and returns the indicies of the FFT corresponding to the uv-coords"""
         u_ind = self.distance([i[0] for i in rescaled_uvcoords])
         v_ind = self.distance([i[1] for i in rescaled_uvcoords])
@@ -114,30 +105,41 @@ class FFT:
         ...
 
     @staticmethod
-    def get_fft_values(ft: np.array, uv_ind: list):
+    def get_fft_values(ft: np.array, uv_ind: list) -> list:
         """Returns the FFT-values at the given indices"""
         return [ft[i[0]][i[1]] for i in uv_ind]
 
     @staticmethod
-    def get_ft_amp_phase(ft: [np.array, int]):
+    def get_ft_amp_phase(ft: [np.array, int]) -> np.array, np.array:
         """Splits the real and imaginary part of the 2D-FFT into amplitude-,
          and phase-spectrum"""
         return np.abs(ft), np.angle(ft)
 
 
-    def do_plot(self, ft: np.array, uvcoords: np.array):
+    def do_plot(self, ft: np.array, uvcoords: np.array) -> None:
         """Makes simple plots in the form of two subplots of the image before and after Fourier transformation"""
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
         ax1.imshow(self.img_array)
+        ax1.set_title(f"{self.name}-Model")
+        ax1.set_xlabel(f"resolution [px] {self.img_size}")
+        ax1.axes.get_xaxis().set_ticks([])
+        ax1.axes.get_yaxis().set_ticks([])
+
         ax2.imshow(np.log(abs(ft)), interpolation='none', extent=[self.min_freq, self.max_freq, self.min_freq, self.max_freq])
+        ax2.set_title("FFT")
+        ax2.set_xlabel("freq")
+        ax2.axes.get_xaxis().set_ticks([])
+        ax2.axes.get_yaxis().set_ticks([])
+
         x, y = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
-        ax2.scatter(x, y)
+        ax2.scatter(x, y, s=5)
         plt.show()
-        time.sleep(2)
-        plt.close("all")
+        # plt.savefig(f"FFT_{self.name}_model.pdf")
 
 
 if __name__ == "__main__":
-    for i in range(134, 2011, 25):
-        print("-----------------------------------------------------\n{}".format(i))
-        fourier = FFT(modelling.uniform_disk(i, 150),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
+    # for i in range(134, 2011, 25):
+    #     print("-----------------------------------------------------\n{}".format(i))
+    #     fourier = FFT(modelling.UniformDisk(i, 150).eval_model(),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
+    fourier2 = FFT(modelling.Gauss2D(4096, 500),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
+
