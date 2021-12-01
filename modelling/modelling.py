@@ -18,7 +18,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
 
-from scipy.special import j0, j1    # Import the Bessel function of 0th and 1st order
+from abc import ABCMeta, abstractmethod     # Import abstract class functionality
+from scipy.special import j0, j1            # Import the Bessel function of 0th and 1st order
 
 # TODO: Work data like RA, DEC, and flux into the script
 # TODO: Use the delta functions to integrate up to a disk
@@ -67,12 +68,10 @@ def set_uvcoords():
     v = u[:, np.newaxis]
     return np.sqrt(u**2+v**2)
 
-
-
 def do_model_plot(*args):
     """Simple plot function for the models"""
     # TODO: Make plot function that displays all of the plots
-    model = args[0](500, 200)
+    model = args[0](size=500, major=200)
 
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     ax1.imshow(model.eval_model())
@@ -82,14 +81,29 @@ def do_model_plot(*args):
 
 # Classes 
 
-class Delta:
-    """Delta function/Point source model"""
-    def __init__(self, size: float, step: float = 1., RA = None, DEC = None) -> None:
+class Model(metaclass=ABCMeta):
+    """Abstract metaclass that initiates the models"""
+    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
         self.size, self.step = size, step
-        self.center = self.size//2
-        self.RA, self.DEC = RA, DEC
+        self.center = center
+        self.major = major
+        self.flux, self.RA, self.DEC = flux, RA, DEC
 
-        self.B = set_uvcoords()
+    @abstractmethod
+    def eval_model() -> np.array:
+        """Evaluates the model"""
+        pass
+
+    @abstractmethod
+    def eval_vis2() -> np.array:
+        """Evaluates the visibilities of the model"""
+        pass
+
+
+class Delta(Model):
+    """Delta function/Point source model"""
+    def __init__(self, size: float, major: float = None, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
+        super().__init__(size, major, step, flux, RA, DEC, center)
 
     def eval_model(self) -> np.array:
         """Evaluates the model"""
@@ -100,56 +114,47 @@ class Delta:
         return np.ones((self.size, self.size))
 
 
-class Gauss2D:
+class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss"""
-    def __init__(self, size: float, fwhm: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        self.size, self.step, self.center = size, step, center
-        self.fwhm = fwhm
-        self.flux = flux
-        self.RA, self.DEC = RA, DEC
+    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
+        super().__init__(size, major, step, flux, RA, DEC, center)
 
-        self.r = set_size(size, fwhm, step, center)
+        self.r = set_size(self.size, self.major, self.step, self.center)
         self.B = set_uvcoords()
 
     def eval_model(self) -> np.array:
         """Evaluates the model"""
-        return (self.flux/np.sqrt(np.pi/(4*np.log(2)*self.fwhm)))*(np.exp(-4*np.log(2)*self.r**2/self.fwhm**2))
+        return (self.flux/np.sqrt(np.pi/(4*np.log(2)*self.major)))*(np.exp(-4*np.log(2)*self.r**2/self.major**2))
 
     def eval_vis2(self) -> np.array:
         """Evaluates the visibilities of the model"""
-        return np.exp(-(np.pi*self.fwhm*self.B)**2/(4*np.log(2)))
+        return np.exp(-(np.pi*self.major*self.B)**2/(4*np.log(2)))
 
 
-class Ring2D:
+class Ring2D(Model):
     """Infinitesimal thin ring model"""
     def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        self.size, self.step, self.center = size, step, center
-        self.major = major
-        self.flux = flux
-        self.RA, self.DEC = RA, DEC
+        super().__init__(size, major, step, flux, RA, DEC, center)
 
-        self.r = set_size(size, major, step, center)
+        self.r = set_size(self.size, self.major, self.step, self.center)
         self.B = set_uvcoords()
 
     def eval_model(self) -> np.array:
         """Evaluates the model"""
         # TODO: Fix problem that ring is not complete!
-        return np.array([[(self.flux/(np.pi*self.major))*delta_fct(j, self.major/2) for j in i] for i in self.r])
+        return np.array([[(self.flux/(np.pi*self.major))*delta_fct(j, self.major//2) for j in i] for i in self.r])
 
     def eval_vis2(self) -> np.array:
         """Evaluates the visibilities of the model"""
         return j0(2*np.pi*self.major*self.B)
 
 
-class UniformDisk:
-    """Uniformly bright disc"""
+class UniformDisk(Model):
+    """Uniformly bright disc model"""
     def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        self.size, self.step, self.center = size, step, center
-        self.major = major
-        self.flux = flux
-        self.RA, self.DEC = RA, DEC
+        super().__init__(size, major, step, flux, RA, DEC, center)
 
-        self.r = set_size(size, major, step, center)
+        self.r = set_size(self.size, self.major, self.step, self.center)
         self.B = set_uvcoords()
 
     def eval_model(self) -> np.array:
@@ -161,15 +166,12 @@ class UniformDisk:
         return (2*j1(np.pi*self.major*self.B))*(np.pi*self.major*self.B)
 
 
-class OpticallyThinSphere:
-    """"""
+class OpticallyThinSphere(Model):
+    """Optically Thin Sphere model"""
     def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        self.size, self.step, self.center = size, step, center
-        self.major = major
-        self.flux = flux
-        self.RA, self.DEC = RA, DEC
+        super().__init__(size, major, step, flux, RA, DEC, center)
 
-        self.r = set_size(size, major, step, center)
+        self.r = set_size(self.size, self.major, self.step, self.center)
         self.B = set_uvcoords()
 
     def eval_model(self) -> np.array:
@@ -181,7 +183,36 @@ class OpticallyThinSphere:
         return (3/(np.pi*self.major*self.B)**3)*(np.sin(np.pi*self.major*self.B)-np.pi*self.major*self.B*np.cos(np.pi*self.major*self.B))
 
 
+class InclinedDisk(Model):
+    """By a certain position angle inclined disk"""
+    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1.,  pos_angle = None, wavlength: float = 8*10**(-6)) -> None:
+        super().__init__(size, step, major, flux, RA, DEC, center)
+
+        # Additional variables
+        self.r_0, self.T_0 = r_0, T_0   # T_0 is temperature at r_0
+        self.q = q                      # Power law index, depends on the type of disk (flat or flared)
+
+        # Calculated variables
+        self.r = set_size(self.size, self.major, self.step, self.center)
+        self.temp = T_0*(r/r_0)**(-q)
+        self.bbspec = ((2*h*c**2)/(wavelength**5))         # Blackbody spectrum per Ring, wavelength and temperature dependent
+        self.B_uth, self.B_vth = 0, 0        # Baselines projected according to their orientation, B_{u, thetha}, B_{v, thetha}
+        self.B = 0                        # Projected Baseline
+
+    def eval_model(self) -> np.array:
+        ...
+
+    def eval_vis2(self) -> np.array:
+        ...
+
+class IntegrateRings():
+    """Adds rings up to create new models"""
+    # TODO: Base this on the inclined disk model
+    def __init__(self):
+        ...
+
+    def uniform_disk():
+        ...
 
 if __name__ == "__main__":
     do_model_plot(Ring2D)
-

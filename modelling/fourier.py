@@ -110,7 +110,7 @@ class FFT:
         return [ft[i[0]][i[1]] for i in uv_ind]
 
     @staticmethod
-    def get_ft_amp_phase(ft: [np.array, int]) -> np.array, np.array:
+    def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
         """Splits the real and imaginary part of the 2D-FFT into amplitude-,
          and phase-spectrum"""
         return np.abs(ft), np.angle(ft)
@@ -133,13 +133,13 @@ class FFT:
 
         x, y = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
         ax2.scatter(x, y, s=5)
-        plt.show()
-        # plt.savefig(f"FFT_{self.name}_model.pdf")
+        # plt.show()
+        plt.savefig(f"FFT_{self.name}_model.pdf")
 
 
 if __name__ == "__main__":
     # for i in range(134, 2011, 25):
     #     print("-----------------------------------------------------\n{}".format(i))
     #     fourier = FFT(modelling.UniformDisk(i, 150).eval_model(),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
-    fourier2 = FFT(modelling.Gauss2D(4096, 500),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
+    fourier = FFT(modelling.UniformDisk(32768, 50),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
 
