@@ -29,7 +29,8 @@ class FFT:
     # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
     # TODO: Remove staticmethods and make them outside of class
     # TODO: Rename variables to make it clearer
-    def __init__(self, model, fits_file_path, wavelength: float = 8*10**(-6), step_size_fft: float = 1.0, greyscale: bool = False) -> None:
+    # TODO: Change euclidean distance to interpolation in order to get coordinates
+    def __init__(self, model, fits_file_path, wavelength: float = 8e-6, step_size_fft: float = 1., greyscale: bool = False) -> None:
 
         self.img_array = model.eval_model()                                         # Evaluates the model
         self.img_size = len(self.img_array)                                         # Gets the size of the model's image
@@ -50,7 +51,7 @@ class FFT:
         self.name = type(model).__name__                                            # Gets the classes name for naming the plots
 
         # Conversion units
-        self.mas2rad = np.deg2rad(1/3600000) # mas per rad
+        self.mas2rad = np.deg2rad(1/3.6e6) # mas per rad
 
         # Initiate the pipeline
         print(self.fft_pipeline())

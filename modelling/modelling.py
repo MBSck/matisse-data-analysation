@@ -18,8 +18,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
 
-from abc import ABCMeta, abstractmethod     # Import abstract class functionality
-from scipy.special import j0, j1            # Import the Bessel function of 0th and 1st order
+from abc import ABCMeta, abstractmethod                             # Import abstract class functionality
+from scipy.special import j0, j1                                    # Import the Bessel function of 0th and 1st order
+from constant import PLANCK, SPEED_OF_LIGHT, BOLTZMAN               # Import constants
 
 # TODO: Work data like RA, DEC, and flux into the script
 # TODO: Use the delta functions to integrate up to a disk
@@ -185,7 +186,8 @@ class OpticallyThinSphere(Model):
 
 class InclinedDisk(Model):
     """By a certain position angle inclined disk"""
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1.,  pos_angle = None, wavlength: float = 8*10**(-6)) -> None:
+    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1.,  pos_angle = None, \
+                 wavlength: float = 8e-6) -> None:
         super().__init__(size, step, major, flux, RA, DEC, center)
 
         # Additional variables
@@ -195,9 +197,10 @@ class InclinedDisk(Model):
         # Calculated variables
         self.r = set_size(self.size, self.major, self.step, self.center)
         self.temp = T_0*(r/r_0)**(-q)
-        self.bbspec = ((2*h*c**2)/(wavelength**5))         # Blackbody spectrum per Ring, wavelength and temperature dependent
-        self.B_uth, self.B_vth = 0, 0        # Baselines projected according to their orientation, B_{u, thetha}, B_{v, thetha}
-        self.B = 0                        # Projected Baseline
+        self.bbspec = ((2*PLANCK*SPEED_OF_LIGHT**2)/(wavelength**5)) * \
+            (np.exp((PLANCK*SPEED_OF_LIGHT)/(self.wavelength*BOLTZMAN*T))-1)**(-1)          # Blackbody spectrum per Ring, wavelength and temperature dependent
+        self.B_uth, self.B_vth = 0, 0                                                       # Baselines projected according to their orientation, B_{u, thetha}, B_{v, thetha}
+        self.B = 0                                                                          # Projected Baseline
 
     def eval_model(self) -> np.array:
         ...
