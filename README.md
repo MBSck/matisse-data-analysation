@@ -29,5 +29,5 @@ _Is currently being worked on_
 
 ## Credit
 ### Contributors
-[Jacob Isbell](#https://github.com/jwisbell/)
-[Marten Scheuck](#https://github.com/MBSck/)
+* [Jacob Isbell](#https://github.com/jwisbell/)
+* [Marten Scheuck](#https://github.com/MBSck/)
