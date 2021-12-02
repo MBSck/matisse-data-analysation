@@ -134,7 +134,7 @@ class FFT:
 
         x, y = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
         ax2.scatter(x, y, s=5)
-        # plt.show()
+        plt.show()
         plt.savefig(f"FFT_{self.name}_model.pdf")
 
 
@@ -142,5 +142,5 @@ if __name__ == "__main__":
     # for i in range(134, 2011, 25):
     #     print("-----------------------------------------------------\n{}".format(i))
     #     fourier = FFT(modelling.UniformDisk(i, 150).eval_model(),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
-    fourier = FFT(modelling.UniformDisk(32768, 50),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
+    fourier = FFT(modelling.Gauss2D(4096, 50),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
 
