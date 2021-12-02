@@ -28,7 +28,6 @@ _Is currently being worked on_
 
 
 ## Credit
-### Author
-Jacob Isbell
 ### Contributors
-[Marten Scheuck](#https://github.com/MBSck/)
+* [Jacob Isbell](#https://www.github.com/jwisbell/ "Jacob Isbell")
+* [Marten Scheuck](#https://www.github.com/MBSck/ "Marten Scheuck")
