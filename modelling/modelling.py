@@ -23,6 +23,7 @@ from scipy.special import j0, j1                                    # Import the
 from typing import Union
 
 from constant import SPEED_OF_LIGHT, PLANCK_CONST, BOLTZMAN_CONST   # Import constants
+from utilities import timeit
 
 # TODO: Work data like RA, DEC, and flux into the script
 # TODO: Use the delta functions to integrate up to a disk
@@ -108,10 +109,14 @@ def temperature_gradient(radius: float, q: float, r_0: float, T_0: float):
     temperature: float
         The temperature at a certain radius
     """
-    power_factor = (radius/r_0)**(q)
+    try:
+        power_factor = (radius/r_0)**q
+    except ZeroDivisionError:
+        power_factor = radius**q
+
     # Remove the ZeroDivisionError -> Bodge
     # TODO: Think of better way
-    power_factor[power_factor == 0] = 1.
+    # power_factor[power_factor == 0] = 1.
 
     return T_0/power_factor
 
@@ -136,9 +141,9 @@ def blackbody_spec(radius: float, q: float, r_0: float, T_0: float, wavelength: 
     """
     T = temperature_gradient(radius, q, r_0, T_0)
     factor = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)/wavelength**5
+
     exp_nominator = PLANCK_CONST*SPEED_OF_LIGHT
     exp_divisor = wavelength*BOLTZMAN_CONST*T
-    print(factor, "factor", exp_nominator, "nominator", exp_divisor, "divisor")
     exponent = np.exp(exp_nominator/exp_divisor)-1
 
     return factor/exponent
@@ -319,7 +324,7 @@ class Gauss2D(Model):
         return np.exp(-(np.pi*major*B)**2/(4*np.log(2)))
 
 
-class Ring2D(Model):
+class Ring(Model):
     """Infinitesimal thin ring model
 
     ...
@@ -481,7 +486,7 @@ class OpticallyThinSphere(Model):
         return (3/(np.pi*major*B)**3)*(np.sin(np.pi*major*B)-np.pi*major*B*np.cos(np.pi*major*B))
 
 
-class InclinedRing2D(Model):
+class InclinedDisk(Model):
     """By a certain position angle inclined disk
 
     ...
@@ -520,7 +525,7 @@ class InclinedRing2D(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def eval_model(self, size: int, q: float, r_0: float, T_0: float, wavelength: float, distance: float, inclination_angle: float, step: int = 1, centre: bool = None) -> np.array:
+    def eval_model(self, size: int, q: float, r_0: int, T_0: int, wavelength: float, distance: int, inclination_angle: int, step: int = 1, centre: bool = None) -> np.array:
         """Evaluates the Model
 
         Parameters
@@ -544,12 +549,12 @@ class InclinedRing2D(Model):
         radius = set_size(size, step, centre)
         flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
 
-        factor = 2*np.pi/distance
+        factor = (2*np.pi/distance)*np.cos(inclination_angle)
 
         try:
-            return factor*radius*flux*np.cos(inclination_angle)
+            return factor*radius*flux
         except ZeroDivisionError:
-            return factor*flux*np.cos(inclination_angle)
+            return factor*flux
 
     def eval_vis(self) -> np.array:
         """Evaluates the visibilities of the model
@@ -574,31 +579,71 @@ class IntegrateRings:
 
     ...
 
+    Methods
+    -------
+    add_rings2D():
+        This adds the rings up to various models and shapes
+    uniform_disk():
+        Calls the add_rings() function with the right parameters to create a uniform disk
+    disk():
+        Calls the add_rings() function with the right parameters to create a disk with an inner rim
     """
     def __init__(self, size_model: int):
         self.size = size_model
 
-    def add_rings2D(self, radius: int, max_radius: int, step_size: int):
-        """This adds the rings up to various models"""
+    def add_rings(self, min_radius: int, max_radius: int, step_size: int, q: float, T_0: int, wavelength: float) -> None:
+        """This adds the rings up to various models
+
+        Parameters
+        ----------
+        min_radius: int
+        max_radius: int
+        step_size: int
+        q: float
+        T_0: int
+        wavelength: float
+
+        Returns
+        -------
+        None
+        """
         # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((self.size, self.size))
 
-        for i in range(radius, max_radius+1, step_size):
-            ring_array = Ring2D(self.size, i).eval_model()
-            output_lst[np.where(ring_array > 0)] += 1/(np.pi*max_radius)
+        for i in range(min_radius+1, max_radius+2, step_size):
+            flux = blackbody_spec(i, q, min_radius, T_0, wavelength)
+            ring_array = Ring().eval_model(self.size, i)
+            output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
 
         plt.imshow(output_lst)
         plt.show()
 
-    def uniform_disk(self, max_radius: int, step_size: int = 1):
-        return self.add_rings2D(0, max_radius, step_size)
+    @timeit
+    def uniform_disk(self, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1):
+        """Calls the add_rings2D() function with the right parameters to create a uniform disk
 
-    def ring(self, radius: int, max_radius: int, step_size: int = 1, optically_thin: bool = True):
-        return self.add_rings2D(radius, max_radius, step_size)
+        See also
+        --------
+        add_rings()
+        """
+        return self.add_rings(0, radius, step_size, q, T_0, wavelength)
+
+    @timeit
+    def disk(self, inner_radius: int, outer_radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1):
+        """Calls the add_rings2D() function with the right parameters to create a disk with a inner ring
+
+        See also
+        --------
+        add_rings()
+        """
+        return self.add_rings(inner_radius, outer_radius, step_size, q, T_0, wavelength)
 
 
 if __name__ == "__main__":
-    do_plot(InclinedRing2D, 500, 0.55, 1., 3000., 8e-06, 1., 1., mod=True)
+    # for i in range(0, 100, 10):
+    #    do_plot(InclinedDisk, 1024, .55, i, 6000, 8e-06, 1, 0, mod=True)
     # do_plot(InclinedDisk2D, 500, vis=True)
-    # integ = IntegrateRings(500).uniform_disk(50)
+    integrate = IntegrateRings(500)
+    integrate.uniform_disk(50)
+    integrate.disk(20, 50)
 
