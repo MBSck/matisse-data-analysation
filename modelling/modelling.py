@@ -184,23 +184,6 @@ class Model(metaclass=ABCMeta):
 
     ...
 
-    Attributes
-    ----------
-    size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
-    step: float
-        The stepsize for the np.array that constitutes the x, y-axis
-    flux: float
-        The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
-
     Methods
     -------
     eval_model():
