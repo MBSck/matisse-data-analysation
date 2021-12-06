@@ -30,7 +30,7 @@ np.set_printoptions(threshold=sys.maxsize)
 
 # Functions
 
-def delta_fct(x: float, y: float):
+def delta_fct(x: int | float, y: int | float):
     """Dirac Delta measure
 
     Parameters
@@ -44,7 +44,7 @@ def delta_fct(x: float, y: float):
     """
     return 1 if x == y else 0
 
-def set_size(size: float, major: float, step: float,  center = None):
+def set_size(size: int, step: int,  centre = None):
     """
     Sets the size of the model and its centre
 
@@ -62,14 +62,14 @@ def set_size(size: float, major: float, step: float,  center = None):
     radius: np.array
         The radius of the object
     """
-    x = np.arange(0, size, 1, float)
+    x = np.arange(0, size, step)
     y = x[:, np.newaxis]
 
-    if center is None:
+    if centre is None:
         x0 = y0 = size//2
     else:
-        x0 = center[0]
-        y0 = center[1]
+        x0 = centre[0]
+        y0 = centre[1]
 
     return np.sqrt((x-x0)**2 + (y-y0)**2).astype(int)
 
@@ -81,9 +81,9 @@ def set_uvcoords():
     np.array
         Visibility axis
     """
-    u = np.arange(-150, 150, 1, float)
+    u = np.arange(-150, 150, 1)
     v = u[:, np.newaxis]
-    return np.sqrt(u**2+v**2)
+    return np.sqrt(u**2+v**2).astype(int)
 
 def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = False) -> None:
     """Simple plot function for the models
@@ -100,7 +100,7 @@ def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = Fals
     # TODO: Make plot function that displays all of the plots
     model = input_model(size=500, major=200)
 
-    if mod:    
+    if mod:
         plt.imshow(model.eval_model())
     if vis:
         plt.imshow(model.eval_vis())
@@ -144,12 +144,6 @@ class Model(metaclass=ABCMeta):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        self.size, self.step = size, step
-        self.center = center
-        self.major = major
-        self.flux, self.RA, self.DEC = flux, RA, DEC
-
     @abstractmethod
     def eval_model() -> np.array:
         """Evaluates the model
@@ -182,8 +176,6 @@ class Delta(Model):
     ----------
     size: float
         The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
     step: float
         The stepsize for the np.array that constitutes the x, y-axis
     flux: float
@@ -202,10 +194,7 @@ class Delta(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float = None, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        super().__init__(size, major, step, flux, RA, DEC, center)
-
-    def eval_model(self) -> np.array:
+    def eval_model(self, size: int, step: int = 1, center: bool = None) -> np.array:
         """Evaluates the model
 
         Returns
