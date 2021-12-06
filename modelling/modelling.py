@@ -22,13 +22,14 @@ from abc import ABCMeta, abstractmethod                             # Import abs
 from scipy.special import j0, j1                                    # Import the Bessel function of 0th and 1st order
 from typing import Union
 
-from constant import PLANCK, SPEED_OF_LIGHT, BOLTZMAN               # Import constants
+from constant import SPEED_OF_LIGHT, PLANCK_CONST, BOLTZMAN_CONST   # Import constants
 
 # TODO: Work data like RA, DEC, and flux into the script
 # TODO: Use the delta functions to integrate up to a disk
+# TODO: Check all analytical visibilities
 
 # Set for debugging
-np.set_printoptions(threshold=sys.maxsize)
+# np.set_printoptions(threshold=sys.maxsize)
 
 # Functions
 
@@ -88,7 +89,62 @@ def set_uvcoords() -> np.array:
     v = u[:, np.newaxis]
     return np.sqrt(u**2+v**2).astype(int)
 
-def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = False) -> None:
+def temperature_gradient(radius: float, q: float, r_0: float, T_0: float):
+    """Temperature gradient model determined by power-law distribution. 
+
+    Parameters
+    ----------
+    radius: float
+        The specified radius
+    q: float
+        The power-law index
+    r_0: float
+        The initial radius
+    T_0: float
+        The temperature at r_0
+
+    Returns
+    -------
+    temperature: float
+        The temperature at a certain radius
+    """
+    power_factor = (radius/r_0)**(q)
+    # Remove the ZeroDivisionError -> Bodge
+    # TODO: Think of better way
+    power_factor[power_factor == 0] = 1.
+
+    return T_0/power_factor
+
+def blackbody_spec(radius: float, q: float, r_0: float, T_0: float, wavelength: float):
+    """Gets the blackbody spectrum at a certain T(r). Per Ring wavelength and temperature dependent
+
+    Parameters
+    ----------
+    radius: float
+        The predetermined radius
+    q: float
+        The power-law index
+    r_0: float
+        The initial radius
+    T_0: float
+        The temperature at r_0
+
+    Returns
+    -------
+    Planck's law B_lambda(lambda, T): float
+        The spectral radiance (the power per unit solid angle) of a black-body
+    """
+    T = temperature_gradient(radius, q, r_0, T_0)
+    factor = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)/wavelength**5
+    exp_nominator = PLANCK_CONST*SPEED_OF_LIGHT
+    exp_divisor = wavelength*BOLTZMAN_CONST*T
+    print(factor, "factor", exp_nominator, "nominator", exp_divisor, "divisor")
+    exponent = np.exp(exp_nominator/exp_divisor)-1
+
+    return factor/exponent
+
+
+def do_plot(input_model, *args, mod: bool = False, vis: bool = False, both: bool = False) -> None:
     """Simple plot function for the models
 
     Parameters
@@ -100,18 +156,18 @@ def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = Fals
     -------
     None
     """
-    # TODO: Make plot function that displays all of the plots
+    # TODO: Make this take any number of arguments as well as any number of models
     model = input_model()
 
     if mod:
-        plt.imshow(model.eval_model(500))
+        plt.imshow(model.eval_model(*args))
     if vis:
-        plt.imshow(model.eval_vis())
+        plt.imshow(model.eval_vis(*args))
 
     if both:
         fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.imshow(model.eval_model(500))
-        ax2.imshow(model.eval_vis(500))
+        ax1.imshow(model.eval_model(*args))
+        ax2.imshow(model.eval_vis(*args))
 
     plt.show()
 
@@ -219,20 +275,16 @@ class Gauss2D(Model):
 
     Attributes
     ----------
-    size: float
+    size: int
         The size of the array that defines x, y-axis and constitutes the radius
-    major: float
+    major: int
         The major determines the radius/cutoff of the model
-    step: float
+    step: int
         The stepsize for the np.array that constitutes the x, y-axis
     flux: float
         The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
+    centre
+        The centre of the model, will be automatically set if not determined
 
     Methods
     -------
@@ -241,13 +293,7 @@ class Gauss2D(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        super().__init__(size, major, step, flux, RA, DEC, center)
-
-        self.r = set_size(self.size, self.major, self.step, self.center)
-        self.B = set_uvcoords()
-
-    def eval_model(self) -> np.array:
+    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
         """Evaluates the model
 
         Returns
@@ -255,9 +301,12 @@ class Gauss2D(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return (self.flux/np.sqrt(np.pi/(4*np.log(2)*self.major)))*(np.exp(-4*np.log(2)*self.r**2/self.major**2))
+        radius = set_size(size, step, centre)
+        return (flux/np.sqrt(np.pi/(4*np.log(2)*major)))*(np.exp(-4*np.log(2)*(radius**2)/(major**2)))
 
-    def eval_vis(self) -> np.array:
+    def eval_vis(self, major: int, flux: float = 1.) -> np.array:
+        # TODO: Somehow relate the visibilites to the real actual model analytically
+        # TODO: This is not completely correct as well
         """Evaluates the visibilities of the model
 
         Returns
@@ -265,7 +314,9 @@ class Gauss2D(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return np.exp(-(np.pi*self.major*self.B)**2/(4*np.log(2)))
+        B = set_uvcoords()
+
+        return np.exp(-(np.pi*major*B)**2/(4*np.log(2)))
 
 
 class Ring2D(Model):
@@ -283,12 +334,8 @@ class Ring2D(Model):
         The stepsize for the np.array that constitutes the x, y-axis
     flux: float
         The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
+    centre
+        The centre of the model, will be automatically set if not determined
 
     Methods
     -------
@@ -297,13 +344,7 @@ class Ring2D(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        super().__init__(size, major, step, flux, RA, DEC, center)
-
-        self.r = set_size(self.size, self.major, self.step, self.center)
-        self.B = set_uvcoords()
-
-    def eval_model(self) -> np.array:
+    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Returns
@@ -311,12 +352,14 @@ class Ring2D(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        try:
-            return np.array([[(self.flux*delta_fct(j, self.major/2))/(np.pi*self.major) for j in i] for i in self.r])
-        except ZeroDivisionError:
-            return np.array([[(self.flux*delta_fct(j, self.major/2))/(np.pi*1) for j in i] for i in self.r])
+        radius = set_size(size, step, centre)
 
-    def eval_vis(self) -> np.array:
+        try:
+            return np.array([[(flux*delta_fct(j, major/2))/(np.pi*major) for j in i] for i in radius])
+        except ZeroDivisionError:
+            return np.array([[(flux*delta_fct(j, major/2))/(np.pi) for j in i] for i in radius])
+
+    def eval_vis(self, major: int) -> np.array:
         """Evaluates the visibilities of the model
 
         Returns
@@ -324,7 +367,9 @@ class Ring2D(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return j0(2*np.pi*self.major*self.B)
+        B = set_uvcoords()
+
+        return j0(2*np.pi*major*B)
 
 
 class UniformDisk(Model):
@@ -356,13 +401,8 @@ class UniformDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        super().__init__(size, major, step, flux, RA, DEC, center)
 
-        self.r = set_size(self.size, self.major, self.step, self.center)
-        self.B = set_uvcoords()
-
-    def eval_model(self) -> np.array:
+    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
         """Evaluates the model
 
         Returns
@@ -370,9 +410,11 @@ class UniformDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return np.array([[4*self.flux/(np.pi*self.major**2) if j <= self.major/2 else 0 for j in i] for i in self.r])
+        radius = set_size(size, step, centre)
 
-    def eval_vis(self) -> np.array:
+        return np.array([[4*flux/(np.pi*(major**2)) if j <= major//2 else 0 for j in i] for i in radius])
+
+    def eval_vis(self, major: int) -> np.array:
         """Evaluates the visibilities of the model
 
         Returns
@@ -380,7 +422,9 @@ class UniformDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return (2*j1(np.pi*self.major*self.B))*(np.pi*self.major*self.B)
+        B = set_uvcoords()
+
+        return 2*j1(np.pi*major*B)
 
 
 class OpticallyThinSphere(Model):
@@ -412,13 +456,7 @@ class OpticallyThinSphere(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None) -> None:
-        super().__init__(size, major, step, flux, RA, DEC, center)
-
-        self.r = set_size(self.size, self.major, self.step, self.center)
-        self.B = set_uvcoords()
-
-    def eval_model(self) -> np.array:
+    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
         """Evaluates the model
 
         Returns
@@ -426,9 +464,11 @@ class OpticallyThinSphere(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return np.array([[(6*self.flux/(np.pi*self.major**2))*np.sqrt(1-(2*j/self.major)**2) if j <= self.major/2 else 0 for j in i] for i in self.r])
+        radius = set_size(size, step, centre)
 
-    def eval_vis(self) -> np.array:
+        return np.array([[(6*flux/(np.pi*(major**2)))*np.sqrt(1-(2*j/major)**2) if j <= major//2 else 0 for j in i] for i in radius])
+
+    def eval_vis(self, major: int) -> np.array:
         """Evaluates the visibilities of the model
 
         Returns
@@ -436,10 +476,12 @@ class OpticallyThinSphere(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return (3/(np.pi*self.major*self.B)**3)*(np.sin(np.pi*self.major*self.B)-np.pi*self.major*self.B*np.cos(np.pi*self.major*self.B))
+        B = set_uvcoords()
+
+        return (3/(np.pi*major*B)**3)*(np.sin(np.pi*major*B)-np.pi*major*B*np.cos(np.pi*major*B))
 
 
-class InclinedDisk(Model):
+class InclinedRing2D(Model):
     """By a certain position angle inclined disk
 
     ...
@@ -452,14 +494,8 @@ class InclinedDisk(Model):
         The major determines the radius/cutoff of the model
     step: float
         The stepsize for the np.array that constitutes the x, y-axis
-    flux: float
-        The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
+    centre: bool
+        The centre of the model, will be automatically set if not determined
     r_0: float
         
     T_0: float
@@ -484,74 +520,36 @@ class InclinedDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: int, major: int, step: int = 1, flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1., \
-                 inc_angle: float = 1., pos_angle_major: float = 1., pos_angle_measurement: float = 1.,  wavelength: float = 8e-6, distance: float = None) -> None:
-        super().__init__(size, step, major, flux, RA, DEC, center)
-        # TODO: Temperature gradient should be like 0.66, 0.65 or sth
-        # Variables
-        self.inc_angle = inc_angle                          # The inclination angle of the disk
-        self.pos_angle_major = pos_angle_major              # The positional angle of the disk semi-major axis
-        self.pos_angle_measure = pos_angle_measurement      # The positional angle of the measurement (B projected according to its orientation)
-        self.r_0, self.T_0 = r_0, T_0                       # T_0 is temperature at r_0
-        self.q = q                                          # Power law index, depends on the type of disk (flat or flared)
-        self.wavelength = wavelength
-
-        # Calculated variables
-        self.r = set_size(self.size, self.major, self.step, self.center)
-
-        # Calculation of the projected Baseline
-        self.B = set_uvcoords()
-        self.Bu, self.Bv = self.B*np.sin(self.pos_angle_measure), self.B*np.cos(self.pos_angle_measure)     # Baselines projected according to their orientation
-        self.Buth, self.Bvth = self.Bu*np.sin(self.pos_angle_major)+self.Bv*np.cos(self.pos_angle_major), \
-                self.Bu*np.cos(self.pos_angle_major)-self.Bv*np.sin(self.pos_angle_major)                   # Baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
-        self.B_proj = np.sqrt(self.Buth**2+(self.Bvth**2)*np.cos(self.inc_angle)**2)                        # Projected Baseline
-
-    def temperature(self, radius: float):
-        """Gets the temperature at a certain radius
-
-        Parameters
-        ----------
-        radius: float
-            The specified radius
-
-        Returns
-        -------
-        temperature: float
-            The temperature at a certain radius
-        """
-        return self.T_0*(radius/self.r_0)**(-self.q)
-
-    def blackbody_spec(self, radius: float):
-        """Gets the blackbody spectrum at a certain T(r). Per Ring wavelength and temperature dependent
-
-        Parameters
-        ----------
-        radius: float
-            The predetermined radius
-
-        Returns
-        -------
-        blackbody_spec: float
-            The blackbody spectrum at a certain radius and temperature
-        """
-        return ((2*PLANCK*SPEED_OF_LIGHT**2)/(self.wavelength**5)) * \
-            (np.exp((PLANCK*SPEED_OF_LIGHT)/(self.wavelength*BOLTZMAN*self.temperature(radius)))-1)**(-1)
-
-    def eval_model(self, radius: float, inc_angle: float, distance: float) -> np.array:
+    def eval_model(self, size: int, q: float, r_0: float, T_0: float, wavelength: float, distance: float, inclination_angle: float, step: int = 1, centre: bool = None) -> np.array:
         """Evaluates the Model
 
         Parameters
         ----------
-        radius: float
-        inc_angle: float
+        size: int
+        q: float
+        r_0: float
+        T_0: float
+        wavelength: float
         distance: float
+        inc_angle: float
+        step: int
+        centre: bool
 
         Returns
         --------
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return (2*np.pi/distance)*np.cos(inc_angle)*radius*self.blackbody_spec(radius)
+        # Temperature gradient should be like 0.66, 0.65 or sth
+        radius = set_size(size, step, centre)
+        flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
+
+        factor = 2*np.pi/distance
+
+        try:
+            return factor*radius*flux*np.cos(inclination_angle)
+        except ZeroDivisionError:
+            return factor*flux*np.cos(inclination_angle)
 
     def eval_vis(self) -> np.array:
         """Evaluates the visibilities of the model
@@ -561,6 +559,13 @@ class InclinedDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
+        self.B = set_uvcoords()
+        self.Bu, self.Bv = self.B*np.sin(self.pos_angle_measure), self.B*np.cos(self.pos_angle_measure)     # Baselines projected according to their orientation
+        self.Buth, self.Bvth = self.Bu*np.sin(self.pos_angle_major)+self.Bv*np.cos(self.pos_angle_major), \
+                self.Bu*np.cos(self.pos_angle_major)-self.Bv*np.sin(self.pos_angle_major)                   # Baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
+        self.B_proj = np.sqrt(self.Buth**2+(self.Bvth**2)*np.cos(self.inc_angle)**2)                        # Projected Baseline
+
+
         return (1/self.eval_model(0))*self.blackbody_spec(radius)
 
 
@@ -580,7 +585,7 @@ class IntegrateRings:
 
         for i in range(radius, max_radius+1, step_size):
             ring_array = Ring2D(self.size, i).eval_model()
-            output_lst[np.where(ring_array > 0)] = 1/(np.pi*max_radius)
+            output_lst[np.where(ring_array > 0)] += 1/(np.pi*max_radius)
 
         plt.imshow(output_lst)
         plt.show()
@@ -593,5 +598,7 @@ class IntegrateRings:
 
 
 if __name__ == "__main__":
-    do_plot(Delta,both=True)
+    do_plot(InclinedRing2D, 500, 0.55, 1., 3000., 8e-06, 1., 1., mod=True)
+    # do_plot(InclinedDisk2D, 500, vis=True)
     # integ = IntegrateRings(500).uniform_disk(50)
+
