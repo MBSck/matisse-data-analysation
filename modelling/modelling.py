@@ -20,6 +20,8 @@ import scipy as sp
 
 from abc import ABCMeta, abstractmethod                             # Import abstract class functionality
 from scipy.special import j0, j1                                    # Import the Bessel function of 0th and 1st order
+from typing import Union
+
 from constant import PLANCK, SPEED_OF_LIGHT, BOLTZMAN               # Import constants
 
 # TODO: Work data like RA, DEC, and flux into the script
@@ -30,32 +32,33 @@ np.set_printoptions(threshold=sys.maxsize)
 
 # Functions
 
-def delta_fct(x: int | float, y: int | float):
+def delta_fct(x: Union[int,  float], y: Union[int, float]) -> int:
     """Dirac Delta measure
 
     Parameters
     ----------
-    x: float
-    y: float
+    x: int | float
+    y: int | float
 
     Returns
     -------
     int
+        1 if 'x == y' or 0 else
     """
     return 1 if x == y else 0
 
-def set_size(size: int, step: int,  centre = None):
+def set_size(size: int, step: int,  centre: bool = None) -> np.array:
     """
     Sets the size of the model and its centre
 
     Parameters
     ----------
-    size: float
+    size: int
         Sets the size of the model image and implicitly the x-, y-axis
-    major: float
-        Sets the constant radius of the model (e.g., fwhm for a gauss model)
-    step: float
+    step: int
         The step size of the np.arange, that defines the axes
+    centre: bool
+        A set centre of the object. Will be set automatically if default 'None' is kept
 
     Returns
     -------
@@ -73,7 +76,7 @@ def set_size(size: int, step: int,  centre = None):
 
     return np.sqrt((x-x0)**2 + (y-y0)**2).astype(int)
 
-def set_uvcoords():
+def set_uvcoords() -> np.array:
     """Sets the uv coords for visibility modelling
 
     Returns
@@ -98,17 +101,17 @@ def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = Fals
     None
     """
     # TODO: Make plot function that displays all of the plots
-    model = input_model(size=500, major=200)
+    model = input_model()
 
     if mod:
-        plt.imshow(model.eval_model())
+        plt.imshow(model.eval_model(500))
     if vis:
         plt.imshow(model.eval_vis())
 
     if both:
         fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.imshow(model.eval_model())
-        ax2.imshow(model.eval_vis())
+        ax1.imshow(model.eval_model(500))
+        ax2.imshow(model.eval_vis(500))
 
     plt.show()
 
@@ -180,12 +183,6 @@ class Delta(Model):
         The stepsize for the np.array that constitutes the x, y-axis
     flux: float
         The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
 
     Methods
     -------
@@ -194,7 +191,7 @@ class Delta(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def eval_model(self, size: int, step: int = 1, center: bool = None) -> np.array:
+    def eval_model(self, size: int, step: int = 1, flux: float = 1.) -> np.array:
         """Evaluates the model
 
         Returns
@@ -202,9 +199,9 @@ class Delta(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return np.array([[0 for j in range(self.size)] if not i == self.center else [0 if not j == self.center else 1. for j in range(self.size)] for i in range(self.size)])
+        return np.array([[0. for j in range(size)] if not i == size//2 else [0. if not j == size//2 else 1.*flux for j in range(size)] for i in range(size)])
 
-    def eval_vis(self) -> np.array:
+    def eval_vis(self, size: int, flux: float = 1.) -> np.array:
         """Evaluates the visibilities of the model
 
         Returns
@@ -212,7 +209,7 @@ class Delta(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        return np.ones((self.size, self.size))
+        return np.ones((size, size))*flux
 
 
 class Gauss2D(Model):
@@ -596,8 +593,5 @@ class IntegrateRings:
 
 
 if __name__ == "__main__":
-    # do_plot(UniformDisk,both=True)
+    do_plot(Delta,both=True)
     # integ = IntegrateRings(500).uniform_disk(50)
-    model = InclinedDisk(500, 50)
-    plt.imshow(model.eval_model(50, 1, 10))
-    plt.show()
