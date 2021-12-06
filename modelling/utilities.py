@@ -4,10 +4,25 @@ __author__ = "Marten Scheuck"
 
 import numpy as np
 import matplotlib.pyplot as plt     # Imports the matplotlib module for image processing
+import time
 
 from astropy.io import fits
 from PIL import Image               # Import PILLOW for image processing
+from functools import wraps
 
+# Functions
+
+def timeit(func):
+    @wraps(func)
+    def timed_func(*args, **kwargs):
+        st = time.time()
+        result = func(*args, **kwargs)
+        et = time.time()
+        print(f"{func.__name__} execution took: {et-st} sec")
+        return result
+    return timed_func
+
+# Classes
 
 class ImageProcessing:
     """All functionality to process an image/model and use the uv-coords on it"""
