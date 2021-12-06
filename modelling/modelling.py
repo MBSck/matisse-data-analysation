@@ -26,7 +26,7 @@ from constant import PLANCK, SPEED_OF_LIGHT, BOLTZMAN               # Import con
 # TODO: Use the delta functions to integrate up to a disk
 
 # Set for debugging
-# np.set_printoptions(threshold=sys.maxsize)
+np.set_printoptions(threshold=sys.maxsize)
 
 # Functions
 
@@ -85,7 +85,7 @@ def set_uvcoords():
     v = u[:, np.newaxis]
     return np.sqrt(u**2+v**2)
 
-def do_plot(*args) -> None:
+def do_plot(input_model, mod: bool = False, vis: bool = False, both: bool = False) -> None:
     """Simple plot function for the models
 
     Parameters
@@ -98,11 +98,18 @@ def do_plot(*args) -> None:
     None
     """
     # TODO: Make plot function that displays all of the plots
-    model = args[0](size=500, major=200)
+    model = input_model(size=500, major=200)
 
-    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
-    ax1.imshow(model.eval_model())
-    ax2.imshow(model.eval_vis())
+    if mod:    
+        plt.imshow(model.eval_model())
+    if vis:
+        plt.imshow(model.eval_vis())
+
+    if both:
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.imshow(model.eval_model())
+        ax2.imshow(model.eval_vis())
+
     plt.show()
 
 
@@ -491,8 +498,8 @@ class InclinedDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self, size: float, major: float, step: float = 1., flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1., \
-                 inc_angle: float = None, pos_angle_major: float = None, pos_angle_measurement: float = None,  wavelength: float = 8e-6, distance: float = None) -> None:
+    def __init__(self, size: int, major: int, step: int = 1, flux: float = 1., RA = None, DEC = None, center = None, r_0: float = 1., T_0: float = 1., q: float = 1., \
+                 inc_angle: float = 1., pos_angle_major: float = 1., pos_angle_measurement: float = 1.,  wavelength: float = 8e-6, distance: float = None) -> None:
         super().__init__(size, step, major, flux, RA, DEC, center)
         # TODO: Temperature gradient should be like 0.66, 0.65 or sth
         # Variables
@@ -501,6 +508,7 @@ class InclinedDisk(Model):
         self.pos_angle_measure = pos_angle_measurement      # The positional angle of the measurement (B projected according to its orientation)
         self.r_0, self.T_0 = r_0, T_0                       # T_0 is temperature at r_0
         self.q = q                                          # Power law index, depends on the type of disk (flat or flared)
+        self.wavelength = wavelength
 
         # Calculated variables
         self.r = set_size(self.size, self.major, self.step, self.center)
@@ -508,9 +516,9 @@ class InclinedDisk(Model):
         # Calculation of the projected Baseline
         self.B = set_uvcoords()
         self.Bu, self.Bv = self.B*np.sin(self.pos_angle_measure), self.B*np.cos(self.pos_angle_measure)     # Baselines projected according to their orientation
-        self.Buth, self.Bvth = self.Bu*np.sin(self.pos_angle_major)+self.Bv*np.cos(self.angle_major), \
-                self.Bu*np.cos(self.pos_angle_major)-self.Bv*np.sin(self.angle_major)                       # Baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
-        self.B_proj = np.sqrt(Buth**2+(Bvth**2)*np.cos(self.inc_angle)**2)                                  # Projected Baseline
+        self.Buth, self.Bvth = self.Bu*np.sin(self.pos_angle_major)+self.Bv*np.cos(self.pos_angle_major), \
+                self.Bu*np.cos(self.pos_angle_major)-self.Bv*np.sin(self.pos_angle_major)                   # Baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
+        self.B_proj = np.sqrt(self.Buth**2+(self.Bvth**2)*np.cos(self.inc_angle)**2)                        # Projected Baseline
 
     def temperature(self, radius: float):
         """Gets the temperature at a certain radius
@@ -585,11 +593,8 @@ class IntegrateRings:
         output_lst = np.zeros((self.size, self.size))
 
         for i in range(radius, max_radius+1, step_size):
-            ring_array = Ring2D(500, i).eval_model()
-            ind_x_array, ind_y_array = np.where(ring_array > 0)
-            index_lst = [i for i in zip(list(ind_x_array), list(ind_y_array))]
-            for i, o in index_lst:
-                output_lst[i][o] = 1/(np.pi*i)
+            ring_array = Ring2D(self.size, i).eval_model()
+            output_lst[np.where(ring_array > 0)] = 1/(np.pi*max_radius)
 
         plt.imshow(output_lst)
         plt.show()
@@ -602,7 +607,8 @@ class IntegrateRings:
 
 
 if __name__ == "__main__":
-    # do_plot(Gauss2D)
+    # do_plot(UniformDisk,both=True)
     # integ = IntegrateRings(500).uniform_disk(50)
-    integ = IntegrateRings(500).ring(30, 50)
-    # do_model_plot(Ring2D)
+    model = InclinedDisk(500, 50)
+    plt.imshow(model.eval_model(50, 1, 10))
+    plt.show()
