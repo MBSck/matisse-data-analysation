@@ -8,13 +8,17 @@ __author__ = "Marten Scheuck"
 import numpy as np                  # Imports the numpy module
 import time                         # Imports the time module
 import matplotlib.pyplot as plt     # Imports the matplotlib module
+
 from numpy import fft               # Imports the Fast-Fourier Transform (FFT) pack
+from pathlib import Path
 
 # Own modules
-import modelling
-from utilities import ImageProcessing, ReadoutFits
+from modelling import Delta, Ring, Gauss2D, UniformDisk, OpticallyThinSphere, InclinedDisk, IntegrateRings
+from utilities import ReadoutFits, timeit
 
-# TODO: Functions are called to often -> Could cause errors as well as slows down program! Take care of that!
+# Be aware of the fact that the code only works for same dimensional pictures/models
+
+# TODO: Make class and function documentation
 
 class FFT:
     """A collection of the fft-functionality given by scipy
@@ -24,15 +28,12 @@ class FFT:
 
     """
     # TODO: Check how the 'step_size_fft' changes the scaling
-    # TODO: Be aware of the fact that the code only works for same dimensional pictures/models
-    # TODO: Write good documentation
     # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
     # TODO: Remove staticmethods and make them outside of class
-    # TODO: Rename variables to make it clearer
+    # TODO: Rename variables to make them clearer
     # TODO: Change euclidean distance to interpolation in order to get coordinates
-    def __init__(self, model, fits_file_path, wavelength: float = 8e-6, step_size_fft: float = 1., greyscale: bool = False) -> None:
-
-        self.img_array = model.eval_model()                                         # Evaluates the model
+    def __init__(self, input_array: np.array, fits_file_path: Path[str], wavelength: float = 8e-6, step_size_fft: float = 1., greyscale: bool = False) -> None:
+        self.img_array = input_array                                                # Evaluates the model
         self.img_size = len(self.img_array)                                         # Gets the size of the model's image
 
         self.readout = ReadoutFits(fits_file_path)                                  # Initializes the readout for '.fits'-files
@@ -48,7 +49,7 @@ class FFT:
         self.uvcoords = self.readout.get_uvcoords_vis2                              # Gets the uvcoords of vis2
         self.wavelength = wavelength                                                # The set wavelength for scaling
 
-        self.name = type(model).__name__                                            # Gets the classes name for naming the plots
+        # self.name = type(img_array).__name__                                        # Gets the classes name for naming the plots
 
         # Conversion units
         self.mas2rad = np.deg2rad(1/3.6e6) # mas per rad
@@ -67,10 +68,12 @@ class FFT:
         fft_value = FFT.get_fft_values(ft, uv_ind)
         return fft_value, FFT.get_ft_amp_phase(fft_value), uv_ind, rescaling_factor
 
+    @timeit
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT"""
         return fft.fftshift(fft.fft2(fft.ifftshift(self.img_array)))
 
+    @timeit
     def do_ifft2(self) -> np.array:
         """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
         return fft.fftshift(fft.ifft2(fft.fftshift(self.img_array))).real
@@ -121,7 +124,7 @@ class FFT:
         """Makes simple plots in the form of two subplots of the image before and after Fourier transformation"""
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
         ax1.imshow(self.img_array)
-        ax1.set_title(f"{self.name}-Model")
+        ax1.set_title(f"Model")
         ax1.set_xlabel(f"resolution [px] {self.img_size}")
         ax1.axes.get_xaxis().set_ticks([])
         ax1.axes.get_yaxis().set_ticks([])
@@ -135,12 +138,15 @@ class FFT:
         x, y = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
         ax2.scatter(x, y, s=5)
         plt.show()
-        plt.savefig(f"FFT_{self.name}_model.pdf")
+        plt.savefig(f"FFT_model.pdf")
 
 
 if __name__ == "__main__":
     # for i in range(134, 2011, 25):
     #     print("-----------------------------------------------------\n{}".format(i))
     #     fourier = FFT(modelling.UniformDisk(i, 150).eval_model(),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
-    fourier = FFT(modelling.Gauss2D(4096, 50),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1.)
+    integrate = IntegrateRings(1024)
+    disk = integrate.disk(20, 50)
+
+    fourier = FFT(disk,"TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 

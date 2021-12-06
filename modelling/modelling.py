@@ -588,7 +588,7 @@ class IntegrateRings:
     disk():
         Calls the add_rings() function with the right parameters to create a disk with an inner rim
     """
-    def __init__(self, size_model: int):
+    def __init__(self, size_model: int) -> None:
         self.size = size_model
 
     def add_rings(self, min_radius: int, max_radius: int, step_size: int, q: float, T_0: int, wavelength: float) -> None:
@@ -615,11 +615,10 @@ class IntegrateRings:
             ring_array = Ring().eval_model(self.size, i)
             output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
 
-        plt.imshow(output_lst)
-        plt.show()
+        return output_lst
 
     @timeit
-    def uniform_disk(self, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1):
+    def uniform_disk(self, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
         """Calls the add_rings2D() function with the right parameters to create a uniform disk
 
         See also
@@ -629,7 +628,7 @@ class IntegrateRings:
         return self.add_rings(0, radius, step_size, q, T_0, wavelength)
 
     @timeit
-    def disk(self, inner_radius: int, outer_radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1):
+    def disk(self, inner_radius: int, outer_radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
         """Calls the add_rings2D() function with the right parameters to create a disk with a inner ring
 
         See also
