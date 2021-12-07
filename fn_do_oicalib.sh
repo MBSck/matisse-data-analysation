@@ -5,13 +5,14 @@ TARGET=hd142666
 DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET/PRODUCTS
 EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
 
-RAWLIST=()
-CALIBLIST=()
+RAWLIST='mat_raw_estimates.2019-03-24T08_48_04.AQUARIUS.rb
+mat_raw_estimates.2019-03-24T09_01_46.AQUARIUS.rb
+mat_raw_estimates.2019-03-24T09_19_40.AQUARIUS.rb'
 
 do_oicalib() {
     FOLDER=nband
-    RAWDIR=$DATADIR/$FOLDER
-    CALIBDIR=$DATADIR/$FOLDER
+    RAWDIR=$DATADIR/$FOLDER/$1
+    CALIBDIR=$DATADIR/$FOLDER/$2
 
     RESDIR=$DATADIR/calib
 
@@ -25,9 +26,17 @@ do_oicalib() {
     cd $EXECDIR
     mv -f *.rb_CALIBRATED $RESDIR
 
-    exit 0
 }
 
-for i in "${!RAWDIR[@]}"
+# for i in "${!RAWLIST[@]}"
+# do
+#    do_oicalib "${RAWLIST[i]}" "${CALIBLIST[i]}"
+# done
+
+
+for i in "${!RAWLIST[@]}"
 do
-    do_oicalib "${}" "${}" &&
+    printf "%s is in %s\n" "$i" "${RAWLIST[$i]}"
+done
+
+exit 0

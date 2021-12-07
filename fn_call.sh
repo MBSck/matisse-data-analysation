@@ -5,11 +5,23 @@ cd ./oca_pipeline/tools/
 
 #----------define the folders for saving data-----------------
 #location of the data folders (raw, outputs, etc)
-DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666
-CALIBDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/RAW
-RAWDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/RAW
+TARGET=hd142666
+DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/
+TARGETDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET
+CALIBDIR=$TARGETDIR/RAW
+RAWDIR=$TARGETDIR/RAW
 RESDIR=$DATADIR/PRODUCTS
-TARGETS='20190323 20190506 20190514 20190630'
+
+TARGETLIST='20190323 20190506 20190514 20190630'
+
+make_directory() {
+for i in "$@"
+do
+    if [ ! -d "$i" ]; then
+        mkdir $i &&
+    fi
+done
+}
 
 #----------run the pipeline function-------------------------------
 do_reduction() {
@@ -50,7 +62,9 @@ runtime=$((end-start))
 printf "Finished calibration in %f sec" $runtime
 }
 
-for i in $TARGETS
+make_directory $TARGETDIR $CALIBDIR
+
+for i in $TARGETLIST
 do
     TEMPRAW=$RAWDIR/$i
     TEMPCALIB=$CALIBDIR/$i
