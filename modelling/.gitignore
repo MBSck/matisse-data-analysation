@@ -1,0 +1,6 @@
+/__pycache__/
+models/__pycache__/
+functionality/__pycache__/
+build/
+dist/
+modelling.egg-info/
