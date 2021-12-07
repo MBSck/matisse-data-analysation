@@ -34,7 +34,7 @@ from utilities import timeit
 
 # Functions
 
-def delta_fct(x: Union[int,  float], y: Union[int, float]) -> int:
+def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """Dirac Delta measure
 
     Parameters
@@ -86,7 +86,7 @@ def set_uvcoords() -> np.array:
     np.array
         Visibility axis
     """
-    u = np.arange(-150, 150, 1)
+    u = np.arange(-150, 150)
     v = u[:, np.newaxis]
     return np.sqrt(u**2+v**2).astype(int)
 
@@ -167,15 +167,19 @@ def do_plot(input_model, *args, mod: bool = False, vis: bool = False, both: bool
     if mod:
         plt.imshow(model.eval_model(*args))
     if vis:
-        plt.imshow(model.eval_vis(*args))
-
+        plt.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
     if both:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.imshow(model.eval_model(*args))
-        ax2.imshow(model.eval_vis(*args))
+        ax2.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
 
+        ax1.set_title("Model")
+        ax1.set_xlabel("[px]")
+
+        ax2.set_title("Vis")
+        ax2.set_xlabel("u[m]")
+        ax2.set_ylabel("v[m]")
     plt.show()
-
 
 # Classes 
 
@@ -292,9 +296,8 @@ class Gauss2D(Model):
         radius = set_size(size, step, centre)
         return (flux/np.sqrt(np.pi/(4*np.log(2)*major)))*(np.exp(-4*np.log(2)*(radius**2)/(major**2)))
 
-    def eval_vis(self, major: int, flux: float = 1.) -> np.array:
-        # TODO: Somehow relate the visibilites to the real actual model analytically
-        # TODO: This is not completely correct as well
+    def eval_vis(self, major: int) -> np.array:
+        # TODO: Somehow relate the visibilites to the real actual model analytically -> Same major
         """Evaluates the visibilities of the model
 
         Returns
@@ -303,8 +306,9 @@ class Gauss2D(Model):
             Two dimensional array that can be plotted with plt.imread()
         """
         B = set_uvcoords()
+        print(B)
 
-        return np.exp(-(np.pi*major*B)**2/(4*np.log(2)))
+        return np.exp(-((np.pi*major*B)**2/(4*np.log(2))))
 
 
 class Ring(Model):
@@ -412,7 +416,7 @@ class UniformDisk(Model):
         """
         B = set_uvcoords()
 
-        return 2*j1(np.pi*major*B)
+        return (2*j1(np.pi*major*B))/(np.pi*major*B)
 
 
 class OpticallyThinSphere(Model):
@@ -574,7 +578,7 @@ class IntegrateRings:
     def __init__(self, size_model: int) -> None:
         self.size = size_model
 
-    def add_rings(self, min_radius: int, max_radius: int, step_size: int, q: float, T_0: int, wavelength: float) -> None:
+    def add_rings(self, min_radius: int, max_radius: int, step_size: int, q: float, T_0: int, wavelength: float, do_flux: bool = True) -> None:
         """This adds the rings up to various models
 
         Parameters
@@ -593,12 +597,28 @@ class IntegrateRings:
         # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((self.size, self.size))
 
-        for i in range(min_radius+1, max_radius+2, step_size):
-            flux = blackbody_spec(i, q, min_radius, T_0, wavelength)
-            ring_array = Ring().eval_model(self.size, i)
-            output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
+        if do_flux:
+            for i in range(min_radius+1, max_radius+2, step_size):
+                flux = blackbody_spec(i, q, min_radius, T_0, wavelength)
+                ring_array = Ring().eval_model(self.size, i)
+                output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
+        else:
+            for i in range(min_radius+1, max_radius+2, step_size):
+                ring_array = Ring().eval_model(self.size, i)
+                output_lst[np.where(ring_array > 0)] = 1/(np.pi*max_radius)
 
         return output_lst
+
+    @timeit
+    def uniformly_bright_disk(self, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
+        """Calls the add_rings2D() function with the right parameters to create a uniform disk
+
+        See also
+        --------
+        add_rings()
+        """
+        return self.add_rings(0, radius, step_size, q, T_0, wavelength, False)
+
 
     @timeit
     def uniform_disk(self, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
@@ -625,7 +645,16 @@ if __name__ == "__main__":
     # for i in range(0, 100, 10):
     #    do_plot(InclinedDisk, 1024, .55, i, 6000, 8e-06, 1, 0, mod=True)
     # do_plot(InclinedDisk2D, 500, vis=True)
-    integrate = IntegrateRings(500)
-    integrate.uniform_disk(50)
-    integrate.disk(20, 50)
+
+    # integrate = IntegrateRings(500)
+    # uniformly_bright_disk = integrate.uniformly_bright_disk(50)
+    # uniform_disk = integrate.uniform_disk(50)
+    # disk = integrate.disk(20, 50)
+    # plt.imshow(uniformly_bright_disk)
+    # plt.show()
+
+    do_plot(UniformDisk, 500, 150, mod=True)
+    do_plot(UniformDisk, 15, vis=True)
+    g = UniformDisk().eval_vis (150)
+    print(g)
 
