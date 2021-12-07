@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash bash
 
 #change this to point to your oca pipeline
 cd ./oca_pipeline/tools/
