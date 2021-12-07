@@ -1,6 +1,6 @@
 import numpy as np
 
-from modelling import Model, timeit
+from ..functionality.utilities import Model, timeit
 
 class Delta(Model):
     """Delta function/Point source model
@@ -47,5 +47,4 @@ class Delta(Model):
 
 if __name__ == "__main__":
     delt = Delta()
-    mod = delt.eval_model(500)
-    print(mod)
+    print(delt.eval_model(512))

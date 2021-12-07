@@ -12,7 +12,7 @@ from astropy.io import fits
 from PIL import Image                           # Import PILLOW for image processing
 from functools import wraps
 
-from modelling import constant                  # Import constants
+from constant import *                         # Import constants
 
 # Functions
 

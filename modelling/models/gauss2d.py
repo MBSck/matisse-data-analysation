@@ -1,7 +1,5 @@
 import numpy as np
 
-from modelling import Model, timeit, set_size, set_uvcoords
-
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss

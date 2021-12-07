@@ -7,4 +7,4 @@ SPEED_OF_LIGHT: float = 2.99792458e8        # Speed of light in SI [m/s]
 BOLTZMAN_CONST: float = 1.380649e-23        # Boltzman's constant in SI [J/K] 
 
 if __name__ == "__main__":
-    print(BOLTZMAN)
+    print(BOLTZMAN_CONST)
