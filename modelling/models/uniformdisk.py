@@ -1,3 +1,10 @@
+import numpy as np
+
+from scipy.special import j1
+
+from modelling import Model, timeit, set_size, set_uvcoords
+
+
 class UniformDisk(Model):
     """Uniformly bright disc model
 
@@ -55,5 +62,4 @@ class UniformDisk(Model):
         print(factor)
 
         return 2*j1(factor)/factor
-
 

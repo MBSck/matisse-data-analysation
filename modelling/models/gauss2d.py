@@ -1,3 +1,8 @@
+import numpy as np
+
+from modelling import Model, timeit, set_size, set_uvcoords
+
+
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
 
@@ -49,5 +54,4 @@ class Gauss2D(Model):
         print(B)
 
         return np.exp(-((np.pi*major*B)**2/(4*np.log(2))))
-
 

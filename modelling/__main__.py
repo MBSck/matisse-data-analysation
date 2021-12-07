@@ -20,7 +20,6 @@ import scipy as sp
 
 from scipy.special import j0, j1                                    # Import the Bessel function of 0th and 1st order
 
-from constant import SPEED_OF_LIGHT, PLANCK_CONST, BOLTZMAN_CONST   # Import constants
 from utilities import Model, timeit, temperature_gradient, \
         blackbody_spec, delta_fct, set_size, set_uvcoords, do_plot  # Import helper functions and baseclass for the models
 

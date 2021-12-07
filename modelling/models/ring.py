@@ -1,3 +1,7 @@
+import numpy as np
+
+from modelling import timeit, set_size, set_uvcoords, delta_fct
+
 class Ring(Model):
     """Infinitesimal thin ring model
 
@@ -51,6 +55,4 @@ class Ring(Model):
         B = set_uvcoords()
 
         return j0(2*np.pi*major*B)
-
-
 

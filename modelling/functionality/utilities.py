@@ -12,9 +12,12 @@ from astropy.io import fits
 from PIL import Image                           # Import PILLOW for image processing
 from functools import wraps
 
+from modelling import constant                  # Import constants
+
 # Functions
 
 def timeit(func):
+    """Simple timer decorator for functions"""
     @wraps(func)
     def timed_func(*args, **kwargs):
         st = time.time()
@@ -215,26 +218,6 @@ class Model(metaclass=ABCMeta):
         pass
 
 
-class ImageProcessing:
-    """All functionality to process an image/model and use the uv-coords on it"""
-    #TODO: Approach to uv-resizing; Max and Min value, resizing the coordinates. However no max and min value that corresponds?
-    #TODO: Enlarge the image and the map the coordinates onto it, sizing is still weird?
-    def __init__(self, path_to_img):
-        self.path_to_img = path_to_img
-
-    def read_image_into_nparray(self):
-        """Checks the input if it is an np.array and if not reads it in as such"""
-        if isinstance(self.path_to_img, np.ndarray):
-            return self.path_to_img
- 
-        return plt.imread(self.path_to_img)
-
-    @property
-    def get_img_size(self):
-        """Gets the size (width and height) of the image"""
-        with Image.open(self.path_to_img) as img:
-            return np.array(list(img.size))
-
 class ReadoutFits:
     """All functionality to work with '.oifits/.fits'-files"""
     def __init__(self, fits_file):
@@ -277,10 +260,8 @@ class ReadoutFits:
 
 if __name__ == "__main__":
     readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
-    img_proc = ImageProcessing("Michelson.png")
 
     print(readout.get_uvcoords_vis2, "uvcoords")
-    # print(img_proc.get_img_size)
     readout.do_uv_plot(readout.get_uvcoords_vis2)
     print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
 
