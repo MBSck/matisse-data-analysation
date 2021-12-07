@@ -1,3 +1,7 @@
+import numpy as np
+
+from modelling import Model, timeit
+
 class Delta(Model):
     """Delta function/Point source model
 
@@ -41,4 +45,7 @@ class Delta(Model):
         """
         return np.ones((size, size))*flux
 
-
+if __name__ == "__main__":
+    delt = Delta()
+    mod = delt.eval_model(500)
+    print(mod)
