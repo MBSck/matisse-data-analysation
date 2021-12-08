@@ -99,3 +99,5 @@ class InclinedDisk(Model):
         return (1/self.eval_model(0))*self.blackbody_spec(radius)
 
 
+if __name__ = "__main__":
+    ...
