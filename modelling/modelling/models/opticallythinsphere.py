@@ -1,6 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
-from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, 
+from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
 
 class OpticallyThinSphere(Model):
     """Optically Thin Sphere model
@@ -57,4 +58,12 @@ class OpticallyThinSphere(Model):
 
         return (3/(np.pi*major*B)**3)*(np.sin(np.pi*major*B)-np.pi*major*B*np.cos(np.pi*major*B))
 
+if __name__ == "__main__":
+    o = OpticallyThinSphere()
+    o_model = o.eval_model(512, 50)
+    o_vis = o.eval_vis(0.1)
+    plt.imshow(o_model)
+    plt.show()
+    plt.imshow(o_vis)
+    plt.show()
 

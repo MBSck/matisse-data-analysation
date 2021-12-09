@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from modelling.functionality.utilities import Model, timeit
 
@@ -46,5 +47,11 @@ class Delta(Model):
         return np.ones((size, size))*flux
 
 if __name__ == "__main__":
-    delt = Delta()
-    print(delt.eval_model(512))
+    d = Delta()
+    d_model = d.eval_model(512)
+    d_vis = d.eval_vis(512)
+    plt.imshow(d_model)
+    plt.show()
+    plt.imshow(d_vis)
+    plt.show()
+

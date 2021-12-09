@@ -1,8 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from scipy.special import j1
 
-from modelling import Model, timeit, set_size, set_uvcoords
+from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, mas2rad
 
 
 class UniformDisk(Model):
@@ -13,9 +14,8 @@ class UniformDisk(Model):
     Attributes
     ----------
     size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
+        The size of the array that defines x, y-axis and constitutes the radius.
+        The units are in radians.
     step: float
         The stepsize for the np.array that constitutes the x, y-axis
     flux: float
@@ -35,7 +35,7 @@ class UniformDisk(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
+    def eval_model(self, size: int, diameter: float, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
         """Evaluates the model
 
         Returns
@@ -43,9 +43,14 @@ class UniformDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        radius = set_size(size, step, centre)
+        # Converts the mas to radians
+        diameter = np.radians(diameter/3.6e6)
 
-        return np.array([[4*flux/(np.pi*(major**2)) if j <= major//2 else 0 for j in i] for i in radius])
+        output_lst = np.zeros((size, size))
+        radius, theta =  set_size(size, step, centre)
+
+        output_lst[radius <= diameter/2] = 4*flux/(np.pi*diameter**2)
+        return output_lst
 
     @timeit
     def eval_vis(self, major: int) -> np.array:
@@ -61,3 +66,11 @@ class UniformDisk(Model):
 
         return 2*j1(factor)/factor
 
+if __name__ == "__main__":
+    u = UniformDisk()
+    u_model = u.eval_model(512, 251.6)
+    # u_vis = u.eval_vis(0.1)
+    plt.imshow(u_model)
+    plt.show()
+    # plt.imshow(u_vis)
+    # plt.show()

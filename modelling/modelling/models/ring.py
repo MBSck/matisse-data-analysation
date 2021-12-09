@@ -31,7 +31,7 @@ class Ring(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, major: int, inc_angle: int = 0, step: int = 1, centre: bool = None) -> np.array:
+    def eval_model(self, size: int, major: int, step: int = 1, centre: bool = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Returns
@@ -60,7 +60,7 @@ class Ring(Model):
         return j0(2*np.pi*major*B)
 
     @timeit
-    def eval_numerical(self, size: int, outer_radius: int, inner_radius: int = None, inc_angle: int = 0, pos_angle_axis: int = 0, pos_angle_ellipsis: int = 0, centre: bool = None) -> np.array:
+    def eval_numerical(self, size: int, outer_radius: int, inner_radius: int = None, inc_angle: int = 0, pos_angle_axis: int = 0, pos_angle_ellipsis: int = 0, centre: bool = None, inclined: bool = False) -> np.array:
         """Numerically evaluates the ring model"""
         x = np.arange(0, size)
         y = x[:, np.newaxis]
@@ -75,11 +75,15 @@ class Ring(Model):
 
         # Calculates the radius from the centre and adds rotation to it
         xc, yc = x-x0, y-y0
-        a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
-        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
-                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
 
-        radius = np.sqrt(ar**2+br**2*np.cos(inc_angle))
+        if inclined:
+            a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
+            ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                    a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+
+            radius = np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)
+        else:
+            radius = np.sqrt(xc**2+yc**2)
 
         # Gets the boundaries of the resulting ellipsis
         radius[radius > outer_radius] = 0.
@@ -91,9 +95,16 @@ class Ring(Model):
         return radius
 
 if __name__ == "__main__":
-    ri = Ring()
-    for i in range(10, 90, 5):
-        inclined_ring =  ri.eval_numerical(512, 50, inc_angle=i, pos_angle_axis=45, pos_angle_ellipsis=45)
-        plt.imshow(inclined_ring)
-        plt.show()
+    r = Ring()
+    # for i in range(10, 90, 5):
+    #     inclined_ring =  r.eval_numerical(512, 50, inc_angle=i, pos_angle_axis=45, pos_angle_ellipsis=45, inclined=True)
+    #     plt.imshow(inclined_ring)
+    #     plt.show()
+
+    r_model = r.eval_model(512, 50)
+    r_vis = r.eval_vis(0.1)
+    plt.imshow(r_model)
+    plt.show()
+    plt.imshow(r_vis)
+    plt.show()
 

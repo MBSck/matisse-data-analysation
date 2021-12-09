@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
 
@@ -50,7 +51,14 @@ class Gauss2D(Model):
             Two dimensional array that can be plotted with plt.imread()
         """
         B = set_uvcoords()
-        print(B)
 
         return np.exp(-((np.pi*major*B)**2/(4*np.log(2))))
 
+if __name__ == "__main__":
+    g = Gauss2D()
+    g_model = g.eval_model(0.01, 150)
+    g_vis = g.eval_vis(0.01)
+    plt.imshow(g_model)
+    plt.show()
+    plt.imshow(g_vis)
+    plt.show()

@@ -41,9 +41,15 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
+def mas2rad(angle: Union[int, float] = None):
+    """Gets mas/rad"""
+    if angle is None:
+        return np.deg2rad(1/3.6e6)
+    return np.deg2rad(angle/3.6e6)
+
 def set_size(size: int, step: int,  centre: bool = None) -> np.array:
     """
-    Sets the size of the model and its centre
+    Sets the size of the model and its centre. Returns the polar coordinates
 
     Parameters
     ----------
@@ -58,6 +64,8 @@ def set_size(size: int, step: int,  centre: bool = None) -> np.array:
     -------
     radius: np.array
         The radius of the object
+    theta: np.array
+        The angle
     """
     x = np.arange(0, size, step)
     y = x[:, np.newaxis]
@@ -68,7 +76,16 @@ def set_size(size: int, step: int,  centre: bool = None) -> np.array:
         x0 = centre[0]
         y0 = centre[1]
 
-    return np.sqrt((x-x0)**2 + (y-y0)**2).astype(int)
+    xc, yc = (x-x0), (y-y0)
+
+    radius = np.sqrt(xc**2+yc**2)*mas2rad()
+
+    with np.errstate(divide='ignore'):
+        theta = np.arctan(x/y)
+
+    theta[np.isnan(theta)] = 0
+
+    return radius, theta
 
 def set_uvcoords() -> np.array:
     """Sets the uv coords for visibility modelling
@@ -108,12 +125,13 @@ def temperature_gradient(radius: float, q: float, r_0: float, T_0: float):
         The temperature at a certain radius
     """
     try:
+        # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
         power_factor = (radius/r_0)**q
     except ZeroDivisionError:
         power_factor = radius**q
 
     # Remove the ZeroDivisionError -> Bodge
-    # TODO: Think of better way
+    # TODO: Think of better way to exist
     #  power_factor[power_factor == 0] = 1.
 
     return T_0/power_factor
@@ -258,9 +276,12 @@ class ReadoutFits:
 
 
 if __name__ == "__main__":
-    readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
+    # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
-    print(readout.get_uvcoords_vis2, "uvcoords")
-    readout.do_uv_plot(readout.get_uvcoords_vis2)
-    print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
+    # print(readout.get_uvcoords_vis2, "uvcoords")
+    # readout.do_uv_plot(readout.get_uvcoords_vis2)
+    # print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
+
+    radius, theta = set_size(512, 1, None)
+    print(radius, "radius", theta, "theta")
 

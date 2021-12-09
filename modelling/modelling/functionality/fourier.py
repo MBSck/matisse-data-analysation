@@ -55,7 +55,7 @@ class FFT:
 
         # Initiate the pipeline
         print(self.fft_pipeline())
- 
+
     def fft_pipeline(self) -> [float, np.array, float, float]:
         """A pipeline function that calls the functions of the FFT in order and
         avoids double calling of single functions"""

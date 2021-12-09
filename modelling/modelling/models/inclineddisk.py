@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+from scipy.special import j0
 
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
@@ -19,21 +22,13 @@ class InclinedDisk(Model):
     centre: bool
         The centre of the model, will be automatically set if not determined
     r_0: float
-        
     T_0: float
-        
     q: float
-        
     inc_angle: float
-        
     pos_angle_major: float
-        
     pos_angle_measurement: float
-        
     wavelength: float
-        
     distance: float
-        
 
     Methods
     -------
@@ -43,7 +38,7 @@ class InclinedDisk(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, q: float, r_0: int, T_0: int, wavelength: float, distance: int, inclination_angle: int, step: int = 1, centre: bool = None) -> np.array:
+    def eval_model(self, size: int, q: float, r_0: float, T_0: int, r: float, wavelength: float, distance: int, inc_angle: int, step: int = 1, centre: bool = None) -> np.array:
         """Evaluates the Model
 
         Parameters
@@ -63,23 +58,20 @@ class InclinedDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        # Temperature gradient should be like 0.66, 0.65 or sth
         radius = set_size(size, step, centre)
         flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
-        factor = (2*np.pi/distance)*np.cos(inclination_angle)
 
-        # Sets the min radius r_0
-        radius[radius <= r_0] = 1
+        # Sets the min radius r_0 and max radius r
+        radius[radius < r_0] = 0
+        radius[radius > r] = 0
 
-        try:
-            result = factor*flux*radius
-        except ZeroDivisionError:
-            result = factor*flux
+        result = (2*np.pi*np.cos(inc_angle)*radius*flux)/distance
+        print(result)
 
         return result
 
     @timeit
-    def eval_vis(self) -> np.array:
+    def eval_vis(self, radius: float, q: float, r_0: float, T_0: int, wavelength: float, distance: int, inc_angle: int, pos_angle_axis: int, pos_angle_measure: int) -> np.array:
         """Evaluates the visibilities of the model
 
         Returns
@@ -87,17 +79,27 @@ class InclinedDisk(Model):
         np.array
             Two dimensional array that can be plotted with plt.imread()
         """
-        self.B = set_uvcoords()
-        self.Bu, self.Bv = self.B*np.sin(self.pos_angle_measure), self.B*np.cos(self.pos_angle_measure)     # Baselines projected according to their orientation
+        B = set_uvcoords()
+        # The ellipsis
+        Bu, Bv = B*np.sin(pos_angle_measure), B*np.cos(pos_angle_measure)
 
-        # Baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
-        self.Buth, self.Bvth = self.Bu*np.sin(self.pos_angle_major)+self.Bv*np.cos(self.pos_angle_major), \
-        self.Bu*np.cos(self.pos_angle_major)-self.Bv*np.sin(self.pos_angle_major)
-        self.B_proj = np.sqrt(self.Buth**2+(self.Bvth**2)*np.cos(self.inc_angle)**2)                        # Projected Baseline
+        # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta taken into account 
+        Buth, Bvth = Bu*np.sin(pos_angle_axis)+Bv*np.cos(pos_angle_axis), \
+                Bu*np.cos(pos_angle_axis)-Bv*np.sin(pos_angle_axis)
+        B_proj = np.sqrt(Buth**2+Bvth**2*np.cos(inc_angle)**2)
+
+        total_null_flux = self.eval_model(512, q, r_0, T_0, wavelength, distance, 0)
+
+        return (1/total_null_flux)*blackbody_spec(radius, q, r_0, T_0, wavelength)*j0(2*np.pi*radius*B_proj)*(radius/distance)
 
 
-        return (1/self.eval_model(0))*self.blackbody_spec(radius)
+if __name__ == "__main__":
+    i = InclinedDisk()
+    for inc in range(5, 90, 5):
+        i_model = i.eval_model(size=512, q=0.55, r_0=100, r=150, T_0=6000, wavelength=8e-06, distance=1, inc_angle=inc)
+        plt.imshow(i_model)
+        plt.show()
 
-
-if __name__ = "__main__":
-    ...
+    # i_vis = i.eval_vis(radius=0.25, q=0.55, r_0=0.01, T_0=6000, wavelength=8e-06, distance=1, inc_angle=60, pos_angle_axis=45, pos_angle_measure=45)
+    # plt.imshow(i_vis)
+    # plt.show()
