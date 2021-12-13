@@ -1,29 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from typing import Optional
+
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
 
 class OpticallyThinSphere(Model):
     """Optically Thin Sphere model
 
     ...
-
-    Attributes
-    ----------
-    size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
-    step: float
-        The stepsize for the np.array that constitutes the x, y-axis
-    flux: float
-        The flux of the system
-    RA
-        The right ascension of the system
-    DEC
-        The declination of the system
-    center
-        The center of the model, will be automatically set if not determined
 
     Methods
     -------
@@ -33,37 +18,68 @@ class OpticallyThinSphere(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
+    def eval_model(self, size: int, diameter: int, sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
         """Evaluates the model
+
+        Parameters
+        ----------
+        size: int
+            The size of the model image
+        diameter: int
+            The diameter of the sphere
+        sampling: int | None
+            The sampling of the object-plane
+        flux: float
+            The flux of the object
+        centre: int | None
+            The centre of the model image
 
         Returns
         --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        radius = set_size(size, step, centre)
+        model: np.array
 
-        return np.array([[(6*flux/(np.pi*(major**2)))*np.sqrt(1-(2*j/major)**2) if j <= major//2 else 0 for j in i] for i in radius])
+        See also
+        --------
+        set_size()
+        """
+        diameter = np.radians(diameter/3.6e6)
+        radius = set_size(size, sampling, centre)
+
+        return np.array([[(6*flux/(np.pi*(diameter**2)))*np.sqrt(1-(2*j/diameter)**2) if j <= diameter/2 else 0 for j in i] for i in radius])
 
     @timeit
-    def eval_vis(self, major: int) -> np.array:
+    def eval_vis(self, sampling: int, diameter: int, wavelength: float) -> np.array:
         """Evaluates the visibilities of the model
+
+        Parameters
+        ---------
+        sampling: int
+            The sampling of the uv-plane
+        diameter: int
+            The diameter of the sphere
+        wavelength: float
+            The sampling wavelength
 
         Returns
         -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        B = set_uvcoords()
+        visibility: np.array
 
-        return (3/(np.pi*major*B)**3)*(np.sin(np.pi*major*B)-np.pi*major*B*np.cos(np.pi*major*B))
+        See also
+        --------
+        set_uvcoords()
+        """
+        diameter = np.radians(diameter/3.6e6)
+        B = set_uvcoords(sampling, wavelength)
+
+        return (3/(np.pi*diameter*B)**3)*(np.sin(np.pi*diameter*B)-np.pi*diameter*B*np.cos(np.pi*diameter*B))
 
 if __name__ == "__main__":
     o = OpticallyThinSphere()
-    o_model = o.eval_model(512, 50)
-    o_vis = o.eval_vis(0.1)
+    o_model = o.eval_model(512, 256.1)
     plt.imshow(o_model)
     plt.show()
+
+    o_vis = o.eval_vis(512, 256.1, 8e-06)
     plt.imshow(o_vis)
     plt.show()
 

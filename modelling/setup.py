@@ -1,6 +1,6 @@
 from setuptools import setup
 setup(name='modelling',
-      version='0.1.0',
+      version='0.1.1',
       description='A package for visibility modelling',
       url='#',
       author='Marten Scheuck',

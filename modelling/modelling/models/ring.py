@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.special import j0
+from typing import Union, Optional
 
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, delta_fct
 
@@ -9,19 +10,6 @@ class Ring(Model):
     """Infinitesimal thin ring model
 
     ...
-
-    Attributes
-    ----------
-    size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
-    step: float
-        The stepsize for the np.array that constitutes the x, y-axis
-    inc_angle: int
-        The angle of the ring's i)nclination, defaults to 0.
-    centre
-        The centre of the model, will be automatically set if not determined
 
     Methods
     -------
@@ -31,42 +19,82 @@ class Ring(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, major: int, step: int = 1, centre: bool = None) -> np.array:
+    def eval_model(self, size: int, r_0: Union[int, float], sampling: Optional[int] = None, centre: Optional[bool] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
+
+        Parameters
+        ----------
+        size: int
+            The size of the model image
+        r_0: int | float
+            The radius of the ring
+        sampling: int | None
+            The sampling of the object-plane
+        centre: int | None
+            The centre of the model image
 
         Returns
         --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        radius = set_size(size, step, centre)
+        model: np.array
 
-        try:
-            return np.array([[delta_fct(j, major/2)/(np.pi*major) for j in i] for i in radius])
-        except ZeroDivisionError:
-            return np.array([[delta_fct(j, major/2)/(np.pi) for j in i] for i in radius])
+        See also
+        --------
+        set_size()
+        """
+        # TODO: Ring is 2 pixels thick, reduce to one?
+        output_lst = np.zeros((size, size))
+        r_0_temp = np.around(r_0*np.radians(1/3.6e6), decimals=8)
+        radius = np.around(set_size(size, sampling, centre), decimals=8)
+        output_lst[radius == r_0_temp] = 1/(2*np.pi*np.radians(r_0/3.6e6))
+        return output_lst
 
     @timeit
-    def eval_vis(self, major: int) -> np.array:
+    def eval_vis(self, sampling: int, r_0: Union[int, float], wavelength: float) -> np.array:
         """Evaluates the visibilities of the model
+
+        Parameters
+        ----------
+        sampling: int
+            The sampling of the uv-plane
+        r_0: int | float
+            The radius of the ring
+        wavelength: float
+            The sampling wavelength
 
         Returns
         -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        B = set_uvcoords()
+        visibility: np.array
 
-        return j0(2*np.pi*major*B)
+        See also
+        --------
+        set_uvcoords()
+        """
+        r_0 *= np.radians(1/3.6e6)
+        B = set_uvcoords(sampling, wavelength)
+
+        return j0(2*np.pi*r_0*B)
 
     @timeit
-    def eval_numerical(self, size: int, outer_radius: int, inner_radius: int = None, inc_angle: int = 0, pos_angle_axis: int = 0, pos_angle_ellipsis: int = 0, centre: bool = None, inclined: bool = False) -> np.array:
+    def eval_numerical(self, size: int, outer_radius: int, inner_radius: Optional[int] = None,
+                       inc_angle: int = 0, pos_angle_axis: int = 0, pos_angle_ellipsis: int = 0,
+                       sampling: Optional[int] = None, centre: bool = None, inclined: bool = False) -> np.array:
         """Numerically evaluates the ring model"""
-        x = np.arange(0, size)
+        # TODO: Check and apply correct unit conversions here
+        if (sampling is None) or (sampling < size):
+            sampling = size
+
+        x = np.linspace(0, size, sampling)
         y = x[:, np.newaxis]
-        inc_angle = np.radians(inc_angle)
-        pos_angle_axis = np.radians(pos_angle_axis)
-        pos_angle_measure = np.radians(pos_angle_ellipsis)
+
+        # scaling
+        scaling = np.radians(1/3.6e6)
+
+        # Set angles to radians
+        if inner_radius is not None:
+            inner_radius *= scaling
+        inc_angle *= np.radians(1)
+        pos_angle_axis *= np.radians(1)
+        pos_angle_ellipsis *= np.radians(1)
 
         if centre is None:
             x0 = y0 = size//2
@@ -92,6 +120,8 @@ class Ring(Model):
         else:
             radius[radius < inner_radius] = 0.
 
+        radius *= scaling
+
         return radius
 
 if __name__ == "__main__":
@@ -101,10 +131,15 @@ if __name__ == "__main__":
     #     plt.imshow(inclined_ring)
     #     plt.show()
 
-    r_model = r.eval_model(512, 50)
-    r_vis = r.eval_vis(0.1)
+    r_model = r.eval_model(512, 10)
     plt.imshow(r_model)
     plt.show()
+
+    r_vis = r.eval_vis(512, 10, 8e-06)
     plt.imshow(r_vis)
+    plt.show()
+
+    r_num = r.eval_numerical(512, 10)
+    plt.imshow(r_num)
     plt.show()
 

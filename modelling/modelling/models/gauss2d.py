@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from typing import Union, Optional
+
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
 
 class Gauss2D(Model):
@@ -10,18 +12,7 @@ class Gauss2D(Model):
 
     Attributes
     ----------
-    size: int
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: int
-        The major determines the radius/cutoff of the model
-    step: int
-        The stepsize for the np.array that constitutes the x, y-axis
-    flux: float
-        The flux of the system
-    centre
-        The centre of the model, will be automatically set if not determined
-
-    Methods
+        Methods
     -------
     eval_model():
         Evaluates the model
@@ -29,36 +20,67 @@ class Gauss2D(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, major: int, step: int = 1, flux: float = 1., centre: bool = None) -> np.array:
+    def eval_model(self, size: int, fwhm: Union[int, float], sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
         """Evaluates the model
+
+        Parameters
+        ----------
+        size: int
+            The size of the model image
+        fwhm: int | float
+            The fwhm of the gaussian
+        sampling: int | None
+            The sampling of the object-plane
+        flux: float
+            The flux of the object
+        centre: int | None
+            The centre of the model image
 
         Returns
         --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
+        model: np.array
+
+        See also
+        --------
+        set_size()
         """
-        radius = set_size(size, step, centre)
-        return (flux/np.sqrt(np.pi/(4*np.log(2)*major)))*(np.exp(-4*np.log(2)*(radius**2)/(major**2)))
+        fwhm = np.radians(fwhm/3.6e6)
+        radius = set_size(size, sampling, centre)
+
+        return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
 
     @timeit
-    def eval_vis(self, major: int) -> np.array:
-        # TODO: Somehow relate the visibilites to the real actual model analytically -> Same major
+    def eval_vis(self, sampling: int, fwhm: Union[int, float], wavelength: float) -> np.array:
         """Evaluates the visibilities of the model
+
+        Parameters
+        ----------
+        sampling: int
+            The sampling of the uv-plane
+        fwhm: int | float
+            The diameter of the sphere
+        wavelength: int
+            The sampling wavelength
 
         Returns
         -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        B = set_uvcoords()
+        visibility: np.array
 
-        return np.exp(-((np.pi*major*B)**2/(4*np.log(2))))
+        See also
+        --------
+        set_uvcoords()
+        """
+        B = set_uvcoords(sampling, wavelength)
+        fwhm = np.radians(fwhm/3.6e6)
+
+        return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model(0.01, 150)
-    g_vis = g.eval_vis(0.01)
+    g_model = g.eval_model(512, 256.1)
     plt.imshow(g_model)
     plt.show()
+
+    g_vis = g.eval_vis(512, 256.1, 8e-06)
     plt.imshow(g_vis)
     plt.show()

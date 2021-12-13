@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.special import j0
+from typing import Union, Optional
 
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
@@ -11,25 +12,6 @@ class InclinedDisk(Model):
 
     ...
 
-    Attributes
-    ----------
-    size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    major: float
-        The major determines the radius/cutoff of the model
-    step: float
-        The stepsize for the np.array that constitutes the x, y-axis
-    centre: bool
-        The centre of the model, will be automatically set if not determined
-    r_0: float
-    T_0: float
-    q: float
-    inc_angle: float
-    pos_angle_major: float
-    pos_angle_measurement: float
-    wavelength: float
-    distance: float
-
     Methods
     -------
     eval_model():
@@ -37,49 +19,98 @@ class InclinedDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
+
+    def __init__(self):
+        self.scaling = np.radians(1/3.6e6)
+
     @timeit
-    def eval_model(self, size: int, q: float, r_0: float, T_0: int, r: float, wavelength: float, distance: int, inc_angle: int, step: int = 1, centre: bool = None) -> np.array:
+    def eval_model(self, size: int, r_max: Union[int, float], r_0: Union[int, float], T_0: int, q: float,
+                   wavelength: float, distance: int, inc_angle: int, sampling: Optional[int] = None,
+                   centre: Optional[int] = None) -> np.array:
         """Evaluates the Model
 
         Parameters
         ----------
         size: int
+            The size of the model image
+        r_max: int | float
+            The cutoff radius of the inclined disk
+        r_0: int | float
+            The inital radius of the inclined disk
+        T_0: int
+            The temperature at the initial radius r_0
         q: float
-        r_0: float
-        T_0: float
+            The temperature gradient
         wavelength: float
+            The sampling wavelength
         distance: float
+            The object's distance from the observer
         inc_angle: float
-        step: int
-        centre: bool
+            The inclination angle of the disk
+        sampling: int | None
+            The sampling of the object-plane
+        centre: int | None
+            The centre of the model image
 
         Returns
         --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
+        model: np.array
+
+        See also
+        --------
+        set_size()
         """
-        radius = set_size(size, step, centre)
-        flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
+        radius = set_size(size, sampling, centre)
+        r_0, r_max = map(lambda x: x*self.scaling, [r_0, r_max])
+        inc_angle = np.radians(inc_angle)
 
-        # Sets the min radius r_0 and max radius r
-        radius[radius < r_0] = 0
-        radius[radius > r] = 0
+        flux = blackbody_spec(r_max, q, r_0, T_0, wavelength)
 
-        result = (2*np.pi*np.cos(inc_angle)*radius*flux)/distance
-        print(result)
+        output_lst = ((2*np.pi*radius*flux)/distance**2)*np.cos(inc_angle)
+        output_lst[radius < r_0] = 0
+        output_lst[radius > r_max] = 0
 
-        return result
+        return output_lst
 
     @timeit
-    def eval_vis(self, radius: float, q: float, r_0: float, T_0: int, wavelength: float, distance: int, inc_angle: int, pos_angle_axis: int, pos_angle_measure: int) -> np.array:
+    def eval_vis(self, sampling: int, radius: int, q: float, r_0: Union[int, float],
+                 T_0: int, wavelength: float, distance: int, inc_angle: int,
+                 pos_angle_axis: int, pos_angle_measure: int) -> np.array:
         """Evaluates the visibilities of the model
+
+        Parameters
+        ----------
+        sampling: int
+            The sampling of the uv-plane
+        radius: int
+            The radius of the inclined disk
+        r_0: int | float
+            The inital radius of the inclined disk
+        T_0: int
+            The temperature at the initial radius r_0
+        wavelength: float
+            The sampling wavelength
+        distance: int
+            The object's distance from the observer
+        inc_angle: int
+            The inclination angle of the disk
+        pos_angle_axis: int
+        pos_angle_measurement: int
 
         Returns
         -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
+        visibility: np.array
+
+        See also
+        --------
+        set_uvcoords()
         """
-        B = set_uvcoords()
+        B = set_uvcoords(sampling, wavelength)
+
+        # Convert angle to radians
+        radius, r_0 =  map(lambda x: x*self.scaling, [radius, r_0])
+        inc_angle, pos_angle_axis, pos_angle_measure = map(lambda x: np.radians(x), [inc_angle, pos_angle_axis, pos_angle_measure])
+
         # The ellipsis
         Bu, Bv = B*np.sin(pos_angle_measure), B*np.cos(pos_angle_measure)
 
@@ -88,18 +119,20 @@ class InclinedDisk(Model):
                 Bu*np.cos(pos_angle_axis)-Bv*np.sin(pos_angle_axis)
         B_proj = np.sqrt(Buth**2+Bvth**2*np.cos(inc_angle)**2)
 
-        total_null_flux = self.eval_model(512, q, r_0, T_0, wavelength, distance, 0)
+        total_flux = self.eval_model(sampling, q, r_0, T_0, wavelength, distance, inc_angle=0)
 
-        return (1/total_null_flux)*blackbody_spec(radius, q, r_0, T_0, wavelength)*j0(2*np.pi*radius*B_proj)*(radius/distance)
+        return (1/total_flux)*blackbody_spec(radius, q, r_0, T_0, wavelength)*j0(2*np.pi*radius*B_proj)*(radius/distance)
 
 
 if __name__ == "__main__":
     i = InclinedDisk()
-    for inc in range(5, 90, 5):
-        i_model = i.eval_model(size=512, q=0.55, r_0=100, r=150, T_0=6000, wavelength=8e-06, distance=1, inc_angle=inc)
+    for inc in range(5, 45, 5):
+        i_model = i.eval_model(1024, 256.1, 10, 6000, 0.55, 8e-06, 1, inc)
         plt.imshow(i_model)
         plt.show()
 
-    # i_vis = i.eval_vis(radius=0.25, q=0.55, r_0=0.01, T_0=6000, wavelength=8e-06, distance=1, inc_angle=60, pos_angle_axis=45, pos_angle_measure=45)
-    # plt.imshow(i_vis)
-    # plt.show()
+    '''
+    i_vis = i.eval_vis(radius=256.1, q=0.55, r_0=10, T_0=6000, sampling=512, wavelength=8e-06, distance=1, inc_angle=60, pos_angle_axis=45, pos_angle_measure=45)
+    plt.imshow(i_vis)
+    plt.show()
+    '''

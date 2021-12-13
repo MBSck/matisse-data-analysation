@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import time
 
 from abc import ABCMeta, abstractmethod
-from typing import Union
+from typing import Union, Optional
 from astropy.io import fits
 from functools import wraps
 
@@ -41,33 +41,56 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
-def mas2rad(angle: Union[int, float] = None):
-    """Gets mas/rad"""
+def compare_arrays(array1: np.array, array2: np.array,
+                   rtol: Union[int, float] = 1e-05, atol: Union[int, float] = 1e-08) -> [np.array, np.array]:
+    """Compares two arrays for their differences in value and also if they are equal in a certain tolerance
+
+    Parameters
+    ----------
+    array1: np.array
+    array2: np.array
+    rtol: int | float
+        relative tolerance of difference
+    atol: int | float
+        absolute tolerance of difference
+
+    Returns
+    -------
+    np.array
+        The numerical difference between the arrays
+    np.array
+        An array of booleans that contain True/False if their difference is within a certain tolerance
+    """
+    return array1-array2, np.isclose(array1, array2, rtol=rtol, atol=atol)
+
+def mas2rad(angle: Optional[Union[int, float]] = None):
+    """Returns a given angle in mas/rad or the pertaining scaling factor"""
     if angle is None:
         return np.deg2rad(1/3.6e6)
     return np.deg2rad(angle/3.6e6)
 
-def set_size(size: int, step: int,  centre: bool = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
     Parameters
     ----------
     size: int
-        Sets the size of the model image and implicitly the x-, y-axis
-    step: int
-        The step size of the np.arange, that defines the axes
+        Sets the size of the model image and implicitly the x-, y-axis.
+        Size change for simple models functions like zero-padding
+    sampling: int
+        The sampling of the object-plane
     centre: bool
         A set centre of the object. Will be set automatically if default 'None' is kept
 
     Returns
     -------
     radius: np.array
-        The radius of the object
-    theta: np.array
-        The angle
     """
-    x = np.arange(0, size, step)
+    if (sampling is None) or (sampling < size):
+        sampling = size
+
+    x = np.linspace(0, size, sampling)
     y = x[:, np.newaxis]
 
     if centre is None:
@@ -78,35 +101,35 @@ def set_size(size: int, step: int,  centre: bool = None) -> np.array:
 
     xc, yc = (x-x0), (y-y0)
 
-    radius = np.sqrt(xc**2+yc**2)*mas2rad()
+    return np.sqrt(xc**2+yc**2)*mas2rad()
 
-    with np.errstate(divide='ignore'):
-        theta = np.arctan(x/y)
-
-    theta[np.isnan(theta)] = 0
-
-    return radius, theta
-
-def set_uvcoords() -> np.array:
+def set_uvcoords(sampling: int, wavelength: float) -> np.array:
     """Sets the uv coords for visibility modelling
+
+    Parameters
+    ----------
+    sampling: int | float
+        The sampling of the (u,v)-plane
+    wavelength: float
+        The wavelength the (u,v)-plane is sampled at
 
     Returns
     -------
-    np.array
-        Visibility axis
+    baseline: np.array
     """
-    u = np.arange(-150, 150)
-    v = u[:, np.newaxis]
+    if sampling < 300:
+        sampling = 300
 
-    B = np.sqrt(u**2+v**2).astype(int)
+    # TODO: Fit the u,v sampling to the ft arrays
+    B = np.linspace(-150, 150, sampling)
 
-    # Avoid ZeroDivisionError
-    # B[B == 0] == 1
+    # Star overhead sin(theta_0)=1
+    u, v = B/wavelength, B[:, np.newaxis]/wavelength
 
-    return B
+    return np.sqrt(u**2+v**2)
 
-def temperature_gradient(radius: float, q: float, r_0: float, T_0: float):
-    """Temperature gradient model determined by power-law distribution. 
+def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
+    """Temperature gradient model determined by power-law distribution.
 
     Parameters
     ----------
@@ -136,7 +159,7 @@ def temperature_gradient(radius: float, q: float, r_0: float, T_0: float):
 
     return T_0/power_factor
 
-def blackbody_spec(radius: float, q: float, r_0: float, T_0: float, wavelength: float):
+def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wavelength: float):
     """Gets the blackbody spectrum at a certain T(r). Per Ring wavelength and temperature dependent
 
     Parameters
@@ -282,6 +305,12 @@ if __name__ == "__main__":
     # readout.do_uv_plot(readout.get_uvcoords_vis2)
     # print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
 
-    radius, theta = set_size(512, 1, None)
-    print(radius, "radius", theta, "theta")
+    # radius= set_size(512, 1, None)
+    # print(radius, "radius", theta, "theta")
+
+    B = set_uvcoords(512, 8e-06)
+    print(B)
+    radius = set_size(512)
+    r = set_size(512, 5)
+    print(radius, radius.shape, "----", r, r.shape)
 

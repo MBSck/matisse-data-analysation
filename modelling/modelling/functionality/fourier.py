@@ -26,35 +26,30 @@ class FFT:
     ----------
 
     """
-    # TODO: Check how the 'step_size_fft' changes the scaling
     # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
     # TODO: Remove staticmethods and make them outside of class
-    # TODO: Rename variables to make them clearer
     # TODO: Change euclidean distance to interpolation in order to get coordinates
-    def __init__(self, input_array: np.array, fits_file_path: Path[str], wavelength: float = 8e-6, step_size_fft: float = 1., greyscale: bool = False) -> None:
-        self.img_array = input_array                                                # Evaluates the model
-        self.img_size = len(self.img_array)                                         # Gets the size of the model's image
+    def __init__(self, model: np.array, set_size: int, fits_file_path: Path[str], wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
+        self.model= model                                                           # Evaluates the model
+        self.model_size = len(self.model)                                           # Gets the size of the model's image
 
-        self.readout = ReadoutFits(fits_file_path)                                  # Initializes the readout for '.fits'-files
+        # Initializes the readout for '.fits'-files
+        self.readout = ReadoutFits(fits_file_path)
 
 
         # General variables
-        self.fftfreq = fft.fftfreq(self.img_size, d=step_size_fft)                  # x-axis of the FFT corresponding to px/img_size
+        self.set_size = set_size
+        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)                # x-axis of the FFT corresponding to px/img_size
         self.min_freq, self.max_freq = np.min(self.fftfreq), np.max(self.fftfreq)   # x-axis lower and upper boundaries
-        self.roll = np.floor(self.img_size/2).astype(int)                           # Gets half the pictures size as int
+        self.roll = np.floor(self.model_size/2).astype(int)                         # Gets half the pictures size as int
         self.freq = np.roll(self.fftfreq, self.roll, axis=0)                        # Rolls 0th-freq to centre
         self.fftscale = np.diff(self.freq)[0]                                       # cycles/mas per px in FFT img
 
         self.uvcoords = self.readout.get_uvcoords_vis2                              # Gets the uvcoords of vis2
         self.wavelength = wavelength                                                # The set wavelength for scaling
 
-        # self.name = type(img_array).__name__                                        # Gets the classes name for naming the plots
-
         # Conversion units
         self.mas2rad = np.deg2rad(1/3.6e6) # mas per rad
-
-        # Initiate the pipeline
-        print(self.fft_pipeline())
 
     def fft_pipeline(self) -> [float, np.array, float, float]:
         """A pipeline function that calls the functions of the FFT in order and
@@ -65,25 +60,39 @@ class FFT:
         uv_ind = self.correspond_fft2freq(rescaled_uvcoords)
         self.do_plot(ft, rescaled_uvcoords)
         fft_value = FFT.get_fft_values(ft, uv_ind)
-        return fft_value, FFT.get_ft_amp_phase(fft_value), uv_ind, rescaling_factor
+        ft = self.zoom_fft2(ft, self.set_size)
+        return ft, fft_value, FFT.get_ft_amp_phase(fft_value), uv_ind, rescaling_factor
 
     @timeit
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT"""
-        return fft.fftshift(fft.fft2(fft.ifftshift(self.img_array)))
+        return fft.fftshift(fft.fft2(fft.ifftshift(self.model)))
 
     @timeit
     def do_ifft2(self) -> np.array:
         """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
-        return fft.fftshift(fft.ifft2(fft.fftshift(self.img_array))).real
+        return fft.fftshift(fft.ifft2(fft.fftshift(self.model))).real
+
+    def zoom_fft2(self, ft: np.array, set_size: int):
+        """This zooms the FFT in after zero-padding"""
+        print(ft, ft.shape)
+        ind_low_start, ind_low_end = 0, set_size//2
+        ind_high_start, ind_high_end = set_size//2,
+        ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 0))
+        ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 1))
+        ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 0))
+        ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 1))
+        print(ft, ft.shape)
+        return ft
+
 
     def get_scaling_px2metr(self) -> float:
         """Calculates the frequency scaling from an input image/model and returns it in meters baseline per pixel"""
-        return (self.fftscale/self.mas2rad) * self.wavelength
+        return (self.fftscale/self.mas2rad)*self.wavelength
 
     def rescale_uvcoords(self, uvcoords: np.array) -> np.array:
         """Rescaled the uv-coords with the scaling factor and the max image size"""
-        return uvcoords/(self.get_scaling_px2metr()*self.img_size)
+        return uvcoords/(self.get_scaling_px2metr()*self.model_size)
 
     def distance(self, uvcoords: np.array) -> np.array:
         """Calculates the norm for a point. Takes the freq and checks both the u and v coords against it
@@ -122,9 +131,9 @@ class FFT:
     def do_plot(self, ft: np.array, uvcoords: np.array) -> None:
         """Makes simple plots in the form of two subplots of the image before and after Fourier transformation"""
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
-        ax1.imshow(self.img_array)
+        ax1.imshow(self.model)
         ax1.set_title(f"Model")
-        ax1.set_xlabel(f"resolution [px] {self.img_size}")
+        ax1.set_xlabel(f"resolution [px] {self.model_size}")
         ax1.axes.get_xaxis().set_ticks([])
         ax1.axes.get_yaxis().set_ticks([])
 

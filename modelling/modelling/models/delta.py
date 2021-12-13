@@ -8,15 +8,6 @@ class Delta(Model):
 
     ...
 
-    Attributes
-    ----------
-    size: float
-        The size of the array that defines x, y-axis and constitutes the radius
-    step: float
-        The stepsize for the np.array that constitutes the x, y-axis
-    flux: float
-        The flux of the system
-
     Methods
     -------
     eval_model():
@@ -25,33 +16,49 @@ class Delta(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, step: int = 1, flux: float = 1.) -> np.array:
+    def eval_model(self, size: int, flux: float = 1.) -> np.array:
         """Evaluates the model
+
+        Parameters
+        ----------
+        size: int
+            The size of the model image
+        flux: float | None
+            The flux of the object
 
         Returns
         --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
+        model: np.array
         """
-        return np.array([[0. for j in range(size)] if not i == size//2 else [0. if not j == size//2 else 1.*flux for j in range(size)] for i in range(size)])
+        output_array = np.zeros((size, size))
+        output_array[size//2, size//2] = flux
+
+        return output_array
 
     @timeit
-    def eval_vis(self, size: int, flux: float = 1.) -> np.array:
+    def eval_vis(self, sampling: int, flux: float = 1.) -> np.array:
         """Evaluates the visibilities of the model
+
+        Parameters
+        ----------
+        sampling: int
+            The sampling of the uv-plane
+        flux: float
+            The flux of the object
 
         Returns
         -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
+        visibility: np.array
         """
-        return np.ones((size, size))*flux
+        return flux*np.ones((sampling, sampling))
 
 if __name__ == "__main__":
     d = Delta()
     d_model = d.eval_model(512)
-    d_vis = d.eval_vis(512)
     plt.imshow(d_model)
     plt.show()
+
+    d_vis = d.eval_vis(512)
     plt.imshow(d_vis)
     plt.show()
 

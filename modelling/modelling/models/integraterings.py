@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from typing import Optional
+
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
 
@@ -37,91 +39,62 @@ class IntegrateRings:
     rimmed_disk():
         ...
     """
-    def add_rings(self, size, min_radius: int, max_radius: int, step_size: int,
-                  q: float, T_0: int, wavelength: float, do_flux: bool = True,
-                  optical_depth: float = 1., inc_angle: int = 0, pos_angle_axis: int = 0,
-                  pos_angle_ellipsis: int = 0, inclined: bool = False) -> None:
-        """This adds the rings up to various models"""
-        # TODO: Make this more performant -> Super slow
+    def integrate_rings(self, size: int, min_radius: int, max_radius: int, q: float, T_0: int, wavelength: float,
+                        sampling: Optional[int] = None, optical_depth: float = 1., centre: Optional[int] = None) -> np.array:
+        """This adds the ring's analytical model up to various models
 
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        See also
+        --------
+        """
+        # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((size, size))
-        # Check if flux should be added to disk
-        if do_flux:
-            for i in range(min_radius+1, max_radius+2, step_size):
-                # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
-                # Get the flux
-                flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
-                # Get a single ring
-                ring_array = Ring().eval_numerical(size, i, inc_angle=inc_angle, pos_angle_axis=pos_angle_axis, pos_angle_ellipsis=pos_angle_ellipsis, inclined=inclined)
-                # Set the indices of the list to their value
-                output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
-        else:
-            for i in range(min_radius+1, max_radius+2, step_size):
-                ring_array = Ring().eval_numerical(size, i, inc_angle=inc_angle, pos_angle_axis=pos_angle_axis, pos_angle_ellipsis=pos_angle_ellipsis, inclined=inclined)
-                output_lst[np.where(ring_array > 0)] = 1/(np.pi*max_radius)
+
+        if sampling is None:
+            sampling = size
+
+        for i in np.linspace(min_radius+1, max_radius+2, sampling):
+            # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
+            flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
+            ring_array = Ring().eval_model(size, i, sampling, centre)
+            output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
 
         return output_lst
 
-    @timeit
-    def uniformly_bright_disk(self, size: int, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
-        """Calls the add_rings2D() function with the right parameters to create a uniform disk
+    def integrate_rings_vis(self, sampling: int, min_radius: int, max_radius: int, q: float, T_0: int,
+                            wavelength: float, step_size: int = 1, optical_depth: float = 1.) -> np.array:
+        """This adds the ring's analytical visibility up to various models
+
+        Parameters
+        ----------
+
+        Returns
+        -------
 
         See also
         --------
-        add_rings()
         """
-        return self.add_rings(size, 0, radius, step_size, q, T_0, wavelength, do_flux=False)
+        # TODO: Make this more performant -> Super slow
+        output_lst = np.zeros((sampling, sampling))
 
+        for i in np.linspace(min_radius+1, max_radius+2, sampling):
+            # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
+            flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
+            ring_array = (Ring().eval_vis(sampling, i, wavelength))*flux
+            output_lst += ring_array
 
-    @timeit
-    def optically_thin_disk(self, size: int, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
-        """Calls the add_rings2D() function with the right parameters to create a uniform disk
+        return output_lst
 
-        See also
-        --------
-        add_rings()
-        """
-        return self.add_rings(size, 0, radius, step_size, q, T_0, wavelength, optical_depth=0.1)
-
-    @timeit
-    def optically_thick_disk(self, size: int, radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1) -> np.array:
-        """Calls the add_rings2D() function with the right parameters to create a uniform disk
-
-        See also
-        --------
-        add_rings()
-        """
-        return self.add_rings(size, 0, radius, step_size, q, T_0, wavelength, optical_depth=100.)
-
-
-    @timeit
-    def rimmed_disk(self, size: int, inner_radius: int, outer_radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1, do_flux: bool = True) -> np.array:
-        """Calls the add_rings2D() function with the right parameters to create a disk with a inner ring
-
-        See also
-        --------
-        add_rings()
-        """
-        return self.add_rings(size, inner_radius, outer_radius, step_size, q, T_0, wavelength, do_flux)
-
-    @timeit
-    def inclined_disk(self, size: int, inner_radius: int, outer_radius: int, wavelength: float = 8e-06, q: float = 0.55, T_0: float = 6000, step_size: int = 1, do_flux: bool = True) -> np.array:
-        """Calls the add_rings2D() function with the right parameters to create a disk with a inner ring
-
-        See also
-        --------
-        add_rings()
-        """
-        return self.add_rings(size, inner_radius, outer_radius, step_size, q, T_0, wavelength, inc_angle=60, pos_angle_axis=45, pos_angle_ellipsis=45, inclined=True)
 
 if __name__ == "__main__":
     integ = IntegrateRings()
-    plt.imshow(integ.inclined_disk(1024, 20, 50))
-    plt.show()
-    plt.imshow(integ.uniformly_bright_disk(1024, 50))
-    plt.show()
-    plt.imshow(integ.rimmed_disk(1024, 20, 50))
-    plt.show()
-    plt.imshow(integ.optically_thin_disk(1024, 50))
+    plt.imshow(integ.integrate_rings_vis(1024, 10, 265.1, 0.55, 6000, 8e-06))
     plt.show()
 
+    plt.imshow(integ.integrate_rings(1024, 10, 265.1, 0.55, 6000, 8e-06))
+    plt.show()
