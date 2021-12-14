@@ -6,9 +6,11 @@ FOLDER=calib_nband
 DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET/PRODUCTS/$FOLDER
 EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
 
+YLOWERVIS2=0.
+YUPPERVIS2=10.
 
 do_plot() {
-    python3 bcd_calibration.py $1 &&
+    python3 myplotter.py $1 $YLOWERVIS2 $YUPPERVIS2
 }
 
 for dir in $DATADIR/*/

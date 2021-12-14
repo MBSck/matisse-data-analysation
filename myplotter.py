@@ -156,9 +156,14 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         fx2.set_ylabel('v [m]')
         fx2.set_xlabel('u [m]')
 
-        # Plot visibility for one certain wavelength
-        xvals = wl[0]
-        ex2.plot(xvals, yvals, label="")
+        # Plot the mean visibility for one certain wavelength
+        mean_vis4wl = [np.mean(i[5:115]) for i in vis2data]
+        std_vis4wl = [np.std(i[5:115]) for i in vis2data]
+        baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(ucoord, vcoord)]
+        mean_lambda = round(np.mean(wl*1e06), 2)
+        ex2.errorbar(baseline_distances, mean_vis4wl, yerr=std_vis4wl, ls='None', fmt='o')
+        ex2.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
+        ex2.set_ylabel(r'$\bar{V}$')
 
         '''
         # Plots the squared visibility to the spatial frequency in Mlambda
