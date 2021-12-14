@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -14,7 +15,7 @@ mpl.rcParams['xtick.top']=True
 mpl.rcParams['ytick.direction']='in'
 mpl.rcParams['ytick.right']=True
 
-def compare_cphase_OO(fname: Path[str]) -> None:
+def compare_cphase_OO(fname: Path) -> None:
     hdu = fits.open(fname)
 
     cphase = hdu['oi_t3'].data['t3phi']
@@ -87,7 +88,7 @@ def spectral_binning(arr: np.array, binwidth: int = 1, phase: bool = False, err:
     return np.array(new_arr)#, np.array(new_err)
 
 
-def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> None:
+def cphase_calib(f1: Path, f2: Path, f3: Path, f4: Path) -> None:
     hdu1 = fits.open(f1)
 
     cphase1 = hdu1['oi_t3'].data['t3phi']
@@ -97,8 +98,8 @@ def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> 
     loops = hdu1['OI_T3'].data['sta_index']
     tel_names = hdu1[2].data['tel_name']
     sta_name = hdu1[2].data['sta_index']
-    all_tels = ['A0', 'B2', 'C0', 'D1']  + ['UT1', 'UT2', 'UT3', 'UT4']
-    all_stas = [1,  5, 13, 10] + [ 32,33,34,35]
+    all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']    # Different baseline-configurations short-, medium-, large AT, UT
+    all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                                          # 'sta_index'of telescopes
     telescopes = []
 
     hdu2 = fits.open(f2)
@@ -236,13 +237,17 @@ def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> 
     #plt.show()
     #plt.close()
 
+    # Creates folder for plots if it does not exist
+    if not os.path.isdir("../plots/bcd/"):
+        os.makedirs("../plots/bcd/")
+
     plt.savefig('../plots/bcd/%s.png'%(hdu1[0].header['eso tpl start'].replace(":","_") ))
-    #plt.show()
+    # plt.show()
     plt.close()
     return
 
 
-def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux: bool = False) -> None:
+def vis2_calib(f1: Path, f2: Path, f3: Path, f4: Path, cflux: bool = False) -> None:
     hdu1 = fits.open(f1)
 
     key = 'oi_vis2'
@@ -259,8 +264,8 @@ def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux
     loops = hdu1['OI_vis2'].data['sta_index']
     tel_names = hdu1[2].data['tel_name']
     sta_name = hdu1[2].data['sta_index']
-    all_tels = ['A0', 'B2', 'C0', 'D1']  + ['UT1', 'UT2', 'UT3', 'UT4'] 
-    all_stas = [1,  5, 13, 10] + [ 32,33,34,35]
+    all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']    # Different baseline-configurations short-, medium-, large AT, UT
+    all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                                          # 'sta_index'of telescopes
     telescopes = []
 
     hdu2 = fits.open(f2)
@@ -441,16 +446,20 @@ def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux
         ax.errorbar(wl*1e6, np.nanmedian(g, 0), yerr=np.nanstd(g, 0),ls='--', lw=2, zorder=2, color='k')
 
 
-    #plt.show()
+    # plt.show()
     plt.close()
 
-    #plt.savefig('../plots/bcd/%s.png'%(hdu1[0].header['eso tpl start'].replace(":","_") ))
-    #plt.show()
+    # Creates folder for plots if it does not exist
+    if not os.path.isdir("../plots/bcd/"):
+        os.makedirs("../plots/bcd/")
+
+    plt.savefig('../plots/bcd/%s.png'%(hdu1[0].header['eso tpl start'].replace(":","_") ))
+    # plt.show()
     plt.close()
     return
 
 
-def main(fdir: Path[str]) -> None:
+def main(fdir: Path) -> None:
     """
     files_oo = np.sort(glob(fdir+'/*out-out.fits'))
     files_ii = np.sort(glob(fdir+'/*in-in.fits'))

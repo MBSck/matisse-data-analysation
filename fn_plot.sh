@@ -7,15 +7,14 @@ DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET/PRODUCTS/
 EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
 
 
-do_bcd() {
+do_plot() {
     python3 bcd_calibration.py $1 &&
-    mv -f ../plots/ $1
 }
 
 for dir in $DATADIR/*/
 do
-    echo "Start BCD of ${dir}"
-    do_bcd $dir
+    echo "Start plotting of folder ${dir}"
+    do_plot $dir
 done
 
 exit 0

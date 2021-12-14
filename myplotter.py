@@ -3,6 +3,7 @@
 __author__ = "Jacob Isbell"
 
 import sys
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -17,16 +18,16 @@ def shell_main():
     This function's sole purpose is to enable the plotter to work in the shell
     """
     try:
-        script, dirname = sys.argv
+        script, dirname, vis_dim0, vis_dim1 = sys.argv
     except:
-        print("Usage: python3 myplotter.py /path/to/target/data/dir/")
+        print("Usage: python3 myplotter.py /path/to/target/data/dir/ vis_dim[0] vis_dim[1]")
         sys.exit(1)
 
-    do_plot(dirname=dirname, do_fit=True)
+    vis_dim = [float(vis_dim0), float(vis_dim1)]
+    do_plot(dirname=dirname, vis_dim=vis_dim, do_fit=False)
 
 def gaussian(spat_freq: np.array, D: float) -> np.array:
-    """
-    A gaussian fit described by the 0th-order Bessel function
+    """ A gaussian fit described by the 0th-order Bessel function
 
     Parameters
     ----------
@@ -42,8 +43,7 @@ def gaussian(spat_freq: np.array, D: float) -> np.array:
     return np.exp(-np.square(np.pi*D*spat_freq)/(4* np.log(2)))
 
 def airy(spat_freq: np.array, D: float) -> np.array:
-    """
-    An airy disk fit described by the 1st-order Bessel function
+    """An airy disk fit described by the 1st-order Bessel function
 
     Parameters
     ----------
@@ -59,9 +59,8 @@ def airy(spat_freq: np.array, D: float) -> np.array:
     radial_dist = spat_freq*D
     return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
 
-def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> None:
-    """
-    Plots the
+def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
+    """Plots the
 
     Parameters
     ----------
@@ -74,10 +73,16 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
     -------
     None
     """
-
     # Sorts the 'CAL_INT*.fits'-files
-    files = np.sort(glob(dirname+'/*CAL_INT*.fits'))
+    files = np.sort(glob(dirname + '/*CAL_INT*.fits'))
+
+    # Checks if no files are found
+    if files is None:
+        print("No files found! Check input path")
+        sys,exit(1)
+
     for f in files[:]:
+        print(f"Plotting {os.path.basename(Path(f))}")
         hdu = fits.open(f)
         fig, axarr = plt.subplots(2, 6, figsize=(16, 6))
 
@@ -91,15 +96,16 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
         ucoord = hdu['oi_vis2'].data['ucoord']
         vcoord = hdu['oi_vis2'].data['vcoord']
         wl = hdu['oi_wavelength'].data['eff_wave']
-        t3phi = hdu['oi_t3'].data['t3phi']          # Use 't3phi', closure phase, as 't3amp' carries no real info
+        # Use 't3phi', closure phase, as 't3amp' carries no real info
+        t3phi = hdu['oi_t3'].data['t3phi']
         t3phierr = hdu['oi_t3'].data['t3phierr']
 
         # Gets the baseline configuration of the telescopes
         loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
         tel_names = hdu[2].data['tel_name']
         sta_name = hdu[2].data['sta_index']
-        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']  # Different baseline-configurations short-, medium-, large AT, UT
-        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                               # 'sta_index'of telescopes
+        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']    # Different baseline-configurations short-, medium-, large AT, UT
+        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                                          # 'sta_index'of telescopes
         telescopes = []
         for trio in loops:
             t1 = trio[0]#tel_names[np.where(sta_name == trio[0])[0]]
@@ -136,7 +142,7 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
             axis.set_ylim([-180,180])
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
-            all_obs[b%4].append(o)
+            all_obs[i%4].append(o)
         for j in range(4):
             axis = axarr[1, j%4]
             axis.errorbar(wl*1e6, np.nanmean(all_obs[j],0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
@@ -150,6 +156,11 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
         fx2.set_ylabel('v [m]')
         fx2.set_xlabel('u [m]')
 
+        # Plot visibility for one certain wavelength
+        xvals = wl[0]
+        ex2.plot(xvals, yvals, label="")
+
+        '''
         # Plots the squared visibility to the spatial frequency in Mlambda
         spat_freq = np.sqrt(np.square(ucoord)+np.square(vcoord))/3.6
         s = np.where(np.logical_and(wl>3.5e-6, wl<3.7e-6))[0][0]
@@ -157,6 +168,7 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
         ex2.set_ylim([0, None])
         ex2.set_xlabel(r'Spat. Freq. M$\lambda$')
         ex2.set_ylabel('vis2 at 3.6um')
+        '''
 
         # Fits the data
         if do_fit:
@@ -166,14 +178,14 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
             fwhm = 10/scaling_rad2arc/1000           # radians 
             xvals = np.linspace(30, 130)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
             yvals = np.square(gaussian(xvals, fwhm))
-            print(yvals)
+            # print(yvals)
             ex2.plot(xvals/1e6, yvals, label='10mas Gaussian')
 
             # Airy-disk fit
             fwhm = 40/scaling_rad2arc/1000           # radians
             yvals = np.square(airy(xvals, fwhm))
             ex2.plot(xvals/1e6, yvals, label='%.1f mas Airy Disk'%(fwhm*206265*1000))
-            print(yvals)
+            # print(yvals)
             ex2.legend(loc='best')
 
 
@@ -183,7 +195,7 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
         # plt.savefig(outname, bbinches='tight') # Bbinches is deprecated; Use bbox_inches
         plt.savefig(outname, bbox_inches='tight')
         plt.close()
-
+        print(f"Done plotting {os.path.basename(Path(f))}")
         # plt.show()
 
 if __name__ == ('__main__'):
@@ -199,3 +211,4 @@ if __name__ == ('__main__'):
 
     # Main process for shell usage
     shell_main()
+
