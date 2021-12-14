@@ -2,70 +2,70 @@
 
 __author__ = "Jacob Isbell"
 
-import sys
 import matplotlib.pyplot as plt
+from astropy.io import fits
 import numpy as np
-
-from pathlib import Path
 from glob import glob
 from scipy.optimize import curve_fit
-from astropy.io import fits
 from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
+import sys
 
 def shell_main():
     """
     This function's sole purpose is to enable the plotter to work in the shell
     """
     try:
-        script, dirname = sys.argv
+        dirname = sys.argv[1]
     except:
         print("Usage: python3 myplotter.py /path/to/target/data/dir/")
         sys.exit(1)
 
     do_plot(dirname=dirname, do_fit=True)
 
-def gaussian(spat_freq: np.array, D: float) -> np.array:
+def gaussian(spat_freq, D):
     """
     A gaussian fit described by the 0th-order Bessel function
 
     Parameters
     ----------
-    spat_freq: np.array
+    spat_freq: float
         Spatial frequency
     D: float
         Distance
 
     Returns
     -------
-    gaussian_fit: np.array
+    gaussian_fit: ndarray
+        Gaussian fit
     """
-    return np.exp(-np.square(np.pi*D*spat_freq)/(4* np.log(2)))
+    return np.exp( - np.square(np.pi* D * spat_freq) / (4* np.log(2) )  )
 
-def airy(spat_freq: np.array, D: float) -> np.array:
+def airy(spat_freq, D):
     """
     An airy disk fit described by the 1st-order Bessel function
 
     Parameters
     ----------
-    spat_freq: np.array
+    spat_freq: float
         Spatial frequency
     D: float
         Distance
 
     Returns
     -------
-    airy_disk_fit: np.array
+    airy_disk_fit: ndarray
+        Airy disk fit
     """
-    radial_dist = spat_freq*D
-    return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
+    radial_dist = spat_freq * D
+    return  2* j1( np.pi *radial_dist )/ radial_dist / np.pi
 
-def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> None:
+def do_plot(dirname, do_fit: bool = False) -> None:
     """
     Plots the
 
     Parameters
     ----------
-    dirname: Path[str]
+    dirname:
         Path to the directory, which files' are to be plotted
     do_fit: bool
         Bool that determines if fit is applied or not
@@ -76,14 +76,14 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
     """
 
     # Sorts the 'CAL_INT*.fits'-files
-    files = np.sort(glob(dirname+'/*CAL_INT*.fits'))
+    files = np.sort(glob(dirname + '/*CAL_INT*.fits'))
     for f in files[:]:
         hdu = fits.open(f)
-        fig, axarr = plt.subplots(2, 6, figsize=(16, 6))
+        fig, axarr = plt.subplots(2,6,figsize=(16,6))
 
         # Flattens the multidimensional arrays into 1D
-        ax, bx, cx, dx, ex, fx = axarr[0].flatten()
-        ax2, bx2, cx2, dx2, ex2, fx2 = axarr[1].flatten()
+        ax,bx,cx,dx,ex,fx = axarr[0].flatten()
+        ax2,bx2,cx2,dx2,ex2,fx2 = axarr[1].flatten()
 
         # Gets the data from the '.fits'-file
         vis2data= hdu['oi_vis2'].data['vis2data']
@@ -111,76 +111,74 @@ def do_plot(dirname: Path[str], vis_dim: list[int], do_fit: bool = False) -> Non
 
         # Sets the range for the squared visibility plots
         all_obs = [[],[],[],[],[],[]]
-
-        # Plots the squared visibility for different degrees and meters
-        for i, o in enumerate(vis2data):
-            axis = axarr[0, i%6]
-            axis.errorbar(wl*1e6, o, yerr=vis2err[i], marker='s', capsize=0., alpha=0.5)
-            axis.set_ylim([vis_dim[0], vis_dim[1]])
+        for b in range(len(vis2data)):
+            axis = axarr[0, b%6]
+            axis.errorbar(wl * 1e6, vis2data[b],yerr=vis2err[b],marker='s',capsize=0.,alpha=0.5)
+            axis.set_ylim([0,2.])  # 0.045 formerly
             axis.set_ylabel('vis2')
             axis.set_xlabel('wl [micron]')
-            all_obs[i%6].append(o)
+            all_obs[b%6].append(vis2data[b])
 
         # Plots the squared visibility for different degrees and metres
-        for j in range(6):
-            axis = axarr[0, j%6]
-            pas = (np.degrees(np.arctan2(vcoord[j],ucoord[j]))-90)*-1
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label='%.1f m %.1f deg'%(np.sqrt(ucoord[j]**2+vcoord[j]**2), pas))
+        for b in range(6):
+            axis = axarr[0, b%6]
+            pas = (np.degrees(np.arctan2(vcoord[b],ucoord[b])) - 90) * -1
+            axis.errorbar(wl * 1e6, np.nanmean(all_obs[b],0),yerr=np.nanstd(all_obs[b],0),marker='s',capsize=0.,alpha=0.9,color='k',label='%.1f m %.1f deg'%(np.sqrt(ucoord[b]**2 + vcoord[b]**2),pas   ))
             axis.legend(loc=2)
 
         # Plots the closure phase
         all_obs = [[],[],[],[]]
-        for i, o in enumerate(t3phi):
-            axis = axarr[1, i%4]
-            axis.errorbar(wl*1e6, o, yerr=t3phierr[i],marker='s',capsize=0.,alpha=0.25)
+        for b in range(len(t3phi)):
+            axis = axarr[1, b%4]
+            axis.errorbar(wl * 1e6, t3phi[b],yerr=t3phierr[b],marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
-            all_obs[b%4].append(o)
-        for j in range(4):
-            axis = axarr[1, j%4]
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j],0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
+            all_obs[b%4].append(t3phi[b])
+        for b in range(4):
+            axis = axarr[1, b%4]
+            axis.errorbar(wl * 1e6, np.nanmean(all_obs[b],0),yerr=np.nanstd(all_obs[b],0),marker='s',capsize=0.,alpha=0.9,color='k',label=telnames_t3[b])
             axis.legend(loc=2)
 
         # Plots the uv coverage
         fx2.scatter(ucoord, vcoord)
         fx2.scatter(-ucoord, -vcoord)
-        fx2.set_xlim([150, -150])
-        fx2.set_ylim([-150, 150])
+        fx2.set_xlim([140,-140])
+        fx2.set_ylim([-140,140])
         fx2.set_ylabel('v [m]')
         fx2.set_xlabel('u [m]')
 
-        # Plots the squared visibility to the spatial frequency in Mlambda
-        spat_freq = np.sqrt(np.square(ucoord)+np.square(vcoord))/3.6
-        s = np.where(np.logical_and(wl>3.5e-6, wl<3.7e-6))[0][0]
-        ex2.errorbar(spat_freq, vis2data[:, s], yerr=vis2err[:, s], marker='s', ls='none', color='firebrick')
-        ex2.set_ylim([0, None])
+        # Plots the
+        spat_freq = np.sqrt(np.square(ucoord) + np.square(vcoord) ) / 3.6
+        s = np.where( np.logical_and(wl>3.5e-6, wl<3.7e-6)   )[0][0]
+        ex2.errorbar(spat_freq, vis2data[:,s],yerr=vis2err[:,s],marker='s',ls='none',color='firebrick'    )
+        ex2.set_ylim([0,None])
         ex2.set_xlabel(r'Spat. Freq. M$\lambda$')
         ex2.set_ylabel('vis2 at 3.6um')
 
         # Fits the data
         if do_fit:
-            scaling_rad2arc = 206265
-
             # Gaussian fit
-            fwhm = 10/scaling_rad2arc/1000           # radians 
-            xvals = np.linspace(30, 130)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
-            yvals = np.square(gaussian(xvals, fwhm))
+            fwhm = 10 / 206265 / 1000           #radians
+            D = fwhm / .832
+            xvals = np.linspace(30, 130)/3.6e-6 #np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+            yvals = np.square(gaussian(xvals , D))
             print(yvals)
-            ex2.plot(xvals/1e6, yvals, label='10mas Gaussian')
+            ex2.plot(xvals / 1e6, yvals, label='10mas Gaussian')
 
             # Airy-disk fit
-            fwhm = 40/scaling_rad2arc/1000           # radians
-            yvals = np.square(airy(xvals, fwhm))
-            ex2.plot(xvals/1e6, yvals, label='%.1f mas Airy Disk'%(fwhm*206265*1000))
+            fwhm = 40 / 206265 / 1000           #radians
+            D = fwhm
+            yvals = np.square(airy(xvals , D))
+            ex2.plot(xvals / 1e6, yvals, label='%.1f mas Airy Disk'%(fwhm * 206265 * 1000))
             print(yvals)
             ex2.legend(loc='best')
 
 
         plt.tight_layout()
-        outname = dirname+'/'+f.split('/')[-1]+'_qa.png'
+        outname = dirname + '/'+f.split('/')[-1] + '_qa.png'
 
-        # plt.savefig(outname, bbinches='tight') # Bbinches is deprecated; Use bbox_inches
+        # plt.savefig(outname, bbinches='tight') # Bbinches is outdated and will become an error, use bbox_inches instead
         plt.savefig(outname, bbox_inches='tight')
         plt.close()
 

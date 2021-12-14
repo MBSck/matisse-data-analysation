@@ -6,19 +6,19 @@ cd ./oca_pipeline/tools/
 #----------define the folders for saving data-----------------
 #location of the data folders (raw, outputs, etc)
 TARGET=hd142666
-DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/
+DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data
 TARGETDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET
 CALIBDIR=$TARGETDIR/RAW
 RAWDIR=$TARGETDIR/RAW
-RESDIR=$DATADIR/PRODUCTS
+RESDIR=$TARGETDIR/PRODUCTS
 
-TARGETLIST='20190323 20190506 20190514 20190630'
+TARGETLIST='20190323'
 
 make_directory() {
 for i in "$@"
 do
     if [ ! -d "$i" ]; then
-        mkdir $i &&
+        mkdir $i
     fi
 done
 }

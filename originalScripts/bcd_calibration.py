@@ -1,12 +1,10 @@
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-from astropy.io import fits
 from glob import glob
-from pathlib import Path
+import matplotlib.pyplot as plt
+from astropy.io import fits
+import matplotlib as mpl
 from sys import argv
+import sys
 
 mpl.rcParams['font.family']='serif'
 mpl.rcParams['xtick.direction']='in'
@@ -14,7 +12,10 @@ mpl.rcParams['xtick.top']=True
 mpl.rcParams['ytick.direction']='in'
 mpl.rcParams['ytick.right']=True
 
-def compare_cphase_OO(fname: Path[str]) -> None:
+
+
+
+def compare_cphase_OO(fname):
     hdu = fits.open(fname)
 
     cphase = hdu['oi_t3'].data['t3phi']
@@ -58,7 +59,7 @@ def compare_cphase_OO(fname: Path[str]) -> None:
 
     plt.show()
 
-def spectral_binning(arr: np.array, binwidth: int = 1, phase: bool = False, err: bool = False) -> np.array:
+def spectral_binning(arr, binwidth=1, phase=False, err=False):
     new_arr = []
     new_err = []
     #print(arr.shape)
@@ -87,11 +88,11 @@ def spectral_binning(arr: np.array, binwidth: int = 1, phase: bool = False, err:
     return np.array(new_arr)#, np.array(new_err)
 
 
-def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> None:
+def cphase_calib(f1, f2, f3, f4):
     hdu1 = fits.open(f1)
 
     cphase1 = hdu1['oi_t3'].data['t3phi']
-    # print(cphase1.shape, 'testing')
+    #print(cphase1.shape, 'testing')
     cphase1_err = hdu1['oi_t3'].data['t3phierr']
     wl = hdu1['oi_wavelength'].data['eff_wave']
     loops = hdu1['OI_T3'].data['sta_index']
@@ -146,7 +147,7 @@ def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> 
     #length = np.min([cphase1.shape[0],cphase2.shape[0]]) //4
     s = np.argmin([cphase1.shape[0],cphase2.shape[0]])
     length = [cphase1.shape[0],cphase2.shape[0]][s] //4
-    for kk in range(length):
+    for kk in range( length ):
         index1 = 0 + kk*4
         index2 = 3 + kk*4
         index3 = 0 + kk*4
@@ -242,7 +243,7 @@ def cphase_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str]) -> 
     return
 
 
-def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux: bool = False) -> None:
+def vis2_calib(f1, f2, f3, f4, cflux=False):
     hdu1 = fits.open(f1)
 
     key = 'oi_vis2'
@@ -319,8 +320,8 @@ def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux
     corr_vis2err = []
     print(vis21.shape[0] // 6, 'vis2')
     s = np.argmin([vis21.shape[0],vis22.shape[0]])
-    length = [vis21.shape[0], vis22.shape[0]][s] //6
-    for kk in range(length):
+    length = [vis21.shape[0],vis22.shape[0]][s] //6
+    for kk in range( length ):
         index1 = 0 + kk*6
         index2 = 0 + kk*6
         index3 = 0 + kk*6
@@ -424,21 +425,21 @@ def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux
 
     myhdu.writeto(files[s].split('.fits')[0].replace('out-out','').replace('in-in','').replace('out-in','').replace('in-out','') + 'bcd_calibratedTEST.fits', overwrite=True )
 
-    fig,axarr = plt.subplots(2, 3)
+    fig,axarr = plt.subplots(2,3)
 
     groups = [[],[],[],[],[],[]]
-    for i, o in enumerate(corr_vis2s):
+    for i in range(len(corr_vis2s)):
         ax = axarr.flatten()[i%6]
-        ax.errorbar(wl*1e6, o, yerr=corr_vis2err[i], zorder=1, alpha=0.5)
-        ax.set_ylim([0, 0.2])
-        groups[i%6].append(o)
+        ax.errorbar(wl*1e6, corr_vis2s[i], yerr=corr_vis2err[i], zorder=1,alpha=0.5)
+        ax.set_ylim([0,0.2])
+        groups[i%6].append(corr_vis2s[i])
         if cflux:
-            ax.set_ylim([0, 2])
+            ax.set_ylim([0,2])
 
-    for j, g in enumerate(groups):
-        ax = axarr.flatten()[j]
-        print(np.nanmedian(g, 0) )
-        ax.errorbar(wl*1e6, np.nanmedian(g, 0), yerr=np.nanstd(g, 0),ls='--', lw=2, zorder=2, color='k')
+    for i,g in enumerate(groups):
+        ax = axarr.flatten()[i]
+        print(np.nanmedian(g,0) )
+        ax.errorbar(wl*1e6, np.nanmedian(g,0), yerr=np.nanstd(g,0),ls='--', lw=2,zorder=2,color='k' )
 
 
     #plt.show()
@@ -450,7 +451,7 @@ def vis2_calib(f1: Path[str], f2: Path[str], f3: Path[str], f4: Path[str], cflux
     return
 
 
-def main(fdir: Path[str]) -> None:
+def main(fdir):
     """
     files_oo = np.sort(glob(fdir+'/*out-out.fits'))
     files_ii = np.sort(glob(fdir+'/*in-in.fits'))
@@ -462,9 +463,9 @@ def main(fdir: Path[str]) -> None:
     files_io = np.sort(glob(fdir+'/*0003.fits'))
     files_oi = np.sort(glob(fdir+'/*0004.fits'))
 
-    for i, o in enumerate(files_oo[:]):
-        cphase_calib(o, files_ii[i], files_io[i], files_oi[i])
-        vis2_calib(o, files_ii[i], files_oo[i], files_oo[i], cflux=False)
+    for i in range(len(files_oo[:])):
+        cphase_calib(files_oo[i], files_ii[i], files_io[i], files_oi[i])
+        vis2_calib(files_oo[i], files_ii[i], files_oo[i], files_oo[i],cflux=False)
 
 
 if __name__ == "__main__":
