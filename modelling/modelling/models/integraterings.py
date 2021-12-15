@@ -58,16 +58,16 @@ class IntegrateRings:
         if sampling is None:
             sampling = size
 
-        for i in np.linspace(min_radius+1, max_radius+2, sampling):
+        for i in np.linspace(min_radius, max_radius):
             # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
             flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
-            ring_array = Ring().eval_model(size, i, sampling, centre)
+            ring_array = Ring().eval_model(size, i, sampling, centre)*flux
             output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
 
         return output_lst
 
     def integrate_rings_vis(self, sampling: int, min_radius: int, max_radius: int, q: float, T_0: int,
-                            wavelength: float, step_size: int = 1, optical_depth: float = 1.) -> np.array:
+                            wavelength: float, optical_depth: float = 1.) -> np.array:
         """This adds the ring's analytical visibility up to various models
 
         Parameters
@@ -81,20 +81,25 @@ class IntegrateRings:
         """
         # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((sampling, sampling))
+        total_flux = 0
 
-        for i in np.linspace(min_radius+1, max_radius+2, sampling):
+        for i in np.linspace(min_radius, max_radius):
             # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
-            flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
-            ring_array = (Ring().eval_vis(sampling, i, wavelength))*flux
+            visibility, flux = Ring().eval_vis(sampling, i, wavelength, True, min_radius, q, T_0)
+            total_flux += flux
+            print(total_flux)
+            ring_array =  visibility*flux*(1-np.exp(-optical_depth))
             output_lst += ring_array
 
-        return output_lst
+        return output_lst/total_flux
 
 
 if __name__ == "__main__":
     integ = IntegrateRings()
-    plt.imshow(integ.integrate_rings_vis(1024, 10, 265.1, 0.55, 6000, 8e-06))
-    plt.show()
 
-    plt.imshow(integ.integrate_rings(1024, 10, 265.1, 0.55, 6000, 8e-06))
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+
+    ax1.imshow(integ.integrate_rings(512, 1, 50, 0.55, 6000, 8e-06))
+    ax2.imshow(integ.integrate_rings_vis(512, 1, 50, 0.55, 6000, 8e-06))
+    plt.savefig("integrate_rings_common_flux.png")
     plt.show()

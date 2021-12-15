@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import j0
 from typing import Union, Optional
 
-from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, delta_fct
+from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, delta_fct, blackbody_spec
 
 class Ring(Model):
     """Infinitesimal thin ring model
@@ -18,6 +18,10 @@ class Ring(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
+    def __init__(self):
+        # Scales deg2mas, yield in radians
+        self.scaling= np.radians(1/3.6e6)
+
     @timeit
     def eval_model(self, size: int, r_0: Union[int, float], sampling: Optional[int] = None, centre: Optional[bool] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
@@ -43,23 +47,31 @@ class Ring(Model):
         """
         # TODO: Ring is 2 pixels thick, reduce to one?
         output_lst = np.zeros((size, size))
+
         r_0_temp = np.around(r_0*np.radians(1/3.6e6), decimals=8)
         radius = np.around(set_size(size, sampling, centre), decimals=8)
+
         output_lst[radius == r_0_temp] = 1/(2*np.pi*np.radians(r_0/3.6e6))
+
         return output_lst
 
     @timeit
-    def eval_vis(self, sampling: int, r_0: Union[int, float], wavelength: float) -> np.array:
+    def eval_vis(self, sampling: int, radius: Union[int, float], wavelength: float, do_flux: bool = False,
+                 r_0: Union[int, float] = 1, q: float = 0.55, T_0: int = 6000) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
         ----------
         sampling: int
             The sampling of the uv-plane
-        r_0: int | float
-            The radius of the ring
+        radius: int | float
+            The radius of the ring. Is converted to radians from mas
         wavelength: float
             The sampling wavelength
+        do_flux: bool
+        r_0: int | float
+        q: float
+        T_0: int
 
         Returns
         -------
@@ -69,10 +81,21 @@ class Ring(Model):
         --------
         set_uvcoords()
         """
-        r_0 *= np.radians(1/3.6e6)
+        r_0, radius = map(lambda x: x*self.scaling, [r_0, radius])
         B = set_uvcoords(sampling, wavelength)
 
-        return j0(2*np.pi*r_0*B)
+        visibility = j0(2*np.pi*radius*B)
+
+        if do_flux:
+            x, u = np.linspace(0, sampling, sampling)*self.scaling, np.linspace(-150, 150, sampling)*self.scaling
+            y, v = x[:, np.newaxis], u[:, np.newaxis]
+
+            complex_term = 2*np.pi*(u*x+v*y)
+            flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
+
+            return visibility, flux
+
+        return visibility
 
     @timeit
     def eval_numerical(self, size: int, outer_radius: int, inner_radius: Optional[int] = None,
@@ -86,12 +109,9 @@ class Ring(Model):
         x = np.linspace(0, size, sampling)
         y = x[:, np.newaxis]
 
-        # scaling
-        scaling = np.radians(1/3.6e6)
-
         # Set angles to radians
         if inner_radius is not None:
-            inner_radius *= scaling
+            inner_radius *= self.scaling
         inc_angle *= np.radians(1)
         pos_angle_axis *= np.radians(1)
         pos_angle_ellipsis *= np.radians(1)
@@ -120,7 +140,7 @@ class Ring(Model):
         else:
             radius[radius < inner_radius] = 0.
 
-        radius *= scaling
+        radius *= self.scaling
 
         return radius
 
@@ -131,15 +151,19 @@ if __name__ == "__main__":
     #     plt.imshow(inclined_ring)
     #     plt.show()
 
-    r_model = r.eval_model(512, 10)
-    plt.imshow(r_model)
-    plt.show()
+    fig, (ax1, ax2) = plt.subplots(1, 2)
 
-    r_vis = r.eval_vis(512, 10, 8e-06)
-    plt.imshow(r_vis)
-    plt.show()
+    r_model = r.eval_model(512, 256.1)
+    ax1.imshow(r_model)
 
-    r_num = r.eval_numerical(512, 10)
+    r_vis = r.eval_vis(512, 256.1, 8e-06, True)
+    ax2.imshow(r_vis[0])
+    plt.show()
+    plt.savefig("mode_ring.png")
+
+    '''
+    r_num = r.eval_numerical(1024, 10)
     plt.imshow(r_num)
     plt.show()
+    '''
 
