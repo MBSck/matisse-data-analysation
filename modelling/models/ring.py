@@ -6,6 +6,8 @@ from typing import Union, Optional
 
 from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, delta_fct, blackbody_spec
 
+I=complex(0, 1)
+
 class Ring(Model):
     """Infinitesimal thin ring model
 
@@ -65,17 +67,26 @@ class Ring(Model):
         sampling: int
             The sampling of the uv-plane
         radius: int | float
-            The radius of the ring. Is converted to radians from mas
+            The radius of the ring. Input is converted to radians from mas
         wavelength: float
             The sampling wavelength
         do_flux: bool
+            Parameter that determines if flux is added to the ring and also
+            returned
         r_0: int | float
+            The minimum radius of the ring. Is also converted to radians from
+            mas
         q: float
+            The temperature gradient
         T_0: int
+            The temperature at the minimum radias
 
         Returns
         -------
         visibility: np.array
+            The visibilities
+        flux: np.array
+            The flux. Will only get returned if 'do_flux=True'
 
         See also
         --------
@@ -91,7 +102,8 @@ class Ring(Model):
             y, v = x[:, np.newaxis], u[:, np.newaxis]
 
             complex_term = 2*np.pi*(u*x+v*y)
-            flux = blackbody_spec(radius, q, r_0, T_0, wavelength)
+            flux = blackbody_spec(radius, q, r_0, T_0,
+                                  wavelength)*np.exp(2*I*np.pi*(u*x+v*y))
 
             return visibility, flux
 
@@ -157,7 +169,7 @@ if __name__ == "__main__":
     ax1.imshow(r_model)
 
     r_vis = r.eval_vis(512, 256.1, 8e-06, True)
-    ax2.imshow(r_vis[0])
+    ax2.imshow(np.abs(r_vis[0]*r_vis[1]))
     plt.show()
     plt.savefig("mode_ring.png")
 

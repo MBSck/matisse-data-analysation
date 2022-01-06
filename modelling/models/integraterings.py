@@ -80,14 +80,13 @@ class IntegrateRings:
         --------
         """
         # TODO: Make this more performant -> Super slow
-        output_lst = np.zeros((sampling, sampling))
+        output_lst = np.zeros((sampling, sampling)).astype(np.complex256)
         total_flux = 0
 
         for i in np.linspace(min_radius, max_radius):
             # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
             visibility, flux = Ring().eval_vis(sampling, i, wavelength, True, min_radius, q, T_0)
             total_flux += flux
-            print(total_flux)
             ring_array =  visibility*flux*(1-np.exp(-optical_depth))
             output_lst += ring_array
 
@@ -97,9 +96,7 @@ class IntegrateRings:
 if __name__ == "__main__":
     integ = IntegrateRings()
 
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-
-    ax1.imshow(integ.integrate_rings(512, 1, 50, 0.55, 6000, 8e-06))
-    ax2.imshow(integ.integrate_rings_vis(512, 1, 50, 0.55, 6000, 8e-06))
+    # ax1.imshow(integ.integrate_rings(512, 1, 50, 0.55, 6000, 8e-06))
+    plt.imshow(np.abs(integ.integrate_rings_vis(512, 1, 50, 0.55, 6000, 8e-06)))
     plt.savefig("integrate_rings_common_flux.png")
     plt.show()
