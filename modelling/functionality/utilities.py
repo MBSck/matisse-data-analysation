@@ -69,7 +69,7 @@ def mas2rad(angle: Optional[Union[int, float]] = None):
         return np.deg2rad(1/3.6e6)
     return np.deg2rad(angle/3.6e6)
 
-def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -82,6 +82,8 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
         The sampling of the object-plane
     centre: bool
         A set centre of the object. Will be set automatically if default 'None' is kept
+    pos_angle: int | None
+        This sets the positional angle of the ellipsis if not None
 
     Returns
     -------
@@ -100,6 +102,10 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
         y0 = centre[1]
 
     xc, yc = (x-x0), (y-y0)
+
+    if pos_angle is not None:
+        pos_angle *= np.radians(1)
+        xc, yc = xc*np.sin(pos_angle), yc*np.cos(pos_angle)
 
     return np.sqrt(xc**2+yc**2)*mas2rad()
 
@@ -147,17 +153,8 @@ def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: i
     temperature: float
         The temperature at a certain radius
     """
-    try:
-        # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
-        power_factor = (radius/r_0)**q
-    except ZeroDivisionError:
-        power_factor = radius**q
-
-    # Remove the ZeroDivisionError -> Bodge
-    # TODO: Think of better way to exist
-    #  power_factor[power_factor == 0] = 1.
-
-    return T_0/power_factor
+    # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
+    return T_0*(radius/r_0)**(-q)
 
 def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wavelength: float):
     """Gets the blackbody spectrum at a certain T(r). Per Ring wavelength and temperature dependent
