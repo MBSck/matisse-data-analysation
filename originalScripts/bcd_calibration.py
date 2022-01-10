@@ -1,5 +1,11 @@
 import numpy as np
 from glob import glob
+
+# Only change to this document - Bugfix by Marten Scheuck 10.01.2021
+import matplotlib
+matplotlib.use('Agg')
+# End of bugfix
+
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import matplotlib as mpl

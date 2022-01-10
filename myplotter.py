@@ -91,14 +91,15 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         ax2, bx2, cx2, dx2, ex2, fx2 = axarr[1].flatten()
 
         # Gets the data from the '.fits'-file
-        vis2data= hdu['oi_vis2'].data['vis2data']
-        vis2err = hdu['oi_vis2'].data['vis2err']
-        ucoord = hdu['oi_vis2'].data['ucoord']
-        vcoord = hdu['oi_vis2'].data['vcoord']
+        vis2data = hdu['oi_vis2'].data['vis2data'][:6]
+        vis2err = hdu['oi_vis2'].data['vis2err'][:6]
+        ucoord = hdu['oi_vis2'].data['ucoord'][:6]
+        vcoord = hdu['oi_vis2'].data['vcoord'][:6]
         wl = hdu['oi_wavelength'].data['eff_wave']
+
         # Use 't3phi', closure phase, as 't3amp' carries no real info
-        t3phi = hdu['oi_t3'].data['t3phi']
-        t3phierr = hdu['oi_t3'].data['t3phierr']
+        t3phi = hdu['oi_t3'].data['t3phi'][:4]
+        t3phierr = hdu['oi_t3'].data['t3phierr'][:4]
 
         # Gets the baseline configuration of the telescopes
         loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
@@ -143,9 +144,13 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
             all_obs[i%4].append(o)
+
         for j in range(4):
             axis = axarr[1, j%4]
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j],0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
+            # Calculates the closure phases in the right way -> Avoids phase wrapping, with np.angle(np.nanmean(np.exp(I*phase)))
+            axis.errorbar(wl*1e6, np.angle(np.nanmean(np.exp(1j*np.array(all_obs[j], dtype=float)),0), deg=True), yerr=np.nanstd(np.angle(1j*np.array(all_obs[j], dtype=float), deg=True), 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
+            # Only takes a simple mean of the closure phases
+            # axis.errorbar(wl*1e6, np.nanmean(all_obs[j],0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
             axis.legend(loc=2)
 
         # Plots the uv coverage
