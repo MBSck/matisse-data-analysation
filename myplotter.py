@@ -8,10 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pathlib import Path
+from typing import Union, Optional, Any, Dict, List
 from glob import glob
 from scipy.optimize import curve_fit
 from astropy.io import fits
 from scipy.special import j0, j1                # Import of the Bessel functions of 0th and 1st order
+from skimage.restoration import unwrap_phase
 
 def shell_main():
     """
@@ -60,12 +62,12 @@ def airy(spat_freq: np.array, D: float) -> np.array:
     return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
 
 
-def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
+def do_plot(dirname: Path, vis_dim: List[float, float], do_fit: bool = False) -> None:
     """Plots the
 
     Parameters
     ----------
-    dirname: Path[str]
+    dirname: Path
         Path to the directory, which files' are to be plotted
     do_fit: bool
         Bool that determines if fit is applied or not
@@ -80,7 +82,7 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
     # Checks if no files are found
     if files is None:
         print("No files found! Check input path")
-        sys,exit(1)
+        sys.exit(1)
 
     for f in files[:]:
         print(f"Plotting {os.path.basename(Path(f))}")
@@ -133,17 +135,18 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         for j in range(6):
             axis = axarr[0, j%6]
             pas = (np.degrees(np.arctan2(vcoord[j],ucoord[j]))-90)*-1
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label='%.1f m %.1f deg'%(np.sqrt(ucoord[j]**2+vcoord[j]**2), pas))
+            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), \
+                          yerr=np.nanstd(all_obs[j], 0), marker='s', \
+                          capsize=0., alpha=0.9, color='k', \
+                          label='%.1f m %.1f deg'%(np.sqrt(ucoord[j]**2+vcoord[j]**2), pas))
             axis.legend(loc=2)
 
         # Plots the closure phase
         all_obs = [[],[],[],[]]
         for i, o in enumerate(t3phi):
             axis = axarr[1, i%4]
-            o_phase_unwrapped = np.arctan2(np.nanmean(np.sin(o*np.pi/180.0),axis=0),
-                                           np.nanmean(np.cos(o*np.pi/180.0),axis=0))*180.0/np.pi
-            print(o_phase_unwrapped)
-            axis.errorbar(wl*1e6, o_phase_unwrapped, yerr=t3phierr[i], marker='s',capsize=0.,alpha=0.25)
+            print(unwrap_phase(o))
+            axis.errorbar(wl*1e6, unwrap_phase(o), yerr=t3phierr[i], marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
@@ -214,12 +217,7 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
 if __name__ == ('__main__'):
     # Tests
     # ------
-    folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
-    #do_plot("2020-03-14T07_57_12.HAWAII-2RG.rb_with_2020-03-14T08_31_10.HAWAII-2RG.rb_CALIBRATED/", do_fit=True)
-    #hdu = fits.open("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/lband/mat_raw_estimates.2019-03-24T09_01_46.HAWAII-2RG.rb/TARGET_RAW_INT_0001.fits")
-    #print(hdu[2].data["tel_name"])
-    #print(hdu["oi_array"].data["tel_name"])
-
+    folder = "assets/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     do_plot(folder, vis_dim=[0., 0.6], do_fit=False)
     # ------
 
