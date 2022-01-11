@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 
 from typing import Optional
 
-from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
+import os
+import sys
+
+sys.path.insert(1, os.path.abspath("../functionality"))
+
+from utilities import Model, timeit, set_size, set_uvcoords
 
 class OpticallyThinSphere(Model):
     """Optically Thin Sphere model
