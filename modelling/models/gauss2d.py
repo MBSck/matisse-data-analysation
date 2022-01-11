@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 
 from typing import Union, Optional
 
-from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords
+import os
+import sys
+
+sys.path.insert(1, os.path.abspath("../functionality"))
+
+from utilities import Model, timeit, set_size, set_uvcoords
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss

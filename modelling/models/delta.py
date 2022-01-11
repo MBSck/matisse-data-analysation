@@ -1,7 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from modelling.functionality.utilities import Model, timeit
+import os
+import sys
+
+sys.path.insert(1, os.path.abspath("../functionality"))
+
+from utilities import Model, timeit
 
 class Delta(Model):
     """Delta function/Point source model

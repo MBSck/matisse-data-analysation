@@ -4,7 +4,12 @@ import matplotlib.pyplot as plt
 from typing import Union, Optional
 from scipy.special import j1
 
-from modelling.functionality.utilities import Model, timeit, set_size, set_uvcoords, mas2rad
+import os
+import sys
+
+sys.path.insert(1, os.path.abspath("../functionality"))
+
+from utilities import Model, timeit, set_size, set_uvcoords, mas2rad
 
 
 class UniformDisk(Model):
