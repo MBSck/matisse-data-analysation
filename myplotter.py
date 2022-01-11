@@ -11,7 +11,7 @@ from pathlib import Path
 from glob import glob
 from scipy.optimize import curve_fit
 from astropy.io import fits
-from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
+from scipy.special import j0, j1                # Import of the Bessel functions of 0th and 1st order
 
 def shell_main():
     """
@@ -58,6 +58,7 @@ def airy(spat_freq: np.array, D: float) -> np.array:
     """
     radial_dist = spat_freq*D
     return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
+
 
 def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
     """Plots the
@@ -139,7 +140,10 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         all_obs = [[],[],[],[]]
         for i, o in enumerate(t3phi):
             axis = axarr[1, i%4]
-            axis.errorbar(wl*1e6, o, yerr=t3phierr[i],marker='s',capsize=0.,alpha=0.25)
+            o_phase_unwrapped = np.arctan2(np.nanmean(np.sin(o*np.pi/180.0),axis=0),
+                                           np.nanmean(np.cos(o*np.pi/180.0),axis=0))*180.0/np.pi
+            print(o_phase_unwrapped)
+            axis.errorbar(wl*1e6, o_phase_unwrapped, yerr=t3phierr[i], marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
@@ -147,10 +151,9 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
 
         for j in range(4):
             axis = axarr[1, j%4]
-            # Calculates the closure phases in the right way -> Avoids phase wrapping, with np.angle(np.nanmean(np.exp(I*phase)))
-            axis.errorbar(wl*1e6, np.angle(np.nanmean(np.exp(1j*np.array(all_obs[j], dtype=float)),0), deg=True), yerr=np.nanstd(np.angle(1j*np.array(all_obs[j], dtype=float), deg=True), 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
             # Only takes a simple mean of the closure phases
-            # axis.errorbar(wl*1e6, np.nanmean(all_obs[j],0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
+            print(np.array(all_obs[j])[0])
+            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(unwrap_phase(np.array(all_obs[j][0])), 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
             axis.legend(loc=2)
 
         # Plots the uv coverage
@@ -211,14 +214,15 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
 if __name__ == ('__main__'):
     # Tests
     # ------
+    folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     #do_plot("2020-03-14T07_57_12.HAWAII-2RG.rb_with_2020-03-14T08_31_10.HAWAII-2RG.rb_CALIBRATED/", do_fit=True)
     #hdu = fits.open("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/lband/mat_raw_estimates.2019-03-24T09_01_46.HAWAII-2RG.rb/TARGET_RAW_INT_0001.fits")
     #print(hdu[2].data["tel_name"])
     #print(hdu["oi_array"].data["tel_name"])
 
-    # do_plot("/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib/20190324/calTarSTD1", do_fit=True)
+    do_plot(folder, vis_dim=[0., 0.6], do_fit=False)
     # ------
 
     # Main process for shell usage
-    shell_main()
+    # shell_main()
 
