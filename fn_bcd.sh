@@ -2,7 +2,7 @@
 
 #location of the data folders (target, calib, output/execution_directory)
 TARGET=hd142666
-FOLDER=calib_nband
+FOLDER=calib_nband/UTs
 DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET/PRODUCTS/$FOLDER
 EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
 
