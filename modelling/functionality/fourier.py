@@ -13,7 +13,7 @@ from numpy import fft               # Imports the Fast-Fourier Transform (FFT) p
 from pathlib import Path
 
 # Own modules
-from .utilities import ReadoutFits, timeit
+from utilities import ReadoutFits, timeit
 
 # Be aware of the fact that the code only works for same dimensional pictures/models
 
