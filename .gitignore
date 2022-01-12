@@ -1,4 +1,5 @@
 # Ignored folder
+assets/
 __pycache__/
 .idea/
 oca_pipeline/
