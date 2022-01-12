@@ -5,15 +5,16 @@ __author__ = "Jacob Isbell"
 import sys
 import os
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Optional, Any, Dict, List
 from glob import glob
 from scipy.optimize import curve_fit
 from astropy.io import fits
-from scipy.special import j0, j1                # Import of the Bessel functions of 0th and 1st order
+from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
 from skimage.restoration import unwrap_phase
+from scipy.special import j0, j1                # Import of the Bessel functions of 0th and 1st order
 
 def shell_main():
     """
@@ -62,12 +63,12 @@ def airy(spat_freq: np.array, D: float) -> np.array:
     return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
 
 
-def do_plot(dirname: Path, vis_dim: List[float], do_fit: bool = False) -> None:
+def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
     """Plots the
 
     Parameters
     ----------
-    dirname: Path
+    dirname: Path[str]
         Path to the directory, which files' are to be plotted
     do_fit: bool
         Bool that determines if fit is applied or not
@@ -82,16 +83,17 @@ def do_plot(dirname: Path, vis_dim: List[float], do_fit: bool = False) -> None:
     # Checks if no files are found
     if files is None:
         print("No files found! Check input path")
-        sys.exit(1)
+        sys,exit(1)
 
     for f in files[:]:
         print(f"Plotting {os.path.basename(Path(f))}")
         hdu = fits.open(f)
-        fig, axarr = plt.subplots(2, 6, figsize=(16, 6))
+        fig, axarr = plt.subplots(3, 6, figsize=(16, 6))
 
         # Flattens the multidimensional arrays into 1D
-        ax, bx, cx, dx, ex, fx = axarr[0].flatten()
+        ax, bx, cx, dx, ex, fx, = axarr[0].flatten()
         ax2, bx2, cx2, dx2, ex2, fx2 = axarr[1].flatten()
+        ax3, bx3, cx3, dx3, ex3, fx3 = axarr[2].flatten()
 
         # Gets the data from the '.fits'-file
         vis2data = hdu['oi_vis2'].data['vis2data'][:6]
@@ -108,14 +110,8 @@ def do_plot(dirname: Path, vis_dim: List[float], do_fit: bool = False) -> None:
         loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
         tel_names = hdu[2].data['tel_name']
         sta_name = hdu[2].data['sta_index']
-
-        # Different baseline-configurations short-, medium-, large AT, UT
-        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] \
-        + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']
-
-        # 'sta_index'of telescopes
-        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] \
-                + [1, 18, 23, 24] + [32, 33, 34, 35]
+        all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']    # Different baseline-configurations short-, medium-, large AT, UT
+        all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                                          # 'sta_index'of telescopes
         telescopes = []
         for trio in loops:
             t1 = trio[0] #tel_names[np.where(sta_name == trio[0])[0]]
@@ -141,45 +137,53 @@ def do_plot(dirname: Path, vis_dim: List[float], do_fit: bool = False) -> None:
         for j in range(6):
             axis = axarr[0, j%6]
             pas = (np.degrees(np.arctan2(vcoord[j],ucoord[j]))-90)*-1
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), \
-                          yerr=np.nanstd(all_obs[j], 0), marker='s', \
-                          capsize=0., alpha=0.9, color='k', \
-                          label='%.1f m %.1f deg'%(np.sqrt(ucoord[j]**2+vcoord[j]**2), pas))
+            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label='%.1f m %.1f deg'%(np.sqrt(ucoord[j]**2+vcoord[j]**2), pas))
             axis.legend(loc=2)
 
         # Plots the closure phase
         all_obs = [[],[],[],[]]
         for i, o in enumerate(t3phi):
             axis = axarr[1, i%4]
-            axis.errorbar(wl*1e6, unwrap_phase(o), yerr=t3phierr[i], marker='s',capsize=0.,alpha=0.25)
+            axis.errorbar(wl*1e6, unwrap_phase(o), yerr=t3phierr[i],marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
             axis.set_ylabel('cphase [deg]')
             axis.set_xlabel('wl [micron]')
-            all_obs[i%4].append(o)
+            all_obs[i%4].append(list(o))
 
         for j in range(4):
             axis = axarr[1, j%4]
-            # Only takes a simple mean of the closure phases
-            print(np.array(all_obs[j])[0])
-            axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(unwrap_phase(np.array(all_obs[j][0])), 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
-            axis.legend(loc=2)
+            # axis.errorbar(wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
+            axis.legend([telnames_t3[j]], loc=2)
 
-        # Plots the uv coverage
+        # Plots the uv coverage with a positional compass
         fx2.scatter(ucoord, vcoord)
         fx2.scatter(-ucoord, -vcoord)
         fx2.set_xlim([150, -150])
         fx2.set_ylim([-150, 150])
+        # fx2.annotate("East to West", xytext=(-85, 135), fontsize=14)
         fx2.set_ylabel('v [m]')
         fx2.set_xlabel('u [m]')
 
         # Plot the mean visibility for one certain wavelength
-        mean_vis4wl = [np.mean(i[5:115]) for i in vis2data]
-        std_vis4wl = [np.std(i[5:115]) for i in vis2data]
+        mean_vis4wl = [np.nanmean(i[5:115]) for i in vis2data]
+        std_vis4wl = [np.nanstd(i[5:115]) for i in vis2data]
         baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(ucoord, vcoord)]
-        mean_lambda = round(np.mean(wl*1e06), 2)
-        ex2.errorbar(baseline_distances, mean_vis4wl, yerr=std_vis4wl, ls='None', fmt='o')
-        ex2.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
-        ex2.set_ylabel(r'$\bar{V}$')
+        mean_lambda = np.mean(wl)
+        ax3.errorbar(baseline_distances, mean_vis4wl, yerr=std_vis4wl, ls='None', fmt='o')
+        ax3.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
+        ax3.set_ylabel(r'$\bar{V}$')
+
+        # Plot around the mean wavelength for the different baselines
+        wl_slice= [j for j in wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
+        indicies_wl = []
+        for i in wl_slice:
+            indicies_wl.append(int(np.where(wl == i)[0]))
+        si, ei = indicies_wl[0], indicies_wl[~0]
+
+        for i in range(6):
+            bx3.errorbar(wl[si:ei]*1e06, vis2data[i][si:ei], yerr=np.nanstd(vis2data[i][si:ei]), ls='None', fmt='o')
+            bx3.set_xlabel(r'wl [micron]')
+            bx3.set_ylabel('vis2')
 
         '''
         # Plots the squared visibility to the spatial frequency in Mlambda
@@ -199,27 +203,38 @@ def do_plot(dirname: Path, vis_dim: List[float], do_fit: bool = False) -> None:
             fwhm = 10/scaling_rad2arc/1000           # radians 
             xvals = np.linspace(30, 130)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
             yvals = np.square(gaussian(xvals, fwhm))
+            # print(yvals)
             ex2.plot(xvals/1e6, yvals, label='10mas Gaussian')
 
             # Airy-disk fit
             fwhm = 40/scaling_rad2arc/1000           # radians
             yvals = np.square(airy(xvals, fwhm))
             ex2.plot(xvals/1e6, yvals, label='%.1f mas Airy Disk'%(fwhm*206265*1000))
+            # print(yvals)
             ex2.legend(loc='best')
 
 
         plt.tight_layout()
         outname = dirname+'/'+f.split('/')[-1]+'_qa.png'
 
+        # plt.savefig(outname, bbinches='tight') # Bbinches is deprecated; Use bbox_inches
         plt.savefig(outname, bbox_inches='tight')
         plt.close()
         print(f"Done plotting {os.path.basename(Path(f))}")
+        # plt.show()
 
 if __name__ == ('__main__'):
     # Tests
     # ------
-    folder = "assets/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
-    do_plot(folder, vis_dim=[0., 0.6], do_fit=False)
+    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/"
+    folders = [data_path + "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED",
+              data_path + "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED",
+              data_path + "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"]
+
+    for i in folders:
+        do_plot(i, [0., 0.15], do_fit=True)
+        break
+    folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     # ------
 
     # Main process for shell usage
