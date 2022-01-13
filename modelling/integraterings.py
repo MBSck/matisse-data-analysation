@@ -3,15 +3,10 @@ import matplotlib.pyplot as plt
 
 from typing import Optional
 
-import os
-import sys
-
-sys.path.insert(1, os.path.abspath("../functionality"))
-
 from utilities import Model, timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
 
-from modelling.models.ring import Ring
+from ring import Ring
 
 class IntegrateRings:
     """Adds 2D rings up/integrates them to create new models (e.g., a uniform disk or a ring structure)

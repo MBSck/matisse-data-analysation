@@ -1,11 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import os
-import sys
-
-sys.path.insert(1, os.path.abspath("../functionality"))
-
 from utilities import Model, timeit
 
 class Delta(Model):

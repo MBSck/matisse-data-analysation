@@ -14,6 +14,7 @@ from pathlib import Path
 
 # Own modules
 from utilities import ReadoutFits, timeit
+from gauss2d import Gauss2D
 
 # Be aware of the fact that the code only works for same dimensional pictures/models
 
@@ -29,7 +30,8 @@ class FFT:
     # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
     # TODO: Remove staticmethods and make them outside of class
     # TODO: Change euclidean distance to interpolation in order to get coordinates
-    def __init__(self, model: np.array, set_size: int, fits_file_path: Path[str], wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
+    # TODO: Make Zoom function work
+    def __init__(self, model: np.array, set_size: int, fits_file_path: Path, wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
         self.model= model                                                           # Evaluates the model
         self.model_size = len(self.model)                                           # Gets the size of the model's image
 
@@ -58,10 +60,10 @@ class FFT:
         rescaling_factor = self.get_scaling_px2metr()
         rescaled_uvcoords = self.rescale_uvcoords(self.uvcoords)
         uv_ind = self.correspond_fft2freq(rescaled_uvcoords)
-        self.do_plot(ft, rescaled_uvcoords)
+        # self.do_plot(ft, rescaled_uvcoords)
         fft_value = FFT.get_fft_values(ft, uv_ind)
-        ft = self.zoom_fft2(ft, self.set_size)
-        return ft, fft_value, FFT.get_ft_amp_phase(fft_value), uv_ind, rescaling_factor
+        # ft = self.zoom_fft2(ft, self.set_size)
+        return ft, rescaled_uvcoords, fft_value, FFT.get_ft_amp_phase(fft_value)
 
     @timeit
     def do_fft2(self) -> np.array:
@@ -75,14 +77,12 @@ class FFT:
 
     def zoom_fft2(self, ft: np.array, set_size: int):
         """This zooms the FFT in after zero-padding"""
-        print(ft, ft.shape)
         ind_low_start, ind_low_end = 0, set_size//2
-        ind_high_start, ind_high_end = set_size//2,
+        ind_high_start, ind_high_end = set_size//2, self.set_size
         ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 0))
         ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 1))
         ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 0))
         ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 1))
-        print(ft, ft.shape)
         return ft
 
 
@@ -146,15 +146,13 @@ class FFT:
         x, y = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
         ax2.scatter(x, y, s=5)
         plt.show()
-        plt.savefig(f"FFT_model.pdf")
 
 
 if __name__ == "__main__":
     # for i in range(134, 2011, 25):
     #     print("-----------------------------------------------------\n{}".format(i))
     #     fourier = FFT(modelling.UniformDisk(i, 150).eval_model(),"TARGET_CAL_INT_0001bcd_calibratedTEST.fits",  greyscale=False, step_size_fft=1)
-    integrate = IntegrateRings(1024)
-    disk = integrate.disk(20, 50)
+    ring = Gauss2D()
 
-    fourier = FFT(disk,"TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
+    fourier = FFT(ring.eval_model(1024, 256.1), 1024,"assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits", 8e-06)
 

@@ -4,11 +4,6 @@ import matplotlib.pyplot as plt
 from scipy.special import j0
 from typing import Union, Optional
 
-import os
-import sys
-
-sys.path.insert(1, os.path.abspath("../functionality"))
-
 from utilities import Model, timeit, set_size, set_uvcoords, delta_fct, blackbody_spec
 
 I=complex(0, 1)

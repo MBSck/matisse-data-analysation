@@ -11,7 +11,7 @@ from typing import Union, Optional
 from astropy.io import fits
 from functools import wraps
 
-from functionality.constant import *
+from constant import *
 
 # Functions
 
