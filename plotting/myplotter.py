@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
+from astropy import modeling
 from pathlib import Path
 from glob import glob
 from scipy.optimize import curve_fit
@@ -88,7 +89,7 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
     for f in files[:]:
         print(f"Plotting {os.path.basename(Path(f))}")
         hdu = fits.open(f)
-        fig, axarr = plt.subplots(3, 6, figsize=(16, 6))
+        fig, axarr = plt.subplots(3, 6, figsize=(20, 10))
 
         # Flattens the multidimensional arrays into 1D
         ax, bx, cx, dx, ex, fx, = axarr[0].flatten()
@@ -108,18 +109,24 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
 
         # Gets the baseline configuration of the telescopes
         loops = hdu['OI_T3'].data['sta_index']  # 'sta_index' short for station index, describing the telescope-baseline relationship
+        vis_loops = hdu['oi_vis2'].data['sta_index']
+
         tel_names = hdu[2].data['tel_name']
         sta_name = hdu[2].data['sta_index']
         all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']    # Different baseline-configurations short-, medium-, large AT, UT
         all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]                                          # 'sta_index'of telescopes
         telescopes = []
         for trio in loops:
-            t1 = trio[0] #tel_names[np.where(sta_name == trio[0])[0]]
-            t2 = trio[1] #tel_names[np.where(sta_name == trio[1])[0]]
-            t3 = trio[2] #tel_names[np.where(sta_name == trio[2])[0]]
+            # tel_names[np.where(sta_name == trio[2])[0]]
+            t1, t2, t3 = trio
             telescopes.append('%s-%s-%s'%(all_tels[all_stas.index(t1)], all_tels[all_stas.index(t2)], all_tels[all_stas.index(t3)])) #[t1[0],t2[0],t3[0]])
-
         telnames_t3 = np.array(telescopes)
+
+        telescopes = []
+        for duo in vis_loops:
+            t1, t2 = duo
+            telescopes.append(f"{all_tels[all_stas.index(t1)]}-{all_tels[all_stas.index(t2)]}")
+        telnames_vis2 = np.array(telescopes)
 
         # Sets the range for the squared visibility plots
         all_obs = [[],[],[],[],[],[]]
@@ -127,7 +134,7 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         # Plots the squared visibility for different degrees and meters
         for i, o in enumerate(vis2data):
             axis = axarr[0, i%6]
-            axis.errorbar(wl*1e6, o, yerr=vis2err[i], marker='s', capsize=0., alpha=0.5)
+            axis.errorbar(wl*1e6, o, yerr=vis2err[i], marker='s', label=telnames_vis2[i], capsize=0., alpha=0.5)
             axis.set_ylim([vis_dim[0], vis_dim[1]])
             axis.set_ylabel('vis2')
             axis.set_xlabel('wl [micron]')
@@ -156,72 +163,90 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
             axis.legend([telnames_t3[j]], loc=2)
 
         # Plots the uv coverage with a positional compass
-        fx2.scatter(ucoord, vcoord)
-        fx2.scatter(-ucoord, -vcoord)
-        fx2.set_xlim([150, -150])
-        fx2.set_ylim([-150, 150])
-        # fx2.annotate("East to West", xytext=(-85, 135), fontsize=14)
-        fx2.set_ylabel('v [m]')
-        fx2.set_xlabel('u [m]')
+        ax3.scatter(ucoord, vcoord)
+        ax3.scatter(-ucoord, -vcoord)
+        ax3.set_xlim([150, -150])
+        ax3.set_ylim([-150, 150])
+        ax3.set_ylabel('v [m]')
+        ax3.set_xlabel('u [m]')
 
+        # Primitive legend or the directions of the uv-plot, if from source or from telescope seen
+        cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]   # north, south, east, west
+        cardinal_colors  = ['black', 'green', 'blue', 'red']
+        cardinal_directions = ['N', 'S', 'W', 'E']
+        arrow_size, head_size = 40, 10
+        x, y = (-85, 85)
+
+        for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
+            dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
+            if vector[0] == 0:
+                ax3.text(x-dx-5, y+dy, direction)
+            if vector[1] == 0:
+                ax3.text(x-dx, y+dy+5, direction)
+            arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
+                                  "width": 1, "fc": color, "ec": color}
+            ax3.arrow(x, y, dx, dy, **arrow_args)
+
+        '''
         # Plot the mean visibility for one certain wavelength
         mean_vis4wl = [np.nanmean(i[5:115]) for i in vis2data]
         std_vis4wl = [np.nanstd(i[5:115]) for i in vis2data]
         baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(ucoord, vcoord)]
-        mean_lambda = np.mean(wl)
-        ax3.errorbar(baseline_distances, mean_vis4wl, yerr=std_vis4wl, ls='None', fmt='o')
-        ax3.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
-        ax3.set_ylabel(r'$\bar{V}$')
+        bx3.errorbar(baseline_distances, mean_vis4wl, yerr=std_vis4wl, ls='None', fmt='o')
+        bx3.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
+        bx3.set_ylabel(r'$\bar{V}$')
+        '''
 
-        # Plot around the mean wavelength for the different baselines
+        # Plot waterfall with the mean wavelength for the different baselines
+        mean_lambda = np.mean(wl)
         wl_slice= [j for j in wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
         indicies_wl = []
         for i in wl_slice:
             indicies_wl.append(int(np.where(wl == i)[0]))
-        si, ei = indicies_wl[0], indicies_wl[~0]
+        si, ei = indicies_wl[0]-5, indicies_wl[~0]-5
 
         for i in range(6):
-            bx3.errorbar(wl[si:ei]*1e06, vis2data[i][si:ei], yerr=np.nanstd(vis2data[i][si:ei]), ls='None', fmt='o')
-            bx3.set_xlabel(r'wl [micron]')
-            bx3.set_ylabel('vis2')
+            fx2.errorbar(wl[si:ei]*1e06, vis2data[i][si:ei], yerr=np.nanstd(vis2data[i][si:ei]),label=telnames_vis2[i], ls='None', fmt='o')
+            fx2.set_xlabel(r'wl [micron]')
+            fx2.set_ylabel('vis2')
+            fx2.legend(loc='best')
 
-        '''
-        # Plots the squared visibility to the spatial frequency in Mlambda
-        spat_freq = np.sqrt(np.square(ucoord)+np.square(vcoord))/3.6
-        s = np.where(np.logical_and(wl>3.5e-6, wl<3.7e-6))[0][0]
-        ex2.errorbar(spat_freq, vis2data[:, s], yerr=vis2err[:, s], marker='s', ls='none', color='firebrick')
-        ex2.set_ylim([0, None])
-        ex2.set_xlabel(r'Spat. Freq. M$\lambda$')
-        ex2.set_ylabel('vis2 at 3.6um')
-        '''
+        # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
+        mean_bin_vis2 = [np.nanmean(i[si:ei]) for i in vis2data]
+        std_bin_vis2 = [np.nanmean(i[si:ei]) for i in vis2data]
+        baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(ucoord, vcoord)]
+        ex2.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
 
         # Fits the data
         if do_fit:
             scaling_rad2arc = 206265
-
             # Gaussian fit
-            fwhm = 10/scaling_rad2arc/1000           # radians 
-            xvals = np.linspace(30, 130)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
-            yvals = np.square(gaussian(xvals, fwhm))
-            # print(yvals)
-            ex2.plot(xvals/1e6, yvals, label='10mas Gaussian')
+            fwhm = 1/scaling_rad2arc/1000           # radians
+            xvals = np.linspace(50, 3*150)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+            fitted_model= np.square(gaussian(xvals, fwhm))
+            ex2.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
             # Airy-disk fit
-            fwhm = 40/scaling_rad2arc/1000           # radians
-            yvals = np.square(airy(xvals, fwhm))
-            ex2.plot(xvals/1e6, yvals, label='%.1f mas Airy Disk'%(fwhm*206265*1000))
-            # print(yvals)
+            fwhm = 3/scaling_rad2arc/1000           # radians
+            fitted_model = np.square(airy(xvals, fwhm))
+            ex2.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+            ex2.set_ylim([0, 0.175])
             ex2.legend(loc='best')
 
+        ex2.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
+        ex2.set_ylabel(r'$\bar{V}$')
 
+        # Finishing up
         plt.tight_layout()
         outname = dirname+'/'+f.split('/')[-1]+'_qa.png'
 
-        # plt.savefig(outname, bbinches='tight') # Bbinches is deprecated; Use bbox_inches
         plt.savefig(outname, bbox_inches='tight')
         plt.close()
         print(f"Done plotting {os.path.basename(Path(f))}")
-        # plt.show()
+
+        with open(outname[:~7]+"_phase_values.txt", 'w') as f:
+            for i in range(4):
+                f.write(str(unwrap_phase(t3phi[i])) + '\n')
 
 if __name__ == ('__main__'):
     # Tests
