@@ -1,14 +1,13 @@
 import matplotlib.pyplot as plt
 
-from modelling.functionality.fourier import FFT
-from modelling.models.delta import Delta
-from modelling.models.uniformdisk import UniformDisk
-from modelling.models.gauss2d import Gauss2D
-from modelling.models.opticallythinsphere import OpticallyThinSphere
-from modelling.models.inclineddisk import InclinedDisk
-from modelling.models.integraterings import IntegrateRings, Ring, blackbody_spec
-
-from modelling.functionality.utilities import compare_arrays
+from functionality.fourier import FFT
+from models.delta import Delta
+from models.ring import Ring
+from models.uniformdisk import UniformDisk
+from models.gauss2d import Gauss2D
+from models.opticallythinsphere import OpticallyThinSphere
+from models.inclineddisk import InclinedDisk
+from models.integraterings import IntegrateRings, Ring, blackbody_spec
 
 def main():
     """Main function, executes code"""
@@ -23,13 +22,7 @@ def main():
 
         print(compare_arrays(fourier, vis_analytically))
     '''
-
-    inte = IntegrateRings()
-    int_uniform_disk_vis = inte.integrate_rings_vis(512, 1, 50, 0.55, 6000, 8e-06)
-    u = models[1]()
-    uniform_disk_vis = u.eval_vis(512, 50, 8e-06)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig, (ax, bx, ax2, bx2) = plt.subplots(2, 2)
 
     ax1.imshow(int_uniform_disk_vis)
     ax1.set_title("Ring integrated uniform disk")
