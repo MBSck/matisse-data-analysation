@@ -1,5 +1,6 @@
 # Ignored folder
 assets/
+LateX/
 __pycache__/
 .idea/
 oca_pipeline/
