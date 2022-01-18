@@ -176,7 +176,7 @@ class MyPlotter:
                           label=tel_t3phi[j])
             axis.legend([tel_t3phi[j]], loc=2)
 
-    def waterfall_plot(self, plot) -> None:
+    def waterfall_plot(self, ax) -> None:
         # Plot waterfall with the mean wavelength for the different baselines
         mean_lambda = np.mean(self.wl)
         wl_slice= [j for j in wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
@@ -186,20 +186,20 @@ class MyPlotter:
         si, ei = indicies_wl[0]-5, indicies_wl[~0]-5
 
         for i in range(6):
-            plot.errorbar(wl[si:ei]*1e06, self.vis2data[i][si:ei],
+            ax.errorbar(wl[si:ei]*1e06, self.vis2data[i][si:ei],
                          yerr=np.nanstd(self.vis2data[i][si:ei]),
                          label=tel_vis2[i], ls='None', fmt='o')
-            plot.set_xlabel(r'wl [micron]')
-            plot.set_ylabel('vis2')
-            plot.legend(loc='best')
+            ax.set_xlabel(r'wl [micron]')
+            ax.set_ylabel('vis2')
+            ax.legend(loc='best')
 
-    def fits_plot(self, plot):
+    def fits_plot(self, ax):
         # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
         mean_bin_vis2 = [np.nanmean(i[si:ei]) for i in self.vis2data]
         std_bin_vis2 = [np.nanmean(i[si:ei]) for i in self.vis2data]
         baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
                                                                  self.vcoords)]
-        ex2.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
+        ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
 
         # Fits the data
         scaling_rad2arc = 206265
@@ -208,36 +208,36 @@ class MyPlotter:
         fwhm = 1/scaling_rad2arc/1000           # radians
         xvals = np.linspace(50, 3*150)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
         fitted_model= np.square(gaussian(xvals, fwhm))
-        ex2.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+        ax.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
         # Airy-disk fit
         fwhm = 3/scaling_rad2arc/1000           # radians
         fitted_model = np.square(airy(xvals, fwhm))
-        ex2.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
-        ex2.set_ylim([0, 0.175])
-        ex2.legend(loc='best')
+        ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+        ax.set_ylim([0, 0.175])
+        ax.legend(loc='best')
 
-        ex2.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
-        ex2.set_ylabel(r'$\bar{V}$')
+        ax.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
+        ax.set_ylabel(r'$\bar{V}$')
 
-    def uv_plot(self, plot) -> None:
+    def uv_plot(self, ax) -> None:
         """Plots the uv-coordinates with an orientational compass
 
         Parameters
         ----------
-        plot
-            The plot anchor
+        ax
+            The axis anchor of matplotlib.pyplot
 
         Returns
         -------
         None
         """
-        plot.scatter(self.ucoords, self.vcoords)
-        plot.scatter(-self.ucoords, -self.vcoords)
-        plot.set_xlim([150, -150])
-        plot.set_ylim([-150, 150])
-        plot.set_ylabel('v [m]')
-        plot.set_xlabel('u [m]')
+        ax.scatter(self.ucoords, self.vcoords)
+        ax.scatter(-self.ucoords, -self.vcoords)
+        ax.set_xlim([150, -150])
+        ax.set_ylim([-150, 150])
+        ax.set_ylabel('v [m]')
+        ax.set_xlabel('u [m]')
 
         # Compasss for the directions
         cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]
@@ -249,35 +249,36 @@ class MyPlotter:
         for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
             dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
             if vector[0] == 0:
-                plot.text(x-dx-5, y+dy, direction)
+                ax.text(x-dx-5, y+dy, direction)
             if vector[1] == 0:
-                plot.text(x-dx, y+dy+5, direction)
+                ax.text(x-dx, y+dy+5, direction)
             arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
                                   "width": 1, "fc": color, "ec": color}
-            plot.arrow(x, y, dx, dy, **arrow_args)
+            ax.arrow(x, y, dx, dy, **arrow_args)
 
-    def model_plot(self, plot1, plot2, model):
+    def model_plot(self, ax1, ax2, model):
+        """"""
         # Plots the model fits and their fft of the uv-coords
         # TODO: Implement this rescaling somehow differently so that there
         # needs to be no import of main
         img, ft, rescaled_uvcoords = main(f, "ring")
 
         # Plots the gaussian model
-        plot1.imshow()
-        plot1.set_title(f'')
-        plot1.plot1.set_xlabel(f"resolution [px] 1024, zero padding 2048")
-        plot1.axes.get_xaxis().set_ticks([])
-        plot1.axes.get_yaxis().set_ticks([])
+        ax1.imshow()
+        ax1.set_title(f'')
+        ax1.set_xlabel(f"resolution [px] 1024, zero padding 2048")
+        ax1.axes.get_xaxis().set_ticks([])
+        ax1.axes.get_yaxis().set_ticks([])
 
-        plot2.imshow(np.log(abs(gauss_ft)), interpolation='none', extent=[-0.5, 0.5, -0.5, 0.5])
+        ax2.imshow(np.log(abs(gauss_ft)), interpolation='none', extent=[-0.5, 0.5, -0.5, 0.5])
         # Rename the plots with the future information -> in all cases
-        plot2.set_title("Gauss FFT")
-        plot2.set_xlabel("freq")
-        plot2.axes.get_xaxis().set_ticks([])
-        plot2.axes.get_yaxis().set_ticks([])
+        ax2.set_title("Gauss FFT")
+        ax2.set_xlabel("freq")
+        ax2.axes.get_xaxis().set_ticks([])
+        ax2.axes.get_yaxis().set_ticks([])
 
         u, v = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
-        plot2.scatter(u, v, s=5)
+        ax2.scatter(u, v, s=5)
 
     def write_values(self):
         """"""
@@ -285,9 +286,9 @@ class MyPlotter:
             for i in range(4):
                 f.write(str(unwrap_phase(t3phi[i])) + '\n')
 
-    def plot_close(self, plot):
+    def plot_close(self):
         """Finishing up the plot and then saving it to the designated folder"""
-        plot.tight_layout()
+        plt.tight_layout()
         outname = self.dirname+'/'+self.fits_file.split('/')[-1]+'_qa.png'
 
         plt.savefig(outname, bbox_inches='tight')
