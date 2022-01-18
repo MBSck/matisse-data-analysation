@@ -60,7 +60,7 @@ class ReadoutFits:
     def get_t3phi(self):
         """Fetches the closure phase data, its error and sta_index of the
         phases"""
-        return self.get_data("oi_t3phi", "t3phidata", "t3phierr", "sta_index")
+        return self.get_data("oi_t3", "t3phi", "t3phierr", "sta_index")
 
     def get_wl(self):
         return self.get_data("oi_wavelength", "eff_wave")
