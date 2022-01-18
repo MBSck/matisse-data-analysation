@@ -26,11 +26,11 @@ def shell_main():
     try:
         script, dirname, vis_dim0, vis_dim1 = sys.argv
     except:
-        print("Usage: python3 myplotter.py /path/to/target/data/dir/ vis_dim[0] vis_dim[1]")
+        print("Usage: python3 plotter.py /path/to/target/data/dir/ vis_dim[0] vis_dim[1]")
         sys.exit(1)
 
     vis_dim = [float(vis_dim0), float(vis_dim1)]
-    do_plot(dirname=dirname, vis_dim=vis_dim, do_fit=False)
+    Plotter(dirname=dirname, vis_dim=vis_dim)
 
 def gaussian(spat_freq: np.array, D: float) -> np.array:
     """ A gaussian fit described by the 0th-order Bessel function
