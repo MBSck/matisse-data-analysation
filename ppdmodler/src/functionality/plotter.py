@@ -67,7 +67,7 @@ def airy(spat_freq: np.array, D: float) -> np.array:
 
 # Classes
 
-class MyPlotter:
+class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
     def __init__(self, dirname: Path, vis_dim: List[float]):
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
@@ -142,7 +142,7 @@ class MyPlotter:
         # plots the squared visibility for different degrees and meters
         for i, o in enumerate(self.vis2data):
             axis = axarr[0, i%6]
-            axis.errorbar(wl*1e6, o, yerr=self.vis2err[i], marker='s',
+            axis.errorbar(self.wl*1e6, o, yerr=self.vis2err[i], marker='s',
                           label=self.tel_vis2[i], capsize=0., alpha=0.5)
             axis.set_ylim([self.vis_dim[0], self.vis_dim[1]])
             axis.set_ylabel("vis2")
@@ -163,7 +163,7 @@ class MyPlotter:
         all_obs = [[],[],[],[]]
         for i, o in enumerate(self.t3phi):
             axis = axarr[1, i%4]
-            axis.errorbar(wl*1e6, unwrap_phase(o), yerr=self.t3phierr[i],marker='s',capsize=0.,alpha=0.25)
+            axis.errorbar(self.wl*1e6, unwrap_phase(o), yerr=self.t3phierr[i],marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
             axis.set_ylabel("cphase [deg]")
             axis.set_xlabel("wl [micron]")
@@ -179,14 +179,14 @@ class MyPlotter:
     def waterfall_plot(self, ax) -> None:
         # Plot waterfall with the mean wavelength for the different baselines
         mean_lambda = np.mean(self.wl)
-        wl_slice= [j for j in wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
+        wl_slice= [j for j in self.wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
         indicies_wl = []
         for i in wl_slice:
             indicies_wl.append(int(np.where(self.wl == i)[0]))
         si, ei = indicies_wl[0]-5, indicies_wl[~0]-5
 
         for i in range(6):
-            ax.errorbar(wl[si:ei]*1e06, self.vis2data[i][si:ei],
+            ax.errorbar(self.wl[si:ei]*1e06, self.vis2data[i][si:ei],
                          yerr=np.nanstd(self.vis2data[i][si:ei]),
                          label=tel_vis2[i], ls='None', fmt='o')
             ax.set_xlabel(r'wl [micron]')
