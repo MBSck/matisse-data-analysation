@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import numpy as np
+
 from astropy.io import fits
 from typing import Any, Dict, List, Union, Optional
 
@@ -33,7 +35,7 @@ class ReadoutFits:
         data: List[np.array]
         """
         with fits.open(self.fits_file) as hdul:
-            return [hdul[hdr].data[i]) for i in args] if len(args) > 1 \
+            return [hdul[hdr].data[i] for i in args] if len(args) > 1 \
                     else hdul[hdr].data[args[0]]
 
     def get_column_names(self, hdr):

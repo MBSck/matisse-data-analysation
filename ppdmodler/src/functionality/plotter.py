@@ -17,7 +17,7 @@ from astropy.io import fits
 from scipy.special import j0, j1
 from skimage.restoration import unwrap_phase
 
-from scr.functionality.readout import ReadoutFits
+from src.functionality.readout import ReadoutFits
 
 def shell_main():
     """
@@ -73,7 +73,7 @@ class Plotter:
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
         self.vis_dim = vis_dim
 
-        if files is None:
+        if self.files is None:
             print("No files found! Check input path")
             sys.exit(1)
 
@@ -99,16 +99,13 @@ class Plotter:
 
             # TODO: Make this into list comprehension
             for duo in self.vis2sta:
-                t1, t2 = duo
-                self.tel_vis2.append(f"{self.all_tels[self.all_stas.index(t1)]}-{self.all_tels[self.all_stas.index(t2)]}")
+                self.tel_t3phi.append("-".join([self.all_tels[self.all_stas.index(t)] for t in duo]))
             self.tel_vis2= np.array(self.tel_vis2)
 
             for trio in self.t3phista:
                 # tel_names[np.where(sta_name == trio[2])[0]]
-                t1, t2, t3 = trio
                 #[t1[0],t2[0],t3[0]])
-                self.tel_t3phi.append(f"{all_tels[all_stas.index(t1)]}-\
-                                      {all_tels[all_stas.index(t2)]}-{all_tels[all_stas.index(t3)])}")
+                self.tel_t3phi.append("-".join([self.all_tels[self.all_stas.index(t)] for t in trio]))
             self.tel_t3phi= np.array(self.tel_t3phi)
 
             self.do_plot()
@@ -304,7 +301,7 @@ if __name__ == ('__main__'):
               data_path + "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"]
 
     for i in folders:
-        MyPlotter(i, [0., 0.15])
+        Plotter(i, [0., 0.15])
     folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     # ------
 
