@@ -81,7 +81,7 @@ class Plotter:
             self.fits_file = file
 
             # Initializes the fits-readout
-            self.readout = ReadoutFits(f)
+            self.readout = ReadoutFits(file)
 
             # Fetches all the data from the '.fits'-file
             self.vis2data, self.vis2err, self.vis2sta = self.readout.get_vis2()
