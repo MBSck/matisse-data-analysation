@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 
-__author__ = "Marten Scheuck"
-
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 
 from abc import ABCMeta, abstractmethod
-from typing import Union, Optional
+from typing import Any, Dict, List, Union, Optional
 from astropy.io import fits
 from functools import wraps
 
-from constant import *
+from src.functionality.constant import *
 
 # Functions
 
@@ -32,7 +30,9 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     Parameters
     ----------
     x: int | float
+        An x value
     y: int | float
+        An y value
 
     Returns
     -------
@@ -185,29 +185,45 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
     return factor/exponent
 
 
-def do_plot(input_model, *args, mod: bool = False, vis: bool = False, both: bool = False) -> None:
+def do_plot(input_models: List[np.array], *args, ffft: bool = False, ft: Optional[np.array],
+            mod: bool = False, vis: bool = False, both: bool = False) -> None:
     """Simple plot function for the models
 
     Parameters
     ----------
+    input_model: np.arry
+        Model input, in form of a 2D-np.array
     args
         Different model inputs
+    fft: bool
+        By default False, if toggled plots FFT instead of models
+    ft: np.array | None
+        The FFT to be plotted if fft is True
+    mod: bool
+        By default False, if toggled plots model
+    vis: bool
+        By default False, if toggled plots visibilities (FFT)
+    both: bool
+        By default False, if toggled plots both model and vis
 
     Returns
     -------
     None
     """
     # TODO: Make this take any number of arguments as well as any number of models
-    model = input_model()
-
-    if mod:
-        plt.imshow(model.eval_model(*args))
-    if vis:
-        plt.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
-    if both:
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.imshow(model.eval_model(*args))
-        ax2.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
+    for model in input_models:
+        model = model()
+        if fft:
+            ...
+        else:
+            if mod:
+                plt.imshow(model.eval_model(*args))
+            if vis:
+                plt.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
+            if both:
+                fig, (ax1, ax2) = plt.subplots(1, 2)
+                ax1.imshow(model.eval_model(*args))
+                ax2.imshow(model.eval_vis(*args), extent=(-150, 150, -150, 150))
 
         ax1.set_title("Model")
         ax1.set_xlabel("[px]")
@@ -215,7 +231,7 @@ def do_plot(input_model, *args, mod: bool = False, vis: bool = False, both: bool
         ax2.set_title("Vis")
         ax2.set_xlabel("u[m]")
         ax2.set_ylabel("v[m]")
-    plt.show()
+        plt.show()
 
 
 # Classes
@@ -279,20 +295,24 @@ class ReadoutFits:
         with fits.open(self.fits_file) as hdul:
             return (hdul[hdr].columns).names
 
-    @property
-    def get_uvcoords_vis2(self):
+    def get_uvcoords(self):
         """Fetches the u, v coord-lists and merges them as well as the individual components"""
         return np.array([i for i in zip(self.get_data(4, "ucoord"), self.get_data(4, "vcoord"))])
 
-    @staticmethod
-    def get_ucoords(uvcoords: np.array):
+    def get_ucoords(self):
         """Splits a 2D-np.array into its 1D-components, in this case the u-coords"""
-        return np.array([item[0] for item in uvcoords])
+        return np.array([item[0] for item in self.get_uvcoords])
 
-    @staticmethod
-    def get_vcoords(uvcoords: np.array):
+    def get_vcoords(self):
         """Splits a 2D-np.array into its 1D-components, in this case the v-coords"""
-        return np.array([item[1] for item in uvcoords])
+        return np.array([item[1] for item in self.get_uvcoords])
+
+    def get_vis2(self):
+        ...
+
+    @property
+    def get_t3phi(self):
+        ...
 
 
 if __name__ == "__main__":

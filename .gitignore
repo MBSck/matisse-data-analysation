@@ -4,8 +4,12 @@ LateX/
 __pycache__/
 .idea/
 oca_pipeline/
-dataReduction/filesJozsef/
-GTO-Proposals/
+drsCodeGuide/
+GTOProposals/
+otherPeoplesScripts/
+ppdmodler/build/
+ppdmodler/dist/
+ppdmodler/ppdmodler.egg-info/
 observation/
 
 # Ignored files

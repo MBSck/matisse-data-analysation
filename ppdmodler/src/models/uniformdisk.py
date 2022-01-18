@@ -4,12 +4,7 @@ import matplotlib.pyplot as plt
 from typing import Union, Optional
 from scipy.special import j1
 
-import os
-import sys
-
-sys.path.insert(1, os.path.abspath("../functionality"))
-
-from utilities import Model, timeit, set_size, set_uvcoords, mas2rad
+from src.functionality.utilities import Model, timeit, set_size, set_uvcoords, mas2rad
 
 
 class UniformDisk(Model):
@@ -25,7 +20,8 @@ class UniformDisk(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, diameter: Union[int, float], sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
+    def eval_model(self, size: int, diameter: Union[int, float],
+                   sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
         """Evaluates the model
 
         Parameters

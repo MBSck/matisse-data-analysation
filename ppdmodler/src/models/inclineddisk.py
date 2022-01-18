@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import j0
 from typing import Union, Optional
 
-from utilities import Model, timeit, set_size, set_uvcoords, \
+from src.functionality.utilities import Model, timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
 
 class InclinedDisk(Model):

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 __author__ = "Jacob Isbell"
 
 import sys
@@ -8,14 +6,14 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-from astropy import modeling
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 from glob import glob
 from scipy.optimize import curve_fit
 from astropy.io import fits
-from scipy.special import j0, j1        # Import of the Bessel functions of 0th and 1st order
+from scipy.special import j0, j1
 from skimage.restoration import unwrap_phase
-from scipy.special import j0, j1                # Import of the Bessel functions of 0th and 1st order
+
 
 def shell_main():
     """
@@ -162,31 +160,6 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
             # axis.errorbar(wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=telnames_t3[j])
             axis.legend([telnames_t3[j]], loc=2)
 
-        # Plots the uv coverage with a positional compass
-        ax3.scatter(ucoord, vcoord)
-        ax3.scatter(-ucoord, -vcoord)
-        ax3.set_xlim([150, -150])
-        ax3.set_ylim([-150, 150])
-        ax3.set_ylabel('v [m]')
-        ax3.set_xlabel('u [m]')
-
-        # Primitive legend or the directions of the uv-plot, if from source or from telescope seen
-        cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]   # north, south, east, west
-        cardinal_colors  = ['black', 'green', 'blue', 'red']
-        cardinal_directions = ['N', 'S', 'W', 'E']
-        arrow_size, head_size = 40, 10
-        x, y = (-85, 85)
-
-        for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
-            dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
-            if vector[0] == 0:
-                ax3.text(x-dx-5, y+dy, direction)
-            if vector[1] == 0:
-                ax3.text(x-dx, y+dy+5, direction)
-            arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
-                                  "width": 1, "fc": color, "ec": color}
-            ax3.arrow(x, y, dx, dy, **arrow_args)
-
         '''
         # Plot the mean visibility for one certain wavelength
         mean_vis4wl = [np.nanmean(i[5:115]) for i in vis2data]
@@ -236,6 +209,68 @@ def do_plot(dirname: str, vis_dim: list, do_fit: bool = False) -> None:
         ex2.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
         ex2.set_ylabel(r'$\bar{V}$')
 
+        # Plots the uv coverage with a positional compass
+        ax3.scatter(ucoord, vcoord)
+        ax3.scatter(-ucoord, -vcoord)
+        ax3.set_xlim([150, -150])
+        ax3.set_ylim([-150, 150])
+        ax3.set_ylabel('v [m]')
+        ax3.set_xlabel('u [m]')
+
+        # Primitive legend or the directions of the uv-plot, if from source or from telescope seen
+        cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]   # north, south, east, west
+        cardinal_colors  = ['black', 'green', 'blue', 'red']
+        cardinal_directions = ['N', 'S', 'W', 'E']
+        arrow_size, head_size = 40, 10
+        x, y = (-85, 85)
+
+        for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
+            dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
+            if vector[0] == 0:
+                ax3.text(x-dx-5, y+dy, direction)
+            if vector[1] == 0:
+                ax3.text(x-dx, y+dy+5, direction)
+            arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
+                                  "width": 1, "fc": color, "ec": color}
+            ax3.arrow(x, y, dx, dy, **arrow_args)
+
+        # Plots the model fits and their fft of the uv-coords
+        gauss_img, gauss_ft, uvcoords = main(f, "gauss")
+        ring_img, ring_ft, uvcoords = main(f, "ring")
+
+        # Plots the gaussian model
+        bx3.imshow(gauss_img)
+        bx3.set_title(f'Model Gauss 10"')
+        bx3.set_xlabel(f"resolution [px] 1024, zero padding 2048")
+        bx3.axes.get_xaxis().set_ticks([])
+        bx3.axes.get_yaxis().set_ticks([])
+
+
+        cx3.imshow(np.log(abs(gauss_ft)), interpolation='none', extent=[-0.5, 0.5, -0.5, 0.5])
+        cx3.set_title("Gauss FFT")
+        cx3.set_xlabel("freq")
+        cx3.axes.get_xaxis().set_ticks([])
+        cx3.axes.get_yaxis().set_ticks([])
+
+        u, v = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
+        cx3.scatter(u, v, s=5)
+
+        # Plots the ring model
+        dx3.imshow(ring_img)
+        dx3.set_title(f'Model Ring 10"')
+        dx3.set_xlabel(f"resolution [px] 1024, zero padding 2048")
+        dx3.axes.get_xaxis().set_ticks([])
+        dx3.axes.get_yaxis().set_ticks([])
+
+        ex3.imshow(np.log(abs(ring_ft)), interpolation='none', extent=[-0.5, 0.5, -0.5, 0.5])
+        ex3.set_title("Ring FFT")
+        ex3.set_xlabel("freq")
+        ex3.axes.get_xaxis().set_ticks([])
+        ex3.axes.get_yaxis().set_ticks([])
+
+        u, v = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
+        ex3.scatter(u, v, s=5)
+
         # Finishing up
         plt.tight_layout()
         outname = dirname+'/'+f.split('/')[-1]+'_qa.png'
@@ -258,7 +293,6 @@ if __name__ == ('__main__'):
 
     for i in folders:
         do_plot(i, [0., 0.15], do_fit=True)
-        break
     folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     # ------
 

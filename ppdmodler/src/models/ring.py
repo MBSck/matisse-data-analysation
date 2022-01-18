@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import j0
 from typing import Union, Optional
 
-from utilities import Model, timeit, set_size, set_uvcoords, delta_fct, blackbody_spec
+from src.functionality.utilities import Model, timeit, set_size, set_uvcoords, delta_fct, blackbody_spec
 
 I=complex(0, 1)
 
@@ -25,7 +25,8 @@ class Ring(Model):
         self.scaling= np.radians(1/3.6e6)
 
     @timeit
-    def eval_model(self, size: int, r_0: Union[int, float], sampling: Optional[int] = None, centre: Optional[bool] = None) -> np.array:
+    def eval_model(self, size: int, r_0: Union[int, float],
+                   sampling: Optional[int] = None, centre: Optional[bool] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
