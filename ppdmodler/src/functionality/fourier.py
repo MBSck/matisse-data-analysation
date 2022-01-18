@@ -18,6 +18,8 @@ from src.models.gauss2d import Gauss2D   # For testing the functionality of four
 # Be aware of the fact that the code only works for same dimensional pictures/models
 
 # TODO: Make class and function documentation
+# TODO: Make the class return the rescaled information readily, maybe rescale
+# it outside of the FFT class?
 
 class FFT:
     """A collection of the fft-functionality given by scipy

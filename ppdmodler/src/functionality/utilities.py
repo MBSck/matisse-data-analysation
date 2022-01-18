@@ -271,50 +271,6 @@ class Model(metaclass=ABCMeta):
         pass
 
 
-class ReadoutFits:
-    """All functionality to work with '.oifits/.fits'-files"""
-    def __init__(self, fits_file):
-        self.fits_file = fits_file
-
-    def get_info(self):
-        """Gets the header's info"""
-        with fits.open(self.fits_file) as hdul:
-            return hdul.info()
-
-    def get_header(self, hdr):
-        """Reads out the specified data"""
-        return repr(fits.getheader(self.fits_file, hdr))
-
-    def get_data(self, hdr, sub_hdr):
-        """Gets a specific set of data from a header"""
-        with fits.open(self.fits_file) as hdul:
-            return (hdul[hdr].data)[sub_hdr]
-
-    def get_column_names(self, hdr):
-        """Fetches the columns of the header"""
-        with fits.open(self.fits_file) as hdul:
-            return (hdul[hdr].columns).names
-
-    def get_uvcoords(self):
-        """Fetches the u, v coord-lists and merges them as well as the individual components"""
-        return np.array([i for i in zip(self.get_data(4, "ucoord"), self.get_data(4, "vcoord"))])
-
-    def get_ucoords(self):
-        """Splits a 2D-np.array into its 1D-components, in this case the u-coords"""
-        return np.array([item[0] for item in self.get_uvcoords])
-
-    def get_vcoords(self):
-        """Splits a 2D-np.array into its 1D-components, in this case the v-coords"""
-        return np.array([item[1] for item in self.get_uvcoords])
-
-    def get_vis2(self):
-        ...
-
-    @property
-    def get_t3phi(self):
-        ...
-
-
 if __name__ == "__main__":
     # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
