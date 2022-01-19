@@ -19,7 +19,7 @@ from skimage.restoration import unwrap_phase
 
 from src.functionality.readout import ReadoutFits
 
-def shell_main():
+def shell_main() -> None:
     """
     This function's sole purpose is to enable the plotter to work in the shell
     """
@@ -69,7 +69,7 @@ def airy(spat_freq: np.array, D: float) -> np.array:
 
 class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
-    def __init__(self, dirname: Path, vis_dim: List[float]):
+    def __init__(self, dirname: Path, vis_dim: List[float]) -> None:
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
         self.dirname = dirname
         self.vis_dim = vis_dim
@@ -92,8 +92,16 @@ class Plotter:
             self.wl = self.readout.get_wl()
             self.tel_names, self.sta_name = self.readout.get_tel_sta()
 
-            # Start and end index to slice around the mean wavelength
-            self.si, self.ei = 0, 0
+            # The mean of the wavelength. Plots all the visibilities for that and the standard deviation
+            mean_lambda = np.mean(self.wl)
+            self.wl_slice= [j for j in self.wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
+            self.si, self.ei = (int(np.where(self.wl == self.wl_slice[0])[0])-5,
+                                    int(np.where(self.wl == self.wl_slice[~0])[0])+5)
+
+
+            self.mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+            self.std_bin_vis2 = [np.nanmean(j[self.si:self.ei]) for j in self.vis2data]
+            self.baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords, self.vcoords)]
 
             # Different baseline-configurations short-, medium-, large AT and UT
             self.all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + \
@@ -179,13 +187,6 @@ class Plotter:
 
     def waterfall_plot(self, ax) -> None:
         # Plot waterfall with the mean wavelength for the different baselines
-        mean_lambda = np.mean(self.wl)
-        wl_slice= [j for j in self.wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
-
-        indicies_wl = []
-        for i in wl_slice:
-            indicies_wl.append(int(np.where(self.wl == i)[0]))
-        self.si, self.ei = indicies_wl[0]-5, indicies_wl[~0]-5
 
         for i in range(6):
             ax.errorbar(self.wl[self.si:self.ei]*1e06, self.vis2data[i][self.si:self.ei],
@@ -195,14 +196,10 @@ class Plotter:
             ax.set_ylabel('vis2')
             ax.legend(loc='best')
 
-    def fits_plot(self, ax):
+
+    def fits_plot(self, ax) -> None:
         # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
-        print(self.vis2data, self.si, self.ei)
-        mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-        std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-        baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
-                                                                     self.vcoords)]
-        ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
+        ax.errorbar(self.baseline_distances, self.mean_bin_vis2, yerr=self.std_bin_vis2, ls='None', fmt='o')
 
         # Fits the data
         scaling_rad2arc = 206265
@@ -261,7 +258,7 @@ class Plotter:
                                   "width": 1, "fc": color, "ec": color}
             ax.arrow(x, y, dx, dy, **arrow_args)
 
-    def model_plot(self, ax1, ax2, model):
+    def model_plot(self, ax1, ax2, model) -> None:
         """"""
         # Plots the model fits and their fft of the uv-coords
         # TODO: Implement this rescaling somehow differently so that there
@@ -285,13 +282,13 @@ class Plotter:
         u, v = np.array([i[0] for i in uvcoords]), np.array([i[1] for i in uvcoords])
         ax2.scatter(u, v, s=5)
 
-    def write_values(self):
+    def write_values(self) -> None:
         """"""
         with open(outname[:~7]+"_phase_values.txt", 'w') as f:
             for i in range(4):
                 f.write(str(unwrap_phase(t3phi[i])) + '\n')
 
-    def close(self):
+    def close(self) -> None:
         """Finishing up the plot and then saving it to the designated folder"""
         plt.tight_layout()
         outname = self.dirname+'/'+self.fits_file.split('/')[-1]+'_qa.png'
