@@ -87,7 +87,8 @@ class Plotter:
             self.vis2data, self.vis2err, self.vis2sta = self.readout.get_vis2()
             self.t3phidata, self.t3phierr, self.t3phista = self.readout.get_t3phi()
             self.tel_vis2, self.tel_t3phi = [], []
-            self.ucoords, self.vcoords, self.wl = self.readout.get_split_uvcoords(), self.readout.get_wl()
+            self.ucoords, self.vcoords = self.readout.get_split_uvcoords()
+            self.wl = self.readout.get_wl()
             self.tel_names, sta_name = self.get_tel_sta()
 
             # Different baseline-configurations short-, medium-, large AT and UT
