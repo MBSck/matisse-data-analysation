@@ -189,7 +189,7 @@ class Plotter:
         for i in range(6):
             ax.errorbar(self.wl[self.si:self.ei]*1e06, self.vis2data[i][self.si:self.ei],
                          yerr=np.nanstd(self.vis2data[i][self.si:self.ei]),
-                         label=tel_vis2[i], ls='None', fmt='o')
+                         label=self.tel_vis2[i], ls='None', fmt='o')
             ax.set_xlabel(r'wl [micron]')
             ax.set_ylabel('vis2')
             ax.legend(loc='best')
