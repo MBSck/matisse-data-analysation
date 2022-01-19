@@ -196,19 +196,22 @@ class Plotter:
             ax.legend(loc='best')
 
     def fits_plot(self, ax):
-        # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
-        mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-        std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-        baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
-                                                                 self.vcoords)]
-        ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
+        for i range(6):
+            # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
+            mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+            std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+            baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
+                                                                     self.vcoords)]
+            ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
 
         # Fits the data
         scaling_rad2arc = 206265
 
         # Gaussian fit
         fwhm = 1/scaling_rad2arc/1000           # radians
-        xvals = np.linspace(50, 3*150)/3.6e-6      # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+
+        # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+        xvals = np.linspace(50, 3*150)/3.6e-6
         fitted_model= np.square(gaussian(xvals, fwhm))
         ax.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
