@@ -149,7 +149,7 @@ class Plotter:
         # Plots the squared visibility for different degrees and metres
         for j in range(6):
             axis = axarr[0, j%6]
-            pas = (np.degrees(np.arctan2(vcoord[j],ucoord[j]))-90)*-1
+            pas = (np.degrees(np.arctan2(self.vcoords[j], self.ucoords[j]))-90)*-1
             axis.errorbar(wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
                           marker='s', capsize=0., alpha=0.9, color='k',
                           label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
