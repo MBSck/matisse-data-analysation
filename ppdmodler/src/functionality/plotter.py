@@ -287,7 +287,7 @@ class Plotter:
             for i in range(4):
                 f.write(str(unwrap_phase(t3phi[i])) + '\n')
 
-    def plot_close(self):
+    def close(self):
         """Finishing up the plot and then saving it to the designated folder"""
         plt.tight_layout()
         outname = self.dirname+'/'+self.fits_file.split('/')[-1]+'_qa.png'
