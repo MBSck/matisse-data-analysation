@@ -158,7 +158,7 @@ class Plotter:
     def t3phi_plot(self, axarr) -> None:
         """Plots the closure phase"""
         all_obs = [[],[],[],[]]
-        for i, o in enumerate(self.t3phi):
+        for i, o in enumerate(self.t3phidata):
             axis = axarr[1, i%4]
             axis.errorbar(self.wl*1e6, unwrap_phase(o), yerr=self.t3phierr[i],marker='s',capsize=0.,alpha=0.25)
             axis.set_ylim([-180,180])
