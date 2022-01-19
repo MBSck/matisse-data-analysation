@@ -71,6 +71,7 @@ class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
     def __init__(self, dirname: Path, vis_dim: List[float]):
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
+        self.dirname = dirname
         self.vis_dim = vis_dim
 
         if self.files is None:
