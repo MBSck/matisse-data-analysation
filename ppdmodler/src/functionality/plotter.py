@@ -91,6 +91,9 @@ class Plotter:
             self.wl = self.readout.get_wl()
             self.tel_names, self.sta_name = self.readout.get_tel_sta()
 
+            # Start and end index to slice around the mean wavelength
+            self.si, self.ei = 0, 0
+
             # Different baseline-configurations short-, medium-, large AT and UT
             self.all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + \
                     ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']
@@ -177,14 +180,15 @@ class Plotter:
         # Plot waterfall with the mean wavelength for the different baselines
         mean_lambda = np.mean(self.wl)
         wl_slice= [j for j in self.wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
+
         indicies_wl = []
         for i in wl_slice:
             indicies_wl.append(int(np.where(self.wl == i)[0]))
-        si, ei = indicies_wl[0]-5, indicies_wl[~0]-5
+        self.si, self.ei = indicies_wl[0]-5, indicies_wl[~0]-5
 
         for i in range(6):
-            ax.errorbar(self.wl[si:ei]*1e06, self.vis2data[i][si:ei],
-                         yerr=np.nanstd(self.vis2data[i][si:ei]),
+            ax.errorbar(self.wl[self.si:self.ei]*1e06, self.vis2data[i][self.si:self.ei],
+                         yerr=np.nanstd(self.vis2data[i][self.si:self.ei]),
                          label=tel_vis2[i], ls='None', fmt='o')
             ax.set_xlabel(r'wl [micron]')
             ax.set_ylabel('vis2')
@@ -192,8 +196,8 @@ class Plotter:
 
     def fits_plot(self, ax):
         # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
-        mean_bin_vis2 = [np.nanmean(i[si:ei]) for i in self.vis2data]
-        std_bin_vis2 = [np.nanmean(i[si:ei]) for i in self.vis2data]
+        mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+        std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
         baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
                                                                  self.vcoords)]
         ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
