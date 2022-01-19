@@ -168,7 +168,7 @@ class Plotter:
 
         for j in range(4):
             axis = axarr[1, j%4]
-            axis.errorbar(wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0),
+            axis.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0),
                           marker='s', capsize=0., alpha=0.9, color='k',
                           label=tel_t3phi[j])
             axis.legend([tel_t3phi[j]], loc=2)
