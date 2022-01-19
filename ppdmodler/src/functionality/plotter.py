@@ -196,13 +196,13 @@ class Plotter:
             ax.legend(loc='best')
 
     def fits_plot(self, ax):
-        for i in range(6):
-            # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
-            mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-            std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-            baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
+        # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
+        print(self.vis2data, self.si, self.ei)
+        mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+        std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
+        baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords,
                                                                      self.vcoords)]
-            ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
+        ax.errorbar(baseline_distances, mean_bin_vis2, yerr=std_bin_vis2, ls='None', fmt='o')
 
         # Fits the data
         scaling_rad2arc = 206265
