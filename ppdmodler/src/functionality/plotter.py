@@ -89,7 +89,7 @@ class Plotter:
             self.tel_vis2, self.tel_t3phi = [], []
             self.ucoords, self.vcoords = self.readout.get_split_uvcoords()
             self.wl = self.readout.get_wl()
-            self.tel_names, sta_name = self.get_tel_sta()
+            self.tel_names, sta_name = self.readout.get_tel_sta()
 
             # Different baseline-configurations short-, medium-, large AT and UT
             self.all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + \
