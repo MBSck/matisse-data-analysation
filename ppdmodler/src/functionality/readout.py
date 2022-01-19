@@ -50,7 +50,7 @@ class ReadoutFits:
     def get_split_uvcoords(self):
         """Splits a 2D-np.array into its 1D-components and returns the u- and
         v-coords seperatly"""
-        uvoords = self.get_uvcoords()
+        uvcoords = self.get_uvcoords()
         return np.array([item[0] for item in uvcoords]), np.array([item[1] for item in uvcoords])
 
     def get_vis2(self):
