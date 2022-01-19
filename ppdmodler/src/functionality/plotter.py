@@ -86,35 +86,30 @@ class Plotter:
             self.readout = ReadoutFits(file)
 
             # Fetches all the relevant data from the '.fits'-file
-            self.vis2data, self.vis2err, =  map(lambda x: x[:6], self.readout.get_vis2()[:1])
-            self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:1])
-            self.t3phista, self.vis2sta = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
+            self.vis2data, self.vis2err = map(lambda x: x[:6], self.readout.get_vis2()[:2])
+            self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
+            self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
             self.ucoords, self.vcoords = self.readout.get_split_uvcoords()
             self.wl = self.readout.get_wl()
 
-            self.tel_vis2 = np.array([("-".join([self.all_tels[self.all_stas.index(t)] for t in duo])) \
-                                      for duo in self.vis2sta])
-            # tel_names[np.where(sta_name == trio[2])[0]], [t1[0],t2[0],t3[0]])
-            self.tel_t3phi = np.array([("-".join([self.all_tels[self.all_stas.index(t)] \
-                                                  for t in trio])) for trio in self.t3phista])
-            self.tel_names, self.sta_name = self.readout.get_tel_sta()
+            # Different baseline-configurations (short-, medium-, large) AT & UT. Telescope names and "sta_index"
+            self.all_tels = {1: "A0", 5: "B2", 13: "C0", 10: "D1"} | \
+                    {28: "K0", 18: "G1", 13: "D0", 24: "J3"} | \
+                    {1: "A0", 18: "G1", 23: "J2", 24: "J3"} | \
+                    {32: "UT1", 33: "UT2", 34: "UT3", 35: "UT4"})
 
-            # The mean of the wavelength. Plots all the visibilities for that and the standard deviation
+            # Sets the descriptors of the telescopes' baselines and the closure # phases
+            self.tel_vis2 = np.array([("-".join([self.all_tels[t] for t in duo])) for duo in self.vis2sta])
+            self.tel_t3phi = np.array([("-".join([self.all_tels[t] for t in trio])) for trio in self.t3phista])
+
+            # The mean of the wavelength. The mean of all the visibilities and their standard deviation
             self.wl_slice= [j for j in self.wl if (j >= np.mean(self.wl)-0.5e-06 and j <= np.mean(self.wl)+0.5e-06)]
             self.si, self.ei = (int(np.where(self.wl == self.wl_slice[0])[0])-5,
                                     int(np.where(self.wl == self.wl_slice[~0])[0])+5)
 
-
             self.mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
             self.std_bin_vis2 = [np.nanmean(j[self.si:self.ei]) for j in self.vis2data]
             self.baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords, self.vcoords)]
-
-            # Different baseline-configurations short-, medium-, large AT and UT
-            # TODO: Make those two lists into sublist and dictionaries or sth
-            self.all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + \
-                    ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']
-            # sta_index of telescopes
-            self.all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]
 
             # Executes the plotting and cleans everything up
             self.do_plot()
