@@ -99,7 +99,7 @@ class Plotter:
 
             # TODO: Make this into list comprehension
             for duo in self.vis2sta:
-                self.tel_t3phi.append("-".join([self.all_tels[self.all_stas.index(t)] for t in duo]))
+                self.tel_vis2.append("-".join([self.all_tels[self.all_stas.index(t)] for t in duo]))
             self.tel_vis2= np.array(self.tel_vis2)
 
             for trio in self.t3phista:
