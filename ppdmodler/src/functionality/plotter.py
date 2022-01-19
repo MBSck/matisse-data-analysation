@@ -79,22 +79,28 @@ class Plotter:
             sys.exit(1)
 
         for file in self.files[:]:
+            print(f'Reading files from "{self.dirname}"')
             self.fits_file = file
 
             # Initializes the fits-readout
             self.readout = ReadoutFits(file)
 
-            # Fetches all the data from the '.fits'-file
-            self.vis2data, self.vis2err, self.vis2sta = self.readout.get_vis2()
-            self.t3phidata, self.t3phierr, self.t3phista = self.readout.get_t3phi()
-            self.tel_vis2, self.tel_t3phi = [], []
+            # Fetches all the relevant data from the '.fits'-file
+            self.vis2data, self.vis2err, =  map(lambda x: x[:6], self.readout.get_vis2()[:1])
+            self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:1])
+            self.t3phista, self.vis2sta = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
             self.ucoords, self.vcoords = self.readout.get_split_uvcoords()
             self.wl = self.readout.get_wl()
+
+            self.tel_vis2 = np.array([("-".join([self.all_tels[self.all_stas.index(t)] for t in duo])) \
+                                      for duo in self.vis2sta])
+            # tel_names[np.where(sta_name == trio[2])[0]], [t1[0],t2[0],t3[0]])
+            self.tel_t3phi = np.array([("-".join([self.all_tels[self.all_stas.index(t)] \
+                                                  for t in trio])) for trio in self.t3phista])
             self.tel_names, self.sta_name = self.readout.get_tel_sta()
 
             # The mean of the wavelength. Plots all the visibilities for that and the standard deviation
-            mean_lambda = np.mean(self.wl)
-            self.wl_slice= [j for j in self.wl if (j >= mean_lambda-0.5e-06 and j <= mean_lambda+0.5e-06)]
+            self.wl_slice= [j for j in self.wl if (j >= np.mean(self.wl)-0.5e-06 and j <= np.mean(self.wl)+0.5e-06)]
             self.si, self.ei = (int(np.where(self.wl == self.wl_slice[0])[0])-5,
                                     int(np.where(self.wl == self.wl_slice[~0])[0])+5)
 
@@ -104,27 +110,18 @@ class Plotter:
             self.baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords, self.vcoords)]
 
             # Different baseline-configurations short-, medium-, large AT and UT
+            # TODO: Make those two lists into sublist and dictionaries or sth
             self.all_tels = ['A0', 'B2', 'C0', 'D1'] + ['K0', 'G1', 'D0', 'J3'] + \
                     ['A0', 'G1', 'J2', 'J3'] + ['UT1', 'UT2', 'UT3', 'UT4']
             # sta_index of telescopes
             self.all_stas = [1,  5, 13, 10] + [28, 18, 13, 24] + [1, 18, 23, 24] + [32, 33, 34, 35]
 
-            # TODO: Make this into list comprehension
-            for duo in self.vis2sta:
-                self.tel_vis2.append("-".join([self.all_tels[self.all_stas.index(t)] for t in duo]))
-            self.tel_vis2= np.array(self.tel_vis2)
-
-            for trio in self.t3phista:
-                # tel_names[np.where(sta_name == trio[2])[0]]
-                #[t1[0],t2[0],t3[0]])
-                self.tel_t3phi.append("-".join([self.all_tels[self.all_stas.index(t)] for t in trio]))
-            self.tel_t3phi= np.array(self.tel_t3phi)
-
+            # Executes the plotting and cleans everything up
             self.do_plot()
             self.close()
 
     def do_plot(self):
-        """Brings all the plots together into one consistent one"""
+        """This is the main pipline of the class. It brings all the plots together into one consistent one"""
         print(f"Plotting {os.path.basename(Path(self.fits_file))}")
 
         fig, axarr = plt.subplots(3, 6, figsize=(20, 10))
