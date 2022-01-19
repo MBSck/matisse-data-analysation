@@ -196,7 +196,7 @@ class Plotter:
             ax.legend(loc='best')
 
     def fits_plot(self, ax):
-        for i range(6):
+        for i in range(6):
             # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
             mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
             std_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
