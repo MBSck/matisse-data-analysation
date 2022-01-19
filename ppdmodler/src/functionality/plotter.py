@@ -96,7 +96,7 @@ class Plotter:
             self.all_tels = {1: "A0", 5: "B2", 13: "C0", 10: "D1"} | \
                     {28: "K0", 18: "G1", 13: "D0", 24: "J3"} | \
                     {1: "A0", 18: "G1", 23: "J2", 24: "J3"} | \
-                    {32: "UT1", 33: "UT2", 34: "UT3", 35: "UT4"})
+                    {32: "UT1", 33: "UT2", 34: "UT3", 35: "UT4"}
 
             # Sets the descriptors of the telescopes' baselines and the closure # phases
             self.tel_vis2 = np.array([("-".join([self.all_tels[t] for t in duo])) for duo in self.vis2sta])
