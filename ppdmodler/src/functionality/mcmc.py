@@ -15,21 +15,28 @@ import emcee
 import corner
 import matplotlib.pyplot as plt
 
-from src.models import Ring
 from typing import Any, Dict, List, Union, Optional
+
+from src.models import Gauss2D
+from src.functionality.utilities import ReadoutFits, get_scaling_px2metr
+
+def uv2model_rescale(sampling: int, uvcoords: np.array, ):
+    """This rescales the models uv-coords in accordance with the model"""
+    ...
 
 def model(theta: List, wavelength: float):
     """The model defined for the MCMC process"""
     sampling, fwhm = theta
-    model = Ring.eval_vis(sampling, fwhm, wavelength)
+    model = Gauss2D.eval_vis(sampling, fwhm, wavelength)
     return model
 
-def lnlike(theta: np.array, u: float, v: float, verr: float):
+def lnlike(theta: np.array, u: float, v: float, uerr: float, verr: float):
     """Takes theta vector and the x, y and the yerr of the theta.
     Returns a number corresponding to how good of a fit the model is to your
     data for a given set of parameters, weighted by the data points. I.e. it is
     more important"""
-    return -0.5*np.sum((y-)/yerr)
+    model = model(theta, wavelength)
+    return -0.5*np.sum((v-v_model)**2/verr)
 
 def lnprior(theta):
     """This function checks if all variables are within their priors (it is
@@ -41,7 +48,7 @@ def lnprior(theta):
     else:
         return -np.inf
 
-def lnprob(theta: np.array, x: float, y: float, yerr: float):
+def lnprob(theta: np.array, wavelength: float, u: float, v: float, uerr: float, verr: float):
     """This function runs the lnprior and checks if it returned -np.inf, and
     returns if it does. If not, (all priors are good) it returns the inlike for
     that model (convention is lnprior + lnlike)
@@ -57,7 +64,7 @@ def lnprob(theta: np.array, x: float, y: float, yerr: float):
     lp = lnprior(theta)
     if not lp == 0.0:
         return -np.inf
-    return lp + lnlike(theta, x, y, yerr)
+    return lp + lnlike(theta, wavelength, u, v, verr)
 
 def main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data) -> np.array:
     """"""
@@ -114,12 +121,13 @@ def plot_posterior_spread(sampler):
                         plot_datapoints=True, quantiles=[0.16, 0.5, 0.84])
 
 if __name__ == "__main__":
-    # Set the data to be fitted
-    verr =  # error for uv is arbitrary, 2%?
-    data = (u, v, verr)
-
     # Set the initial values for the parameters 
-    initial = np.array([300, 10.])
+    sampling, fwhm = 300, 10.
+    initial = np.array([sampling, fwhm])
+
+    # Set the data to be fitted
+    uerr, verr =  np.mean(v)*0.01     # error for uv is arbitrary, 2%?
+    data = (u, v, verr)
 
     # The number of walkers (must be even) and the number of dimensions/parameters
     nwalkers, ndim = 250, len(initial)

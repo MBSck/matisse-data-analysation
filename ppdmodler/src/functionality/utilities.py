@@ -82,13 +82,13 @@ def mas2rad(angle: Optional[Union[int, float]] = None):
         return np.deg2rad(1/3.6e6)
     return np.deg2rad(angle/3.6e6)
 
-def get_scaling_px2metr(array_scaling: float, wavelength: float) -> float:
-    """Calculates the frequency scaling from an input image/model and returns it in meters baseline per pixel
+def get_scaling_px2metr(scaling: float, wavelength: float) -> float:
+    """Calculates the frequency scaling from the axis of an input image/model and returns it in meters baseline per pixel
 
     Parameters
     ----------
-    array_scaling: float
-        The scaling of the image/array x-axis to px
+    scaling: float
+        The scaling of the image/modelx-axis to px
     wavelength: float
         The wavelength at which the scaling should take place
     """
@@ -102,7 +102,7 @@ def rescale_uvcoords(self, model_size: int, scaling: float, uvcoords: np.array) 
     model_size: int
         The dimensions of the model
     scaling: float
-        The scaling of the model to meters
+        The scaling of the image/model x-axis to px
     uvcoords: np.array
         The uvcoords to be rescaled
 
@@ -111,9 +111,9 @@ def rescale_uvcoords(self, model_size: int, scaling: float, uvcoords: np.array) 
     np.array
         The rescaled uvcoords
     """
-    return uvcoords/(scaling*model_size)
+    return uvcoords/(get_scaling_px2metr(scaling, wavelength)*model_size)
 
-def get_distance(self, uvcoords: np.array) -> np.array:
+def get_distance(self, axis: np.array, uvcoords: np.array) -> np.array:
     """Calculates the norm for a point. Takes the freq and checks both the
     u- and v-coords against it (works only for models/image that have the same length in both dimensions).
 
@@ -121,43 +121,56 @@ def get_distance(self, uvcoords: np.array) -> np.array:
 
     Parameters
     ----------
+    axis: np.array
+        The axis of which the distance is to be calculated
     uvcoords: np.array
         The uvcoords that should be cross referenced
 
     Returns
     -------
+    np.array
+        The indices of the closest matching points
     """
     # This makes a list of all the distances in the shape (size_img_array, uv_coords)
-    freq_distance_lst = [[np.sqrt((j-i)**2) for j in fftfreq] for i in
-                         .uvcoords]
+    distance_lst = [[np.sqrt((j-i)**2) for j in axis] for i in uvcoords]
 
     # This gets the indices of the elements closest to the uv-coords
-    indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))
-    return np.ndarray.flatten(np.array(indices_lst))]
+    indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
+    return np.ndarray.flatten(np.array(indices_lst))
 
 def interpolate(self):
     ...
 
-def correspond_fft2freq(uvcoords: np.array) -> List:
-    """This calculates the closest point in the scaled, transformed
-    uv-coords to the FFT result and returns the indicies of the FFT corresponding to the uv-coords"""
-    for i in freq_distance_lst]
-        u_ind = self.distance([i[0] for i in uvcoords])
-        v_ind = self.distance([i[1] for i in uvcoords])
-    return list(zip(u_ind, v_ind))
+def correspond_uv2model(uvcoords: np.array, dis: bool = False, intpol: bool = False) -> List:
+    """This gets the indicies of rescaled given uvcoords to a image/model with
+    either euclidean distance or interpolation and returns their vis2 values
 
-def readout_all_px2uvcoords(self):
-    """This function reads all the pixels into uv coords with the scaling factor"""
-    ...
+    Parameters
+    ----------
+    uvcoords: np.array
+        The to the image's size rescaled uvcoords
+    dis: bool
+        If enabled, corresponds via euclidean distance
+    intpol: bool
+        If enable, corresponds via interpolationg
 
-def get_fft_values(ft: np.array, uv_ind: List) -> List:
-    """Returns the FFT-values at the given indices"""
+    Returns
+    -------
+    np.array
+        Values for the vis2
+    """
+    if dis:
+        u_ind, v_ind = get_distance([i[0] for i in uvcoords]), \
+                get_distance([i[0] for i in uvcoords])
+        uv_ind =  list(zip(u_ind, v_ind))
+    if intpol:
+        ...
+
     return [ft[i[0]][i[1]] for i in uv_ind]
 
-def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
-    """Splits the real and imaginary part of the 2D-FFT into amplitude-,
-     and phase-spectrum"""
-    return np.abs(ft), np.angle(ft)
+def readout_model_px2uvcoords(self):
+    """This function reads all the pixels into uv coords with the scaling factor"""
+    ...
 
 def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
     """

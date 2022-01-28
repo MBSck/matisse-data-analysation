@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Union, Optional
+from typing import Any, Dict, List, Union, Optional
 from scipy.special import j1
 
-from src.functionality.utilities import Model, timeit, set_size, set_uvcoords, mas2rad
+from src.functionality.baseClasses import Model
+from src.functionality.utilities import timeit, set_size, set_uvcoords, mas2rad
 
 
 class UniformDisk(Model):

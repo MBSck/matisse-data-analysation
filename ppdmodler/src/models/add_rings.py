@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 from typing import Optional
 
-from src.functionality.utilities import Model, timeit, set_size, set_uvcoords, \
+from src.functionality.baseClasses import Model
+from src.functionality.utilities import timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
 from src.models.ring import Ring
 

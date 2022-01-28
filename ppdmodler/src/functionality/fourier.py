@@ -71,6 +71,11 @@ class FFT:
         self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 0))
         self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 1))
 
+    def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
+        """Splits the real and imaginary part of the 2D-FFT into amplitude-,
+         and phase-spectrum"""
+        return np.abs(ft), np.angle(ft)
+
 if __name__ == "__main__":
     ring = Gauss2D()
     file_path = "/Users/scheuck/Documents/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"

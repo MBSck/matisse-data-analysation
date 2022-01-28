@@ -1,3 +1,5 @@
+import numpy as np
+
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional

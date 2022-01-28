@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 from typing import Union, Optional
 
-from src.functionality.utilities import Model, timeit, set_size, set_uvcoords
+from src.functionality.baseClasses import Model
+from src.functionality.utilities import timeit, set_size, set_uvcoords
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -86,6 +87,5 @@ if __name__ == "__main__":
     # right distance/unit
 
     g_vis = g.eval_vis(512, 256.1, 8e-06)
-    print(g_vis)
     plt.imshow(g_vis)
     plt.show()

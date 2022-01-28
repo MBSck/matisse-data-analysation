@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Optional
+from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.utilities import Model, timeit, set_size, set_uvcoords
+from src.functionality.baseClasses import Modelk
+from src.functionality.utilities import timeit, set_size, set_uvcoords
 
 class OpticallyThinSphere(Model):
     """Optically Thin Sphere model
