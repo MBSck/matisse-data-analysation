@@ -25,7 +25,8 @@ class InclinedDisk(Model):
 
     @timeit
     def eval_model(self, size: int, r_max: Union[int, float], r_0: Union[int, float], T_0: int, q: float,
-                   wavelength: float, distance: int, inc_angle: int, sampling: Optional[int] = None,
+                   wavelength: float, distance: int, inc_angle: int,
+                   pos_angle_axis: int, pos_angle_measure: int, sampling: Optional[int] = None,
                    centre: Optional[int] = None) -> np.array:
         """Evaluates the Model
 
@@ -60,20 +61,33 @@ class InclinedDisk(Model):
         --------
         set_size()
         """
-        radius = set_size(size, sampling, centre)
+        if (sampling is None) or (sampling < size):
+            sampling = size
+
+        x = np.linspace(0, size, sampling)
+        y = x[:, np.newaxis]
+
+        if centre is None:
+            x0 = y0 = size//2
+        else:
+            x0, y0 = centre
+
+        inc_angle, pos_angle_axis, pos_angle_measure = map(lambda x: x*np.radians(1), [inc_angle, pos_angle_axis, pos_angle_measure])
+
+        a, b = (x-x0)*np.sin(pos_angle_measure), (y-y0)*np.cos(pos_angle_measure)
+        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        radius = np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)*self.scaling
+
         r_0, r_max = map(lambda x: x*self.scaling, [r_0, r_max])
-        inc_angle = np.radians(inc_angle)
 
-        flux = blackbody_spec(r_max, q, r_0, T_0, wavelength)
-
-        output_lst = ((2*np.pi*radius*flux)/distance**2)*np.cos(inc_angle)
-        output_lst[radius < r_0] = 0
-        output_lst[radius > r_max] = 0
+        output_lst = ((2*np.pi*radius*blackbody_spec(radius, q, r_0, T_0, wavelength))/distance)*np.cos(inc_angle)
+        output_lst[radius < r_0], output_lst[radius > r_max] = 0, 0
 
         return output_lst
 
     @timeit
-    def eval_vis(self, sampling: int, radius: int, q: float, r_0: Union[int, float],
+    def eval_vis(self, sampling: int, r_max: Union[int, float], q: float, r_0: Union[int, float],
                  T_0: int, wavelength: float, distance: int, inc_angle: int,
                  pos_angle_axis: int, pos_angle_measure: int) -> np.array:
         """Evaluates the visibilities of the model
@@ -82,8 +96,8 @@ class InclinedDisk(Model):
         ----------
         sampling: int
             The sampling of the uv-plane
-        radius: int
-            The radius of the inclined disk
+        r_max: int | float
+            The max radius of the inclined disk
         r_0: int | float
             The inital radius of the inclined disk
         T_0: int
@@ -108,8 +122,18 @@ class InclinedDisk(Model):
         B = set_uvcoords(sampling, wavelength)
 
         # Convert angle to radians
-        radius, r_0 =  map(lambda x: x*self.scaling, [radius, r_0])
+        r_max, r_0 =  map(lambda x: x*self.scaling, [r_max, r_0])
         inc_angle, pos_angle_axis, pos_angle_measure = map(lambda x: np.radians(x), [inc_angle, pos_angle_axis, pos_angle_measure])
+
+        # Sets the radius
+        x = np.linspace(0, sampling, sampling)
+        y = x[:, np.newaxis]
+
+        x0 = y0 = sampling//2
+        a, b = (x-x0)*np.sin(pos_angle_measure), (y-y0)*np.cos(pos_angle_measure)
+        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        radius = np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)*self.scaling
 
         # The ellipsis
         Bu, Bv = B*np.sin(pos_angle_measure), B*np.cos(pos_angle_measure)
@@ -119,16 +143,23 @@ class InclinedDisk(Model):
                 Bu*np.cos(pos_angle_axis)-Bv*np.sin(pos_angle_axis)
         B_proj = np.sqrt(Buth**2+Bvth**2*np.cos(inc_angle)**2)
 
-        total_flux = self.eval_model(sampling, q, r_0, T_0, wavelength, distance, inc_angle=0)
+        total_flux = self.eval_model(sampling, r_max, q, r_0, T_0, wavelength,
+                                     distance, 0, pos_angle_axis,
+                                     pos_angle_measure)
 
-        return (1/total_flux)*blackbody_spec(radius, q, r_0, T_0, wavelength)*j0(2*np.pi*radius*B_proj)*(radius/distance)
+        output_lst = (1/total_flux)*blackbody_spec(radius, q, r_0, T_0, wavelength)*j0(2*np.pi*radius*B_proj)*(radius/distance)
+        output_lst[radius < r_0], output_lst[radius > r_max] = 0, 0
+
+        return output_lst
 
 
 if __name__ == "__main__":
     i = InclinedDisk()
-    for inc in range(5, 45, 5):
-        i_model = i.eval_model(1024, 256.1, 10, 6000, 0.55, 8e-06, 1, inc)
-        plt.imshow(i_model)
+    for inc in range(10, 90, 10):
+        # i_model = i.eval_model(1024, 100, 20, 6000, 0.55, 8e-06, 1, inc, 45, 45)
+        i_vis = i.eval_vis(1024, 256.1, 0.55, 10, 6000, 8e-06, 1, inc, 45, 45)
+        # plt.imshow(i_model)
+        plt.imshow(i_vis)
         plt.show()
 
     '''

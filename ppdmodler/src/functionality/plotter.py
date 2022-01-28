@@ -89,7 +89,8 @@ class Plotter:
             self.vis2data, self.vis2err = map(lambda x: x[:6], self.readout.get_vis2()[:2])
             self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
             self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
-            self.ucoords, self.vcoords = self.readout.get_split_uvcoords()
+            self.ucoords, self.vcoords = map(lambda x: x[:6],
+                                             self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()
 
             # Different baseline-configurations (short-, medium-, large) AT & UT. Telescope names and "sta_index"
@@ -292,14 +293,13 @@ class Plotter:
 if __name__ == ('__main__'):
     # Tests
     # ------
-    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/"
-    folders = [data_path + "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED",
-              data_path + "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED",
-              data_path + "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"]
+    data_path = "/Users/scheuck/Documents/matisse_stuff/assets/UTs"
+    folders = [os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"),
+              os.path.join(data_path, "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"),
+              os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED")]
 
     for i in folders:
         Plotter(i, [0., 0.15])
-    folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/hd142666/PRODUCTS/calib_nband/UTs/2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"
     # ------
 
     # Main process for shell usage

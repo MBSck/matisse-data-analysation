@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import src.models
 from src.functionality.fourier import FFT
 
+# TODO: Make Parameter class and implement more OOP in the code
+
 def main():
     """Main function, executes code"""
     # model_array = models[model]().eval_model(1024, 10)

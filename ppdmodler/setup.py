@@ -8,10 +8,10 @@ setup(
     version="0.0.1",
     description="Modelling tools for protoplanetary disks",
     author="Marten Scheuck",
-    autor_email="martenscheuck@gmail.com",
     url="",
     py_modules=["main"],
     packages=find_packages(),
+    package_dir={'': 'src'},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",

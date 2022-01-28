@@ -97,5 +97,5 @@ if __name__ == "__main__":
 
     # ax1.imshow(integ.integrate_rings(512, 1, 50, 0.55, 6000, 8e-06))
     plt.imshow(np.abs(integ.integrate_rings_vis(512, 1, 50, 0.55, 6000, 8e-06)))
-    plt.savefig("integrate_rings_common_flux.png")
+    # plt.savefig("integrate_rings_common_flux.png")
     plt.show()

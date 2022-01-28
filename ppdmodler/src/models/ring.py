@@ -59,7 +59,7 @@ class Ring(Model):
         return output_lst
 
     @timeit
-    def eval_vis(self, sampling: int, radius: Union[int, float], wavelength: float, do_flux: bool = False,
+    def eval_vis(self, sampling: int, r_max: Union[int, float], wavelength: float, do_flux: bool = False,
                  r_0: Union[int, float] = 1, q: float = 0.55, T_0: int = 6000) -> np.array:
         """Evaluates the visibilities of the model
 
@@ -67,7 +67,7 @@ class Ring(Model):
         ----------
         sampling: int
             The sampling of the uv-plane
-        radius: int | float
+        r_max: int | float
             The radius of the ring. Input is converted to radians from mas
         wavelength: float
             The sampling wavelength
@@ -93,22 +93,21 @@ class Ring(Model):
         --------
         set_uvcoords()
         """
-        r_0, radius = map(lambda x: x*self.scaling, [r_0, radius])
+        r_0, r_max = map(lambda x: x*self.scaling, [r_0, r_max])
         B = set_uvcoords(sampling, wavelength)
 
-        visibility = j0(2*np.pi*radius*B)
+        # Realtive brightness distribution
+        rel_brightness = self.eval_model(sampling, r_max)*blackbody_spec(r_max, q, r_0, T_0, wavelength)
 
-        if do_flux:
-            x, u = np.linspace(0, sampling, sampling)*self.scaling, np.linspace(-150, 150, sampling)*self.scaling
-            y, v = x[:, np.newaxis], u[:, np.newaxis]
+        visibility = j0(2*np.pi*r_max*B)
+        # TODO: Make way to get the individual fluxes from this funciotn
+        # TODO: Remember to add up for the individual x, y and not sum them up,
+        # should solve the problem
 
-            complex_term = 2*np.pi*(u*x+v*y)
-            flux = blackbody_spec(radius, q, r_0, T_0,
-                                  wavelength)*np.exp(2*I*np.pi*(u*x+v*y))
+        x, u = np.linspace(0, sampling, sampling)*self.scaling, np.linspace(-150, 150, sampling)*self.scaling
+        y, v = x[:, np.newaxis], u[:, np.newaxis]
 
-            return visibility, flux
-
-        return visibility
+        return visibility*blackbody_spec(r_max, q, r_0, T_0, wavelength)*np.exp(2j*np.pi*(u*x+v*y)), rel_brightness
 
     @timeit
     def eval_numerical(self, size: int, outer_radius: int, inner_radius: Optional[int] = None,
@@ -159,20 +158,21 @@ class Ring(Model):
 
 if __name__ == "__main__":
     r = Ring()
-    # for i in range(10, 90, 5):
-    #     inclined_ring =  r.eval_numerical(512, 50, inc_angle=i, pos_angle_axis=45, pos_angle_ellipsis=45, inclined=True)
-    #     plt.imshow(inclined_ring)
-    #     plt.show()
+    # for i in range(10, 180, 15):
+        # inclined_ring =  r.eval_numerical(512, 50, inc_angle=i, pos_angle_axis=45, pos_angle_ellipsis=45, inclined=True)
+        # plt.imshow(inclined_ring)
+        # plt.show()
 
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    # fig, (ax1, ax2) = plt.subplots(1, 2)
 
-    r_model = r.eval_model(512, 256.1)
-    ax1.imshow(r_model)
+    # r_model = r.eval_model(512, 256.1)
+    # ax1.imshow(r_model)
 
-    r_vis = r.eval_vis(512, 256.1, 8e-06, True)
-    ax2.imshow(np.abs(r_vis[0]*r_vis[1]))
-    plt.show()
-    plt.savefig("mode_ring.png")
+    r_vis = r.eval_vis(512, 256.1, 8e-06)
+    print(r_vis, r_vis.shape)
+    # ax2.imshow(np.abs(r_vis[0]))
+    # plt.show()
+    # plt.savefig("mode_ring.png")
 
     '''
     r_num = r.eval_numerical(1024, 10)

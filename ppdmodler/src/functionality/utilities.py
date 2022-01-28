@@ -4,12 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Union, Optional
 from astropy.io import fits
 from functools import wraps
 
 from src.functionality.constant import *
+
+# TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
+# TODO: Change euclidean distance to interpolation in order to get coordinates
 
 # Functions
 
@@ -41,7 +43,7 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
-def compare_arrays(array1: np.array, array2: np.array,
+def compare_arrays(arr1: np.array, arr2: np.array,
                    rtol: Union[int, float] = 1e-05, atol: Union[int, float] = 1e-08) -> [np.array, np.array]:
     """Compares two arrays for their differences in value and also if they are equal in a certain tolerance
 
@@ -64,10 +66,98 @@ def compare_arrays(array1: np.array, array2: np.array,
     return array1-array2, np.isclose(array1, array2, rtol=rtol, atol=atol)
 
 def mas2rad(angle: Optional[Union[int, float]] = None):
-    """Returns a given angle in mas/rad or the pertaining scaling factor"""
+    """Returns a given angle in mas/rad or the pertaining scaling factor
+
+    Parameters
+    ----------
+    angle: [int | float] | None
+        The input angle
+
+    Returns
+    -------
+    float
+        The angle in radians
+    """
     if angle is None:
         return np.deg2rad(1/3.6e6)
     return np.deg2rad(angle/3.6e6)
+
+def get_scaling_px2metr(array_scaling: float, wavelength: float) -> float:
+    """Calculates the frequency scaling from an input image/model and returns it in meters baseline per pixel
+
+    Parameters
+    ----------
+    array_scaling: float
+        The scaling of the image/array x-axis to px
+    wavelength: float
+        The wavelength at which the scaling should take place
+    """
+    return (array_scaling/mas2rad())*wavelength
+
+def rescale_uvcoords(self, model_size: int, scaling: float, uvcoords: np.array) -> np.array:
+    """Rescaled the uv-coords with the scaling factor and the max image size
+
+    Parameters
+    ----------
+    model_size: int
+        The dimensions of the model
+    scaling: float
+        The scaling of the model to meters
+    uvcoords: np.array
+        The uvcoords to be rescaled
+
+    Returns
+    -------
+    np.array
+        The rescaled uvcoords
+    """
+    return uvcoords/(scaling*model_size)
+
+def get_distance(self, uvcoords: np.array) -> np.array:
+    """Calculates the norm for a point. Takes the freq and checks both the
+    u- and v-coords against it (works only for models/image that have the same length in both dimensions).
+
+    The indices of the output list evaluate to the indices of the input list
+
+    Parameters
+    ----------
+    uvcoords: np.array
+        The uvcoords that should be cross referenced
+
+    Returns
+    -------
+    """
+    # This makes a list of all the distances in the shape (size_img_array, uv_coords)
+    freq_distance_lst = [[np.sqrt((j-i)**2) for j in fftfreq] for i in
+                         .uvcoords]
+
+    # This gets the indices of the elements closest to the uv-coords
+    indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))
+    return np.ndarray.flatten(np.array(indices_lst))]
+
+def interpolate(self):
+    ...
+
+def correspond_fft2freq(uvcoords: np.array) -> List:
+    """This calculates the closest point in the scaled, transformed
+    uv-coords to the FFT result and returns the indicies of the FFT corresponding to the uv-coords"""
+    for i in freq_distance_lst]
+        u_ind = self.distance([i[0] for i in uvcoords])
+        v_ind = self.distance([i[1] for i in uvcoords])
+    return list(zip(u_ind, v_ind))
+
+def readout_all_px2uvcoords(self):
+    """This function reads all the pixels into uv coords with the scaling factor"""
+    ...
+
+def get_fft_values(ft: np.array, uv_ind: List) -> List:
+    """Returns the FFT-values at the given indices"""
+    return [ft[i[0]][i[1]] for i in uv_ind]
+
+def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
+    """Splits the real and imaginary part of the 2D-FFT into amplitude-,
+     and phase-spectrum"""
+    return np.abs(ft), np.angle(ft)
 
 def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
     """
@@ -98,10 +188,9 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
     if centre is None:
         x0 = y0 = size//2
     else:
-        x0 = centre[0]
-        y0 = centre[1]
+        x0, y0 = centre
 
-    xc, yc = (x-x0), (y-y0)
+    xc, yc = x-x0, y-y0
 
     if pos_angle is not None:
         pos_angle *= np.radians(1)
@@ -176,13 +265,14 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
         The spectral radiance (the power per unit solid angle) of a black-body
     """
     T = temperature_gradient(radius, q, r_0, T_0)
-    factor = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)/wavelength**5
+    numerator = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)
 
-    exp_nominator = PLANCK_CONST*SPEED_OF_LIGHT
+    exp_numerator = PLANCK_CONST*SPEED_OF_LIGHT
     exp_divisor = wavelength*BOLTZMAN_CONST*T
-    exponent = np.exp(exp_nominator/exp_divisor)-1
+    divisor = wavelength**5*np.exp(exp_numerator/exp_divisor)
 
-    return factor/exponent
+    return numerator/divisor
+
 
 
 def do_plot(input_models: List[np.array], *args, ffft: bool = False, ft: Optional[np.array],
@@ -232,43 +322,6 @@ def do_plot(input_models: List[np.array], *args, ffft: bool = False, ft: Optiona
         ax2.set_xlabel("u[m]")
         ax2.set_ylabel("v[m]")
         plt.show()
-
-
-# Classes
-
-class Model(metaclass=ABCMeta):
-    """Abstract metaclass that initiates the models
-
-    ...
-
-    Methods
-    -------
-    eval_model():
-        Evaluates the model
-    eval_vis2():
-        Evaluates the visibilities of the model
-    """
-    @abstractmethod
-    def eval_model() -> np.array:
-        """Evaluates the model
-
-        Returns
-        --------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        pass
-
-    @abstractmethod
-    def eval_vis() -> np.array:
-        """Evaluates the visibilities of the model
-
-        Returns
-        -------
-        np.array
-            Two dimensional array that can be plotted with plt.imread()
-        """
-        pass
 
 
 if __name__ == "__main__":

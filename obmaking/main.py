@@ -14,7 +14,7 @@ def shell_main():
         try:
             sci_lst, interferometric_array_config, sci_or_cal = sys,argv[1:3]
         except:
-            print("Usage: python3 myplotter.py /sci_lst/ /cal_lst/ /tar_lst/ /sci/cal/") 
+            print("Usage: python3 myplotter.py /sci_lst/ /cal_lst/ /tar_lst/ /sci/cal/")
             sys.exit(1)
 
     if sci_or_cal == "sci":
@@ -47,7 +47,7 @@ def make_cal_obs(cal_lst, sci_lst, tag_lst, interferometric_array_config, outdir
     """Checks if there are sublists in the calibration list and calls the 'mat_gen_ob' with the right inputs
     to generate the calibration objects.
     The input lists correspond to each other index-wise (e.g., cal_lst[1], sci_lst[1], tag_lst[1]; etc.)
-    
+
     Parameters
     ----------
     cal_lst: list
@@ -60,7 +60,7 @@ def make_cal_obs(cal_lst, sci_lst, tag_lst, interferometric_array_config, outdir
         The array configuration ('small', 'medium', 'large')
     outdir: str
         The output directory, where the '.obx'-files will be created in
-    
+
     Returns
     -------
     None
@@ -87,13 +87,13 @@ if __name__ == "__main__":
     #make_cal_obs(cal_lst_003, sci_lst_003, tag_lst_003, "medium",  "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.003_medium")
 
     # Make sci-file
-    make_sci_obs(["Z_CMa"], "medium", "/Users/scheuck/Documents/matisse_stuff/obmaking")
+    # make_sci_obs(["Z_CMa"], "medium", "/Users/scheuck/Documents/matisse_stuff/obmaking")
 
     # Make calibs for sci-file
-    # sci_lst_backup = ["R_Scl", "HD87643", "HD72106", "HD98922"]
-    # cal_lst_backup = [["HD6595", "HD9053"], "HD84810", "HD66435", "HD92436"]
-    # tag_lst_backup = [["L", "N"], "LN", "LN", "LN"]
-    # make_cal_obs(cal_lst_backup, sci_lst_backup, tag_lst_backup, "medium", "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/obmaking/108.225V.backup_medium")
+    sci_lst_backup = ["HD31648"]
+    cal_lst_backup = ["HD27482"]
+    tag_lst_backup = ["LN"]
+    make_cal_obs(cal_lst_backup, sci_lst_backup, tag_lst_backup, "UTs", "/Users/scheuck/Documents/matisse_stuff/obmaking/obs")
 
     # For shell implementation
     # shell_main()
