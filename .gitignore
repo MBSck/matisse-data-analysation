@@ -11,6 +11,7 @@ otherPeoplesScripts/
 ppdmodler/build/
 ppdmodler/dist/
 ppdmodler/ppdmodler.egg-info/
+ppdmodler/src/ppdmodler.egg-info/
 observation/
 
 # Ignored files
