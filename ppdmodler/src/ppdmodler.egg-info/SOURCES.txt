@@ -1,8 +1,0 @@
-README.md
-setup.py
-src/main.py
-src/ppdmodler.egg-info/PKG-INFO
-src/ppdmodler.egg-info/SOURCES.txt
-src/ppdmodler.egg-info/dependency_links.txt
-src/ppdmodler.egg-info/requires.txt
-src/ppdmodler.egg-info/top_level.txt
