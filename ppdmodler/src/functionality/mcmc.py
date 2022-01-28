@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import Gauss2D
-from src.functionality.utilities import ReadoutFits, get_scaling_px2metr
+from src.functionality.readout import ReadoutFits
+from src.functionality.utilities import get_model2px_scaling
 
 def uv2model_rescale(sampling: int, uvcoords: np.array, ):
     """This rescales the models uv-coords in accordance with the model"""
@@ -30,13 +31,15 @@ def model(theta: List, wavelength: float):
     model = Gauss2D.eval_vis(sampling, fwhm, wavelength)
     return model
 
-def lnlike(theta: np.array, u: float, v: float, uerr: float, verr: float):
+def lnlike(theta: np.array, wavelength: float, u: float, v: float, uerr: float, verr: float):
     """Takes theta vector and the x, y and the yerr of the theta.
     Returns a number corresponding to how good of a fit the model is to your
     data for a given set of parameters, weighted by the data points. I.e. it is
     more important"""
     model = model(theta, wavelength)
-    return -0.5*np.sum((v-v_model)**2/verr)
+
+    u_diff, v_diff = -0.5*np.sum((u-u_model)**2), -0.5*np.sum((v-v_model)**2/verr)
+    return u_diff + v_diff
 
 def lnprior(theta):
     """This function checks if all variables are within their priors (it is
@@ -122,18 +125,27 @@ def plot_posterior_spread(sampler):
 
 if __name__ == "__main__":
     # Set the initial values for the parameters 
+    wavelength = 8e-06
     sampling, fwhm = 300, 10.
     initial = np.array([sampling, fwhm])
 
-    # Set the data to be fitted
-    uerr, verr =  np.mean(v)*0.01     # error for uv is arbitrary, 2%?
-    data = (u, v, verr)
+    # TODO: Make model give the frequency scaling in np.diff(sampling), roll
+    # etc.
+
+    # Readout Fits
+    f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
+    u, v = map(lambda x: x*get_model2px_scaling(sampling, wavelength),
+               ReadoutFits(f).get_split_uvcoords())
+
+    # Set the data to be fitted. Error arbitrary, set to 1%
+    uerr, verr = map(lambda x: 0.01*np.mean(x), (u, v))
+    data = (u, v, uerr, verr)
 
     # The number of walkers (must be even) and the number of dimensions/parameters
     nwalkers, ndim = 250, len(initial)
 
     # Sets the steps of the burn-in and the max. steps
-    niter_burn, niter = 100, 10000
+    niter_burn, niter = 100, 1000
 
     # This vector defines the starting points of each walker for the amount of
     # dimensions

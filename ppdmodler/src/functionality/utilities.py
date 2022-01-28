@@ -82,6 +82,48 @@ def mas2rad(angle: Optional[Union[int, float]] = None):
         return np.deg2rad(1/3.6e6)
     return np.deg2rad(angle/3.6e6)
 
+def get_model2px_scaling(sampling: float, wavelength: float):
+    """Gets the model's scaling from its sampling rate
+
+    Parameters
+    ----------
+    sampling: float
+        The sampling of the uvcoords
+
+    Return
+    ------
+    float
+        The px to uv-coord scaling
+    """
+    B = set_uvcoords(sampling, wavelength)
+    roll = np.floor(len(B)/2).astype(int)
+    freq = np.roll(B, roll, axis=0)
+    return np.diff(freq)[0][0]
+
+def scale_uv2px(sampling: int, u: np.array,
+                v: np.array, wavelength: float) -> np.array:
+    """Takes uv-coords and the image/model's scaling to rescale them into
+    radians per px
+
+    Parameters
+    ----------
+    sampling: int
+        The sampling of the image
+    u: np.array
+        The u-coords
+    v: np.array
+        The v-coords
+    wavelength: float
+        The wavelength at which the uv-coords are sampled
+
+    Returns
+    -------
+    tuple
+        The rescaled uv-coords as a tuple of np.arrays
+    """
+    u, v = map(lambda x: get_model2px_scaling(sampling)*(mas2rad(x)/wavelength), (u, v))
+    return u, v
+
 def get_scaling_px2metr(scaling: float, wavelength: float) -> float:
     """Calculates the frequency scaling from the axis of an input image/model and returns it in meters baseline per pixel
 
@@ -95,7 +137,9 @@ def get_scaling_px2metr(scaling: float, wavelength: float) -> float:
     return (array_scaling/mas2rad())*wavelength
 
 def rescale_uvcoords(self, model_size: int, scaling: float, uvcoords: np.array) -> np.array:
-    """Rescaled the uv-coords with the scaling factor and the max image size
+    """Rescaled the uv-coords with the scaling factor and the max image size as
+    well as to radians. Applicable for FFT, but not for analytical model as it
+    is already in radians
 
     Parameters
     ----------

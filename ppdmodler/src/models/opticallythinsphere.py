@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.baseClasses import Modelk
+from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords
 
 class OpticallyThinSphere(Model):

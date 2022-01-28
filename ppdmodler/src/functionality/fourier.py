@@ -26,7 +26,7 @@ class FFT:
     # TODO: Make Zoom function work
     def __init__(self, model: np.array, set_size: int, fits_file_path: Path,
                  wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
-        self.model= model                                                           # Evaluates the model
+        self.model = model                                                           # Evaluates the model
         self.model_size = len(self.model)                                           # Gets the size of the model's image
 
         # General variables
