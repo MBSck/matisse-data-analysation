@@ -182,8 +182,30 @@ def get_distance(self, axis: np.array, uvcoords: np.array) -> np.array:
     indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
     return np.ndarray.flatten(np.array(indices_lst))
 
-def interpolate(self):
-    ...
+def interpolate(sampling: int, uvcoords: np.array) -> List:
+    """This creates a grid of uv-coords from 0 to 300, sampling determines the
+    steps and the real uv-coords are rounded to fit to it. Returns the
+    indices of the real uv-data matched to the model data of the same sampling.
+
+    Parameters
+    ----------
+    sampling: int
+        The sampling rate, determining the steps
+    uvcoords: np.array
+        The real uv data
+
+    Returns
+    -------
+    uv_ind: List
+        The indicies of the uv data fitting to the sampling
+
+    """
+    # This gets the number of the sampling's digits after the first
+    dg_samp = len(str(sampling))-1
+    print(dg_sampl, samp)
+    B = np.linspace(-150, 150, sampling)
+
+    # uvcoords = np.around(uvcoords, )
 
 def correspond_uv2model(uvcoords: np.array, dis: bool = False, intpol: bool = False) -> List:
     """This gets the indicies of rescaled given uvcoords to a image/model with
@@ -391,9 +413,9 @@ if __name__ == "__main__":
     # radius= set_size(512, 1, None)
     # print(radius, "radius", theta, "theta")
 
-    B = set_uvcoords(512, 8e-06)
-    print(B)
-    radius = set_size(512)
-    r = set_size(512, 5)
-    print(radius, radius.shape, "----", r, r.shape)
+    # B = set_uvcoords(512, 8e-06)
+    # print(B)
+    # radius = set_size(512)
+    # r = set_size(512, 5)
+    # print(radius, radius.shape, "----", r, r.shape)
 

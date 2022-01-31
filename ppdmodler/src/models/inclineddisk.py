@@ -157,10 +157,10 @@ class InclinedDisk(Model):
 if __name__ == "__main__":
     i = InclinedDisk()
     for inc in range(10, 90, 10):
-        # i_model = i.eval_model(1024, 100, 20, 6000, 0.55, 8e-06, 1, inc, 45, 45)
-        i_vis = i.eval_vis(1024, 256.1, 0.55, 10, 6000, 8e-06, 1, inc, 45, 45)
-        # plt.imshow(i_model)
-        plt.imshow(i_vis)
+        i_model = i.eval_model(1024, 100, 20, 6000, 0.55, 8e-06, 1, inc, 45, 45)
+        # i_vis = i.eval_vis(1024, 256.1, 0.55, 10, 6000, 8e-06, 1, inc, 45, 45)
+        plt.imshow(i_model)
+        # plt.imshow(i_vis)
         plt.show()
 
     '''

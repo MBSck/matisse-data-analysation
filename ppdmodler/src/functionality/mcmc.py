@@ -21,25 +21,19 @@ from src.models import Gauss2D
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import get_model2px_scaling
 
-def uv2model_rescale(sampling: int, uvcoords: np.array, ):
-    """This rescales the models uv-coords in accordance with the model"""
-    ...
-
 def model(theta: List, wavelength: float):
     """The model defined for the MCMC process"""
     sampling, fwhm = theta
-    model = Gauss2D.eval_vis(sampling, fwhm, wavelength)
+    model = Gauss2D().eval_vis(sampling, fwhm, wavelength)
     return model
 
-def lnlike(theta: np.array, wavelength: float, u: float, v: float, uerr: float, verr: float):
+def lnlike(theta: List, wavelength: float, B: np.array, Berr: float):
     """Takes theta vector and the x, y and the yerr of the theta.
     Returns a number corresponding to how good of a fit the model is to your
     data for a given set of parameters, weighted by the data points. I.e. it is
     more important"""
-    model = model(theta, wavelength)
-
-    u_diff, v_diff = -0.5*np.sum((u-u_model)**2), -0.5*np.sum((v-v_model)**2/verr)
-    return u_diff + v_diff
+    Bm = model(theta, wavelength)
+    return -0.5*np.sum((B-Bm)**2/Berr)
 
 def lnprior(theta):
     """This function checks if all variables are within their priors (it is
@@ -51,7 +45,7 @@ def lnprior(theta):
     else:
         return -np.inf
 
-def lnprob(theta: np.array, wavelength: float, u: float, v: float, uerr: float, verr: float):
+def lnprob(theta: np.array, wavelength: float, B: np.array, Berr: float):
     """This function runs the lnprior and checks if it returned -np.inf, and
     returns if it does. If not, (all priors are good) it returns the inlike for
     that model (convention is lnprior + lnlike)
@@ -67,7 +61,7 @@ def lnprob(theta: np.array, wavelength: float, u: float, v: float, uerr: float, 
     lp = lnprior(theta)
     if not lp == 0.0:
         return -np.inf
-    return lp + lnlike(theta, wavelength, u, v, verr)
+    return lp + lnlike(theta, wavelength, B, Berr)
 
 def main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data) -> np.array:
     """"""
@@ -136,10 +130,12 @@ if __name__ == "__main__":
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     u, v = map(lambda x: x*get_model2px_scaling(sampling, wavelength),
                ReadoutFits(f).get_split_uvcoords())
+    print(ReadoutFits(f).get_uvcoords())
+    B = np.sqrt(u**2+v**2)
 
     # Set the data to be fitted. Error arbitrary, set to 1%
-    uerr, verr = map(lambda x: 0.01*np.mean(x), (u, v))
-    data = (u, v, uerr, verr)
+    Berr = 0.01*np.mean(B)
+    data = (wavelength, B, Berr)
 
     # The number of walkers (must be even) and the number of dimensions/parameters
     nwalkers, ndim = 250, len(initial)
