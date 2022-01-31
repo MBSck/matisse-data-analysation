@@ -1,18 +1,25 @@
 #!/bin/env bash
-
+# Brackets around the code makes it possible to change during running
+# as whole file is parsed before run
+{
 #change this to point to your oca pipeline
 cd ./oca_pipeline/tools/
 
 #----------define the folders for saving data-----------------
 #location of the data folders (raw, outputs, etc)
-TARGET=hd142666
+TARGET=openTime/suAur
 DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data
-TARGETDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET
-CALIBDIR=$TARGETDIR/RAW
-RAWDIR=$TARGETDIR/RAW
-RESDIR=$TARGETDIR/PRODUCTS
+RAWDIR=$DATADIR/$TARGET/RAW
+CALIBDIR=$RAWDIR
+RESDIR=$DATADIR/$TARGET/PRODUCTS
 
-TARGETLIST='20190323'
+TARGETLIST=
+
+# Checks if reductions for both bands should be done -> implement that
+DO_BOTH=true
+
+# Defaults to L-band data reduction 
+CHECK_LBAND=false
 
 make_directory() {
 for i in "$@"
@@ -29,8 +36,6 @@ do_reduction() {
 
 start=`date +%s`
 
-# Defaults to L-band data reduction 
-CHECK_LBAND=false
 
 #----------Do the L-band-------------------------------
 if [ "$CHECK_LBAND" == true ]; then
@@ -44,7 +49,7 @@ if [ "$CHECK_LBAND" == true ]; then
 	    mv -f $RESDIR/Iter1/*.rb $RESDIR/lband
     fi
 
-#----------Do the L-band-------------------------------
+#----------Do the N-band-------------------------------
 else
 	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$RESDIR --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=TRUE/coherentAlgo=2/corrFlux=FALSE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
 
@@ -62,14 +67,21 @@ runtime=$((end-start))
 printf "Finished calibration in %f sec" $runtime
 }
 
+# Make directories if they are not yet exisiting
 make_directory $TARGETDIR $CALIBDIR
 
-for i in $TARGETLIST
-do
-    TEMPRAW=$RAWDIR/$i
-    TEMPCALIB=$CALIBDIR/$i
+if [ -z $TARGETLIST];then
+    echo works
+    do_reduction $RAWDIR $CALIBDIR
+else
+    for i in $TARGETLIST
+    do
+        TEMPRAW=$RAWDIR/$i
+        TEMPCALIB=$CALIBDIR/$i
 
-    do_reduction $TEMPRAW $TEMPCALIB
-done
+        do_reduction $TEMPRAW $TEMPCALIB
+    done
+fi
 
-exit 0
+exit
+}
