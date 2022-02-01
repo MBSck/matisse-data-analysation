@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -13,7 +14,14 @@ from src.functionality.constant import *
 # TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
 # TODO: Change euclidean distance to interpolation in order to get coordinates
 
+# Shows the full np.arrays, takes ages to print the arrays
+# np.set_printoptions(threshold=sys.maxsize)
+
 # Functions
+
+def trunc(values, decs=0):
+    """Truncates the floating point decimals"""
+    return np.trunc(values*10**decs)/(10**decs)
 
 def timeit(func):
     """Simple timer decorator for functions"""
@@ -182,31 +190,6 @@ def get_distance(self, axis: np.array, uvcoords: np.array) -> np.array:
     indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
     return np.ndarray.flatten(np.array(indices_lst))
 
-def interpolate(sampling: int, uvcoords: np.array) -> List:
-    """This creates a grid of uv-coords from 0 to 300, sampling determines the
-    steps and the real uv-coords are rounded to fit to it. Returns the
-    indices of the real uv-data matched to the model data of the same sampling.
-
-    Parameters
-    ----------
-    sampling: int
-        The sampling rate, determining the steps
-    uvcoords: np.array
-        The real uv data
-
-    Returns
-    -------
-    uv_ind: List
-        The indicies of the uv data fitting to the sampling
-
-    """
-    # This gets the number of the sampling's digits after the first
-    dg_samp = len(str(sampling))-1
-    print(dg_sampl, samp)
-    B = np.linspace(-150, 150, sampling)
-
-    # uvcoords = np.around(uvcoords, )
-
 def correspond_uv2model(uvcoords: np.array, dis: bool = False, intpol: bool = False) -> List:
     """This gets the indicies of rescaled given uvcoords to a image/model with
     either euclidean distance or interpolation and returns their vis2 values
@@ -277,7 +260,8 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
 
     return np.sqrt(xc**2+yc**2)*mas2rad()
 
-def set_uvcoords(sampling: int, wavelength: float) -> np.array:
+@timeit
+def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
@@ -289,12 +273,11 @@ def set_uvcoords(sampling: int, wavelength: float) -> np.array:
 
     Returns
     -------
-    baseline: np.array
+    baseline: ArrayLike
     """
     if sampling < 300:
         sampling = 300
 
-    # TODO: Fit the u,v sampling to the ft arrays
     B = np.linspace(-150, 150, sampling)
 
     # Star overhead sin(theta_0)=1
@@ -404,6 +387,7 @@ def do_plot(input_models: List[np.array], *args, ffft: bool = False, ft: Optiona
 
 
 if __name__ == "__main__":
+    ...
     # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
     # print(readout.get_uvcoords_vis2, "uvcoords")
@@ -418,4 +402,3 @@ if __name__ == "__main__":
     # radius = set_size(512)
     # r = set_size(512, 5)
     # print(radius, radius.shape, "----", r, r.shape)
-

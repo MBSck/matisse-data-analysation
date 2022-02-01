@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Union, Optional
+from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords
@@ -57,7 +57,7 @@ class Gauss2D(Model):
 
         Parameters
         ----------
-        sampling: int
+        sampling: int, optional
             The sampling of the uv-plane
         fwhm: int | float
             The diameter of the sphere
@@ -79,13 +79,13 @@ class Gauss2D(Model):
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model(512, 256.1)
-    plt.imshow(g_model)
-    plt.show()
+    # g_model = g.eval_model(512, 256.1)
+    # plt.imshow(g_model)
+    # plt.show()
 
     # TODO: Make scaling factor of px, the rest is already calculated to the
     # right distance/unit
 
-    # g_vis = g.eval_vis(512, 256.1, 8e-06)
-    # plt.imshow(g_vis)
-    # plt.show()
+    g_vis = g.eval_vis(256.1, 8e-06, sampling=512)
+    plt.imshow(g_vis)
+    plt.show()

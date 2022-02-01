@@ -7,7 +7,6 @@ import numpy as np
 from astropy.io import fits
 from subprocess import call
 from sys import argv
-import myplotter as plotter
 import sys
 
 try:
@@ -57,11 +56,3 @@ try:
 except:
     print('Something went wrong, check the log file...')
 
-
-#now try to make some basic qa plots
-try:
-    plotter.do_plot(outname, do_fit=True)
-except:
-    print("Plotting failed")
-
-print('Done!')
