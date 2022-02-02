@@ -93,11 +93,24 @@ class Plotter:
                                              self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()
 
-            # Different baseline-configurations (short-, medium-, large) AT & UT. Telescope names and "sta_index"
+            # Different baseline-configurations (small-, medium-, large) AT & UT. Telescope names and "sta_index"
+            self.all_tels = {}
+            smallAT, medAT, largeAT, UT = {1: "A0", 5: "B2", 13: "C0", 10: "D1"}, \
+                    {28: "K0", 18: "G1", 13: "D0", 24: "J3"}, \
+                    {1: "A0", 18: "G1", 23: "J2", 24: "J3"}, \
+                    {32: "UT1", 33: "UT2", 34: "UT3", 35: "UT4"}
+            self.all_tels.update(smallAT)
+            self.all_tels.update(medAT)
+            self.all_tels.update(largeAT)
+            self.all_tels.update(UT)
+
+            '''
+            # Code for python 3.9, dic merging operator
             self.all_tels = {1: "A0", 5: "B2", 13: "C0", 10: "D1"} | \
                     {28: "K0", 18: "G1", 13: "D0", 24: "J3"} | \
                     {1: "A0", 18: "G1", 23: "J2", 24: "J3"} | \
                     {32: "UT1", 33: "UT2", 34: "UT3", 35: "UT4"}
+            '''
 
             # Sets the descriptors of the telescopes' baselines and the closure # phases
             self.tel_vis2 = np.array([("-".join([self.all_tels[t] for t in duo])) for duo in self.vis2sta])
@@ -291,15 +304,16 @@ class Plotter:
 
 
 if __name__ == ('__main__'):
+    ...
     # Tests
     # ------
-    data_path = "/Users/scheuck/Documents/matisse_stuff/assets/UTs"
-    folders = [os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"),
-              os.path.join(data_path, "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"),
-              os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED")]
+    # data_path = "/Users/scheuck/Documents/matisse_stuff/assets/UTs"
+    # folders = [os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"),
+    #           os.path.join(data_path, "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"),
+    #           os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED")]
 
-    for i in folders:
-        Plotter(i, [0., 0.15])
+    # for i in folders:
+    #     Plotter(i, [0., 0.15])
     # ------
 
     # Main process for shell usage
