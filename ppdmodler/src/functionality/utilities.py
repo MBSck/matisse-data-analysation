@@ -110,7 +110,7 @@ def get_scaling_px2metr(model: np.ndarray, wavelength: float, uvcoords:
     scaling = (get_px_scaling(axis)/mas2rad())*wavelength*axis_size
     return uvcoords/scaling
 
-def get_distance(self, axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
+def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     """Calculates the norm for a point. Takes the freq and checks both the
     u- and v-coords against it.
     Works only for models/image that have the same length in both dimensions.
@@ -133,19 +133,20 @@ def get_distance(self, axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     distance_lst = [[np.sqrt((j-i)**2) for j in axis] for i in uvcoords]
 
     # This gets the indices of the elements closest to the uv-coords
+    # TODO: Maybe make more efficient with numpy instead of list comprehension
     indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
     return np.ndarray.flatten(np.array(indices_lst))
 
 def interpolate():
     ...
 
-def correspond_uv2model(model: np.ndarray, uvcoords: np.array, dis: bool = False, intpol: bool = False) -> List:
+def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: np.array,
+                        dis: bool = False, intpol: bool = False) -> List:
     """This gets the indicies of rescaled given uvcoords to a image/model with
     either euclidean distance or interpolation and returns their vis2 values
 
     Parameters
     ----------
-
     uvcoords: np.array
         The to the image's size rescaled uvcoords
     dis: bool
@@ -159,13 +160,13 @@ def correspond_uv2model(model: np.ndarray, uvcoords: np.array, dis: bool = False
         Values for the vis2
     """
     if dis:
-        u_ind, v_ind = get_distance([i[0] for i in uvcoords]), \
-                get_distance([i[0] for i in uvcoords])
-        uv_ind =  list(zip(u_ind, v_ind))
+        u_ind, v_ind = get_distance(model_axis, [i[0] for i in uvcoords]), \
+                get_distance(model_axis, [i[1] for i in uvcoords])
+        uv_ind =  zip(u_ind, v_ind)
     if intpol:
         ...
 
-    return [model[i[0]][i[1]] for i in uv_ind]
+    return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
 def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
     """
@@ -186,6 +187,9 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
     Returns
     -------
     radius: np.array
+        The radius
+    xc: np.ndarray
+        The x-axis used to calculate the radius
     """
     if (sampling is None):
         sampling = size
@@ -204,7 +208,7 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
         pos_angle *= np.radians(1)
         xc, yc = xc*np.sin(pos_angle), yc*np.cos(pos_angle)
 
-    return np.sqrt(xc**2+yc**2)*mas2rad()
+    return np.sqrt(xc**2+yc**2)*mas2rad(), xc
 
 def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
     """Sets the uv coords for visibility modelling
@@ -218,14 +222,17 @@ def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
 
     Returns
     -------
-    baseline: ArrayLike
+    baselines: ArrayLike
+        The baselines for the uvcoords
+    B: ArrayLike
+        The axis used to calculate the baslines
     """
     B = np.linspace(-150, 150, sampling)
 
     # Star overhead sin(theta_0)=1 position
     u, v = B/wavelength, B[:, np.newaxis]/wavelength
 
-    return np.sqrt(u**2+v**2)
+    return np.sqrt(u**2+v**2), B
 
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
