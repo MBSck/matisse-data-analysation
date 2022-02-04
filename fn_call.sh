@@ -6,7 +6,7 @@
 
 {
 #change this to point to your oca pipeline
-cd ./oca_pipeline/tools/
+cd /data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools
 
 #----------define the folders for saving data-----------------
 # Location of the data folders (raw, outputs, etc)

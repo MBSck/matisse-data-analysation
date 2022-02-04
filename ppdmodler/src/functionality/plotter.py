@@ -307,13 +307,16 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    # data_path = "/Users/scheuck/Documents/matisse_stuff/assets/UTs"
+    data_path = "data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/suAur/PRODUCTS/nband/calib_nband/"
     # folders = [os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"),
     #           os.path.join(data_path, "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"),
     #           os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED")]
 
     # for i in folders:
     #     Plotter(i, [0., 0.15])
+
+    folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
+    Plotter(os.path.join(data_path, folder), [0., 0.15])
     # ------
 
     # Main process for shell usage

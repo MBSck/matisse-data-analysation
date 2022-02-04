@@ -256,4 +256,102 @@ Processing summary:
 mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb': File exists
 mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb': File exists
 mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb': File exists
-Finished calibration in 2414.000000 sec
+Finished calibration in 2414.000000 secpython: can't open file 'automaticPipeline.py': [Errno 2] No such file or directory
+mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb': File exists
+mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb': File exists
+mv: cannot move '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb' to '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb': File exists
+Finished calibration in 0.000000 secpython: can't open file 'automaticPipeline.py': [Errno 2] No such file or directory
+Finished calibration in 0.000000 sec 
+------------------------------------------------------------------------
+('Raw Data Directory:                     ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/RAW')
+('Calibration Directory:                  ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/RAW')
+('Results Directory:                      ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS')
+('Number of Cores:                        ', 4)
+('Maximum Number of Iteration:            ', 1)
+------------------------------------------------------------------------
+Sorting files according to constraints...
+Determining the number of reduction blocks...
+Found 3 reduction blocks.
+
+('Iteration ', 1)
+-----------------------
+listing reduction blocks...
+listing files in the reduction blocks...
+listing actions in the reduction blocks...
+listing calibrations in the reduction blocks...
+done.
+listing calibrations from previous iteration in the reduction blocks...
+creating the sof files and directories...
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03:45:35.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb does not exist. Creating it...
+
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:13:23.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb does not exist. Creating it...
+
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:44:01.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb does not exist. Creating it...
+
+('Reduction Blocks to process:            ', 3)
+ 
+------------------------------------------------------------------------
+('Raw Data Directory:                     ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/RAW')
+('Calibration Directory:                  ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/RAW')
+('Results Directory:                      ', '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS')
+('Number of Cores:                        ', 4)
+('Maximum Number of Iteration:            ', 1)
+------------------------------------------------------------------------
+Sorting files according to constraints...
+Determining the number of reduction blocks...
+Found 3 reduction blocks.
+
+('Iteration ', 1)
+-----------------------
+listing reduction blocks...
+listing files in the reduction blocks...
+listing actions in the reduction blocks...
+listing calibrations in the reduction blocks...
+done.
+listing calibrations from previous iteration in the reduction blocks...
+creating the sof files and directories...
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03:45:35.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb does not exist. Creating it...
+
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:13:23.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb does not exist. Creating it...
+
+sof file /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:44:01.AQUARIUS.sof does not exist. Creating it...
+outputDir /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb does not exist. Creating it...
+
+('Reduction Blocks to process:            ', 3)
+esorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb mat_raw_estimates  --useOpdMod=TRUE --coherentAlgo=2 --corrFlux=FALSE --compensate=[pb,rb,nl,if,bp,od] --coherentIntegTime=0.2 --cumulBlock=FALSE --spectralBinning=11 --replaceTel=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03:45:35.AQUARIUS.sof
+LOW
+('Reduction Blocks processed:             ', 3)
+('Reduction Blocks not processed:         ', 0)
+ 
+No more iteration to do
+-----------------------
+ 
+Processing summary:
+ 
+('2021-10-15T03:45:35     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+('2021-10-15T04:13:23     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+('2021-10-15T04:44:01     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+Finished calibration in 414.000000 secesorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb mat_raw_estimates  --useOpdMod=TRUE --coherentAlgo=2 --corrFlux=FALSE --compensate=[pb,rb,nl,if,bp,od] --coherentIntegTime=0.2 --cumulBlock=FALSE --spectralBinning=11 --replaceTel=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:44:01.AQUARIUS.sof
+LOW
+esorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb mat_raw_estimates  --useOpdMod=TRUE --coherentAlgo=2 --corrFlux=FALSE --compensate=[pb,rb,nl,if,bp,od] --coherentIntegTime=0.2 --cumulBlock=FALSE --spectralBinning=11 --replaceTel=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T04:13:23.AQUARIUS.sof
+LOW
+esorex --output-dir=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb mat_raw_estimates  --useOpdMod=TRUE --coherentAlgo=2 --corrFlux=FALSE --compensate=[pb,rb,nl,if,bp,od] --coherentIntegTime=0.2 --cumulBlock=FALSE --spectralBinning=11 --replaceTel=2 /data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/mat_raw_estimates.2021-10-15T03:45:35.AQUARIUS.sof
+LOW
+('Reduction Blocks processed:             ', 3)
+('Reduction Blocks not processed:         ', 0)
+ 
+No more iteration to do
+-----------------------
+ 
+Processing summary:
+ 
+('2021-10-15T03:45:35     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+('2021-10-15T04:13:23     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+('2021-10-15T04:44:01     ', 'AQUARIUS      ', 'ACTION_MAT_RAW_ESTIMATES      ', 'Processing done at iteration 1')
+mv: cannot stat '/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/Iter1/*.rb': No such file or directory
+Finished calibration in 2376.000000 sec

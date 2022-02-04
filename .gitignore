@@ -12,7 +12,7 @@ ppdmodler/build/
 ppdmodler/dist/
 ppdmodler/ppdmodler.egg-info/
 ppdmodler/src/ppdmodler.egg-info/
-query/getdata_ESO_Archive.py
+query/getdata_ESO_archive.py
 observation/
 
 # Ignored files

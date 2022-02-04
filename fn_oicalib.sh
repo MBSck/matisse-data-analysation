@@ -4,7 +4,7 @@
 TARGET=suAur
 FOLDER=nband
 DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/$TARGET/PRODUCTS/$FOLDER
-EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
+EXECDIR=/home/scheuck/scripts
 
 
 do_oicalib() {
@@ -38,8 +38,8 @@ do_oicalib() {
 # do
 #     printf "%s is in %s\n" "$i" "${RAWLIST[$i]}"
 # done
-
-do_oicalib mat_raw_estimates.2021-10-15T06_50_56.AQUARIUS.rb mat_raw_estimates.2021-10-15T07_20_19.AQUARIUS.rb
+do_oicalib mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb mat_raw_estimates.2021-10-15T04_13_23.AQUARIUS.rb
+do_oicalib mat_raw_estimates.2021-10-15T04_44_01.AQUARIUS.rb mat_raw_estimates.2021-10-15T03_45_35.AQUARIUS.rb 
 
 exit 0
 }
