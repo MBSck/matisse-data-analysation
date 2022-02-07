@@ -30,7 +30,12 @@ except:
 
 
 #for file in the targ dir, write to sof
-targ_files = np.sort( glob(targdir + '/*RAW_INT_*.fits')  )
+try:
+    targ_files = np.sort( glob(targdir + '/*RAW_INT_*.fits')  )
+except:
+    print("No TARGET_RAW_INT-files found -> Either calibrator or missing")
+    targ_files = np.sort( glob(calibdir + '/*CALIB_RAW_INT_*.fits')  )
+
 for tf in targ_files:
     print(tf)
     mysof.write("%s %s\n"%(tf, 'TARGET_RAW_INT') )
