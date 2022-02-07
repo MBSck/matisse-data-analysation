@@ -20,6 +20,18 @@ class Gauss2D(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
+    def __init__(self):
+        self._axis_mod= []
+        self._axis_vis= []
+
+    @property
+    def axis_mod(self):
+        return self._axis_mod
+
+    @property
+    def axis_vis(self):
+        return self._axis_vis
+
     @timeit
     def eval_model(self, size: int, fwhm: Union[int, float],
                    sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
@@ -47,7 +59,7 @@ class Gauss2D(Model):
         set_size()
         """
         fwhm = np.radians(fwhm/3.6e6)
-        radius = set_size(size, sampling, centre)
+        radius, self._axis_mod  = set_size(size, sampling, centre)
 
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
 
@@ -72,7 +84,7 @@ class Gauss2D(Model):
         --------
         set_uvcoords()
         """
-        B = set_uvcoords(sampling, wavelength)
+        B, self._axis_vis  = set_uvcoords(sampling, wavelength)
         fwhm = np.radians(fwhm/3.6e6)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
@@ -86,6 +98,7 @@ if __name__ == "__main__":
     # TODO: Make scaling factor of px, the rest is already calculated to the
     # right distance/unit
 
-    g_vis = g.eval_vis(256.1, 8e-06, sampling=512)
+    g_vis = g.eval_vis(512, 256.1, 8e-06)
+    print(g_vis)
     plt.imshow(g_vis)
     plt.show()

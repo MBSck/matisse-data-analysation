@@ -5,6 +5,8 @@ import numpy as np
 from astropy.io import fits
 from typing import Any, Dict, List, Union, Optional
 
+from src.functionality.utilities import get_distance
+
 class ReadoutFits:
     """All functionality to work with '.oifits/.fits'-files"""
     def __init__(self, fits_file):
@@ -45,7 +47,7 @@ class ReadoutFits:
 
     def get_uvcoords(self):
         """Fetches the u, v coord-lists and merges them as well as the individual components"""
-        return np.array([i for i in zip(self.get_data(4, "ucoord"), self.get_data(4, "vcoord"))])
+        return np.array([i for i in zip(self.get_data(4, "ucoord")[:6], self.get_data(4, "vcoord")[:6])])
 
     def get_split_uvcoords(self):
         """Splits a 2D-np.array into its 1D-components and returns the u- and
@@ -74,5 +76,27 @@ class ReadoutFits:
     def get_tel_sta(self):
         return self.get_data(2, "tel_name", "sta_index")
 
+    def get_vis24wl(self, wavelength) -> np.ndarray:
+        """Fetches the vis2data for one specific wavelength
+
+        Returns
+        --------
+        np.ndarray
+            Array with two nested arrays containing the the vis2  and the
+            vis2err for all baselines for a specific wavelength
+        """
+        vis2data, vis2err  = map(lambda x: x[:6], self.get_vis2()[:2])
+        wldata = self.get_wl()
+        wl_ind = get_distance(wldata, [wavelength])
+        vis2datawl, vis2errwl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [vis2data, vis2err])
+
+        return vis2datawl, vis2errwl
+
+
 if __name__ == "__main__":
-    ...
+    file = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_RAW_INT_0001.fits"
+    readout = ReadoutFits(file)
+    print(readout.get_uvcoords())
+    # readout.get_info()
+
+    print(readout.get_vis24wl(8e-06))
