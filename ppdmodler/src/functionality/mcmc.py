@@ -30,11 +30,12 @@ from src.models import Gauss2D
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import correspond_uv2model
 
-def model(theta: np.ndarray, sampling: int, wavelength: float) -> np.ndarray:
+def model(theta: np.ndarray, sampling: int, wavelength: float, uvcoords:
+          np.ndarray) -> np.ndarray:
     """The model defined for the MCMC process"""
     fwhm = theta
     model = Gauss2D()
-    model_vis = model.eval_vis(sampling, fwhm, wavelength)
+    model_vis = model.eval_vis(sampling, fwhm, wavelength, uvcoords)
     model_axis = model.axis_vis
     return model_vis, model_axis
 
@@ -44,8 +45,7 @@ def lnlike(theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.nda
     Returns a number corresponding to how good of a fit the model is to your
     data for a given set of parameters, weighted by the data points. I.e. it is
     more important"""
-    visdatamod, vis_axis = model(theta, sampling, wavelength)
-    visdatamod, uv_ind  = correspond_uv2model(visdatamod, vis_axis, uvcoords, True)
+    visdatamod, vis_axis = model(theta, sampling, wavelength, uvcoords)
     vis2datamod = visdatamod*np.conj(visdatamod)
     return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
 
@@ -114,16 +114,24 @@ def test_model(sampler) -> None:
     autocorr= np.mean(sampler.get_autocorr_time())
     print(f"Mean acceptance fraction {acceptance} and the autcorrelation time {autocorr}")
 
-def model_plot(sampler, sampling: int, wavelength: float) -> None:
+def model_plot(sampler, sampling: int, wavelength: float, uvcoords:
+               Optional[np.ndarray] = None) -> None:
     """Plot the samples to get estimate of the density that has been sampled, to
     test if sampling went well"""
 
     # This gets the parameter values for every walker at each step in the chain.
     # Array of shape (steps, nwalkers, ndim)
     samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
-    theta_max = samples[np.argmax(sampler.flatlnprobability)]
+    theta_max = samples[np.argmax(sampler.flatlnprobability)][0]
     print(theta_max)
-    best_fit_model = model(theta_max, sampling, wavelength)[0]
+    best_fit_model = Gauss2D().eval_vis(sampling, theta_max, wavelength)
+
+    if uvcoords is not None:
+        best_fit_model_coords = Gauss2D().eval_vis(sampling, theta_max, wavelength, uvcoords)
+        print(best_fit_model_coords*np.conj(best_fit_model_coords), "best model fit vis2")
+        print(vis2data, "real vi2data2")
+        np.save("model_fit_test.npy", best_fit_model_coords*np.conj(best_fit_model_coords))
+
     plt.imshow(best_fit_model)
     plt.savefig("model_plot.png")
 
@@ -135,38 +143,43 @@ def corner_plot(samples):
 
 if __name__ == "__main__":
     # Set the initial values for the parameters 
-    fwhm = 50.
+    fwhm = 1.
     initial = np.array([fwhm])
 
-    # Sets the wavelength the model is to be evaluated at
-    sampling, wavelength = 512, 10e-06
 
     # Readout Fits for real data
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     readout = ReadoutFits(f)
-    vis2data, vis2err = readout.get_vis24wl(wavelength)
+
+    # Sets the wavelength the model is to be evaluated at
+    wl_ind = 101
+    sampling, wavelength = 128, readout.get_wl()[wl_ind]
+
+    vis2data, vis2err = readout.get_vis24wl(wl_ind)
+    # Test the fitting by inputting model data
+    # vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
     uvcoords = readout.get_uvcoords()
 
     # Set the data to be fitted. Error arbitrary, set to 1%
     data = (sampling, wavelength, vis2data, vis2err, uvcoords)
 
     # The number of walkers (must be even) and the number of dimensions/parameters
-    nwalkers, ndim = 5, len(initial)
+    nwalkers, ndim = 10, len(initial)
 
     # Sets the steps of the burn-in and the max. steps
-    niter_burn, niter = 50, 500
+    niter_burn, niter = 100, 1000
 
     # This vector defines the starting points of each walker for the amount of
     # dimensions
     p0 = np.random.rand(nwalkers, ndim)
 
     # This calls the MCMC fitting
-    # sampler, pos, prob, state = main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data)
-    # with open("sampler.npy", "wb") as f:
-        # np.save(f, sampler.flatchain)
+    sampler, pos, prob, state = main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data)
+    with open("sampler.npy", "wb") as f:
+        np.save(f, sampler.flatchain)
 
     # This plots the resulting model
-    # model_plot(sampler, sampling, wavelength)
+    model_plot(sampler, sampling, wavelength, uvcoords)
 
     # This plots the corner plots of the posterior spread
     samples = np.load("sampler.npy")

@@ -76,7 +76,7 @@ class ReadoutFits:
     def get_tel_sta(self):
         return self.get_data(2, "tel_name", "sta_index")
 
-    def get_vis24wl(self, wavelength) -> np.ndarray:
+    def get_vis24wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the vis2data for one specific wavelength
 
         Returns
@@ -86,8 +86,6 @@ class ReadoutFits:
             vis2err for all baselines for a specific wavelength
         """
         vis2data, vis2err  = map(lambda x: x[:6], self.get_vis2()[:2])
-        wldata = self.get_wl()
-        wl_ind = get_distance(wldata, [wavelength])
         vis2datawl, vis2errwl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [vis2data, vis2err])
 
         return vis2datawl, vis2errwl
@@ -99,4 +97,4 @@ if __name__ == "__main__":
     print(readout.get_uvcoords())
     # readout.get_info()
 
-    print(readout.get_vis24wl(8e-06))
+    print(readout.get_vis24wl())

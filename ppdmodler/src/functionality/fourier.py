@@ -24,17 +24,17 @@ class FFT:
 
     """
     # TODO: Make Zoom function work
-    def __init__(self, model: np.array, set_size: int, fits_file_path: Path,
+    def __init__(self, model: np.array, set_size: int,
                  wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
-        self.model = model                                                           # Evaluates the model
-        self.model_size = len(self.model)                                           # Gets the size of the model's image
+        self.model = model
+        self.model_size = len(self.model)
 
         # General variables
         self.set_size = set_size
-        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)                # x-axis of the FFT corresponding to px/img_size
-        self.roll = np.floor(self.model_size/2).astype(int)                         # Gets half the pictures size as int
-        self.freq = np.roll(self.fftfreq, self.roll, axis=0)                        # Rolls 0th-freq to centre
-        self.fftscale = np.diff(self.freq)[0]                                       # cycles/mas per px in FFT img
+        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)
+        self.roll = np.floor(self.model_size/2).astype(int)
+        self.freq = np.roll(self.fftfreq, self.roll, axis=0)
+        self.fftscale = np.diff(self.freq)[0]
 
     def fft_pipeline(self) -> [float, np.array, float, float]:
         """A pipeline function that calls the functions of the FFT in order, and

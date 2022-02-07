@@ -65,8 +65,8 @@ def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
         The angle in radians
     """
     if angle is None:
-        return np.deg2rad(1/3.6e6)
-    return np.deg2rad(angle/3.6e6)
+        return np.deg2rad(1)
+    return np.deg2rad(angle)
 
 def get_px_scaling(axis: np.ndarray):
     """Gets the model's scaling from its sampling rate
@@ -210,7 +210,8 @@ def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] =
 
     return np.sqrt(xc**2+yc**2)*mas2rad(), xc
 
-def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
+def set_uvcoords(sampling: int, wavelength: float, uvcoords:
+                 Optional[List[float]] = None) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
@@ -219,6 +220,8 @@ def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
         The sampling of the (u,v)-plane
     wavelength: float
         The wavelength the (u,v)-plane is sampled at
+    uvcoords: List[float], optional
+        If uv-coords are given, then the visibilities are calculated for
 
     Returns
     -------
@@ -227,12 +230,20 @@ def set_uvcoords(sampling: int, wavelength: float,) -> np.array:
     B: ArrayLike
         The axis used to calculate the baslines
     """
-    B = np.linspace(-150, 150, sampling)
+    if uvcoords is None:
+        axis = np.linspace(-150, 150, sampling)
 
-    # Star overhead sin(theta_0)=1 position
-    u, v = B/wavelength, B[:, np.newaxis]/wavelength
+        # Star overhead sin(theta_0)=1 position
+        u, v = axis, axis[:, np.newaxis]
 
-    return np.sqrt(u**2+v**2), B
+        B, axis = np.sqrt(u**2+v**2)/wavelength, axis
+    else:
+        u, v = np.array([i[0] for i in uvcoords]), \
+                np.array([i[1] for i in uvcoords])
+
+        B, axis = np.sqrt(u**2+v**2)/wavelength, uvcoords
+
+    return B, axis
 
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
@@ -286,7 +297,8 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
 
 if __name__ == "__main__":
-    print(set_uvcoords(10, 8e-06))
+    print(set_uvcoords(10, 8e-06, [[10, 8], [5, 10]]))
+    print(np.exp(1e-9*1e-6))
     # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
     # print(readout.get_uvcoords_vis2, "uvcoords")
