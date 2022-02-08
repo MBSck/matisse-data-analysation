@@ -3,9 +3,15 @@
 """Test file for a 2D-Gaussian PPD model, that is fit with MCMC; The emcee
 package"""
 
+import numpy as np
+import emcee
+import corner
 import matplotlib.pyplot as plt
 
-from src.functionality.utilities import interpolate
+from typing import Any, Dict, List, Union, Optional
+
+from src.models import Gauss2D
+from src.functionality.readout import ReadoutFits
 
 # TODO: Make it possible to fit uv-points to model data of vis models and not
 # only FFT -> Make the rescaling function outside of the FFT?
@@ -19,16 +25,33 @@ from src.functionality.utilities import interpolate
 
 # TODO: Make the code faster by only comparing six values
 
-import numpy as np
-import emcee
-import corner
-import matplotlib.pyplot as plt
+class MCMC:
+    def __init__(self, model, mc_params: List[float]):
+        self.model = model
+        self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
 
-from typing import Any, Dict, List, Union, Optional
+    def pipeline(self, lnprob, data) -> np.array:
+        """The main pipline that executes the combined mcmc code and fits the
+        model"""
+        # The EnsambleSampler gets the parameters. The args are the args put into the
+        # lob_prob function. Additional parameter a can be used for the stepsize. None is
+        # the default 
+        sampler = emcee.EnsembleSampler(self.nw, self.nd, lnprob, args=data)
 
-from src.models import Gauss2D
-from src.functionality.readout import ReadoutFits
-from src.functionality.utilities import correspond_uv2model
+        # Burn-in of the sampler. Explores the parameter space. The walkers get settled
+        # into the maximum of the density. Saves the walkers in the state variable
+        print("Running burn-in...")
+        p0 = sampler.run_mcmc(self.p0, self.nib)
+
+        # Resets the chain to remove burn in samples and sets the walkers lower
+        sampler.reset()
+
+        # Do production. Starts from the final position of burn-in chain (rstate0 is
+        # the state of the internal random number generator)
+        print("Running production...")
+        pos, prob, state = sampler.run_mcmc(p0, self.ni)
+
+        return sampler, pos, prob, state
 
 def model(theta: np.ndarray, sampling: int, wavelength: float, uvcoords:
           np.ndarray) -> np.ndarray:
@@ -78,27 +101,6 @@ def lnprob(theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.arr
         return -np.inf
     return lp + lnlike(theta, sampling, wavelength, vis2data, vis2err, uvcoords)
 
-def main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data) -> np.array:
-    """"""
-    # The EnsambleSampler gets the parameters. The args are the args put into the
-    # lob_prob function. Additional parameter a can be used for the stepsize. None is
-    # the default 
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=data)
-
-    # Burn-in of the sampler. Explores the parameter space. The walkers get settled
-    # into the maximum of the density. Saves the walkers in the state variable
-    print("Running burn-in...")
-    p0 = sampler.run_mcmc(p0, niter_burn)
-
-    # Resets the chain to remove burn in samples and sets the walkers lower
-    sampler.reset()
-
-    # Do production. Starts from the final position of burn-in chain (rstate0 is
-    # the state of the internal random number generator)
-    print("Running production...")
-    pos, prob, state = sampler.run_mcmc(p0, niter)
-
-    return sampler, pos, prob, state
 
 def test_model(sampler) -> None:
     # Another test of whether or not the sampling went well is the mean acceptance
@@ -114,7 +116,7 @@ def test_model(sampler) -> None:
     autocorr= np.mean(sampler.get_autocorr_time())
     print(f"Mean acceptance fraction {acceptance} and the autcorrelation time {autocorr}")
 
-def model_plot(sampler, sampling: int, wavelength: float, uvcoords:
+def plot_model_and_vis_curve(sampler, sampling: int, wavelength: float, uvcoords:
                Optional[np.ndarray] = None) -> None:
     """Plot the samples to get estimate of the density that has been sampled, to
     test if sampling went well"""
@@ -126,23 +128,23 @@ def model_plot(sampler, sampling: int, wavelength: float, uvcoords:
     print(theta_max)
     best_fit_model = Gauss2D().eval_vis(sampling, theta_max, wavelength)
 
-    if uvcoords is not None:
-        best_fit_model_coords = Gauss2D().eval_vis(sampling, theta_max, wavelength, uvcoords)
-        print(best_fit_model_coords*np.conj(best_fit_model_coords), "best model fit vis2")
-        print(vis2data, "real vi2data2")
-        np.save("model_fit_test.npy", best_fit_model_coords*np.conj(best_fit_model_coords))
+    visdatamod = Gauss2D().eval_vis(sampling, theta_max, wavelength, uvcoords)
+    vis2datamod = visdatamod*np.conj(visdatamod)
+    print(vis2datamod, "best model fit vis2")
+    print(vis2data, "real vi2data2")
 
     plt.imshow(best_fit_model)
     plt.savefig("model_plot.png")
 
-def corner_plot(samples):
+def plot_corner(samples):
     """Plots the corner plot of the posterior spread"""
-    # samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
-    fig = corner.corner(samples)
+    labels = ["FWHM"]
+    fig = corner.corner(samples, labels=labels)
     plt.show()
 
 if __name__ == "__main__":
     # Set the initial values for the parameters 
+    # fwhm = 19.01185824931766         # Fitted value to model data
     fwhm = 1.
     initial = np.array([fwhm])
 
@@ -155,13 +157,10 @@ if __name__ == "__main__":
     wl_ind = 101
     sampling, wavelength = 128, readout.get_wl()[wl_ind]
 
-    vis2data, vis2err = readout.get_vis24wl(wl_ind)
+    # vis2data, vis2err = readout.get_vis24wl(wl_ind)
     # Test the fitting by inputting model data
-    # vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
+    vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
     uvcoords = readout.get_uvcoords()
-
-    # Set the data to be fitted. Error arbitrary, set to 1%
-    data = (sampling, wavelength, vis2data, vis2err, uvcoords)
 
     # The number of walkers (must be even) and the number of dimensions/parameters
     nwalkers, ndim = 10, len(initial)
@@ -173,14 +172,19 @@ if __name__ == "__main__":
     # dimensions
     p0 = np.random.rand(nwalkers, ndim)
 
+    # Set the mcmc parameters and the the data to be fitted.
+    mc_params = (p0, nwalkers, ndim, niter_burn, niter)
+    data = (sampling, wavelength, vis2data, vis2err, uvcoords)
+
     # This calls the MCMC fitting
-    sampler, pos, prob, state = main(p0, nwalkers, niter_burn, niter, ndim, lnprob, data)
+    mcmc = MCMC(Gauss2D, mc_params)
+    sampler, pos, prob, state = mcmc.pipeline(lnprob, data)
     with open("sampler.npy", "wb") as f:
         np.save(f, sampler.flatchain)
 
     # This plots the resulting model
-    model_plot(sampler, sampling, wavelength, uvcoords)
+    plot_model_and_vis_curve(sampler, sampling, wavelength, uvcoords)
 
     # This plots the corner plots of the posterior spread
     samples = np.load("sampler.npy")
-    corner_plot(samples)
+    plot_corner(samples)
