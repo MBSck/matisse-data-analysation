@@ -21,7 +21,8 @@ class Model(metaclass=ABCMeta):
     """
     @abstractmethod
     def eval_model() -> np.array:
-        """Evaluates the model
+        """Evaluates the model image
+        Convention to put non fitting parameters at end of *args.
 
         Returns
         --------
@@ -32,7 +33,8 @@ class Model(metaclass=ABCMeta):
 
     @abstractmethod
     def eval_vis() -> np.array:
-        """Evaluates the visibilities of the model
+        """Evaluates the visibilities of the model.
+        Convention to put non fitting parameters at end of *args.
 
         Returns
         -------

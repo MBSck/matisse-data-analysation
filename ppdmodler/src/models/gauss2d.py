@@ -25,6 +25,7 @@ class Gauss2D(Model):
         Evaluates the visibilities of the model
     """
     def __init__(self):
+        self.name = "2D-Gaussian"
         self._axis_mod= []
         self._axis_vis= []
 
@@ -76,10 +77,10 @@ class Gauss2D(Model):
         ----------
         fwhm: int | float
             The diameter of the sphere
-        sampling: int, optional
-            The sampling of the uv-plane
         wavelength: int
             The sampling wavelength
+        sampling: int, optional
+            The sampling of the uv-plane
         uvcoords: List[float], optional
             If uv-coords are given, then the visibilities are calculated for
             precisely these.
@@ -107,7 +108,6 @@ if __name__ == "__main__":
     # TODO: Make scaling factor of px, the rest is already calculated to the
     # right distance/unit
 
-    g_vis = g.eval_vis(512, 35, 3.7e-06)
-    print(g_vis[250:260])
+    g_vis = g.eval_vis(35, 3.7e-06, 512)
     plt.imshow(g_vis)
     plt.show()

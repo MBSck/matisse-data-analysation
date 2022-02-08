@@ -11,19 +11,33 @@ import matplotlib.pyplot as plt
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import Gauss2D
+from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
+from src.functionality.utilities import trunc
 
 # TODO: Think of way to implement the FFT fits -> See Jacob's code
 # TODO: Make documentation in Evernote of this file and then remove unncessary
 # comments
+# TODO: Make this more generally applicable
 
 class MCMC:
-    def __init__(self, model, mc_params: List[float], data: List) -> None:
+    def __init__(self, model, mc_params: List[float], data: List, numerical:
+                 bool = True) -> None:
         self.model = model()
         self.data = data
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
+        self.numerical = numerical
 
-    def pipeline(self) -> np.array:
+    def pipeline(self) -> None:
+        sampler, pos, prob, state = self.do_fit()
+
+        # This plots the corner plots of the posterior spread
+        mcmc.plot_corner(sampler)
+
+        # This plots the resulting model
+        # mcmc.plot_model_and_vis_curve(sampler, sampling, wavelength)
+
+    def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
         model"""
         # The EnsambleSampler gets the parameters. The args are the args put into the
@@ -61,7 +75,11 @@ class MCMC:
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
-        visdatamod, vis_axis = self.model2fit(theta, *args, **kwargs)
+        if self.numerical:
+            visdatamod, vis_axis, vis_scaling = self.model4fit_numerical(theta, *args, **kwargs)
+        else:
+            visdatamod = self.model4fit_analytical(theta, *args, **kwargs)
+
         vis2datamod = visdatamod*np.conj(visdatamod)
         return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
 
@@ -84,11 +102,16 @@ class MCMC:
             return -np.inf
         return lp + self.lnlike(theta, vis2data, vis2err, *args, **kwargs)
 
-    def model2fit(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
-        """The model defined for the MCMC process"""
+    def model4fit_analytical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
+        """The analytical model defined for the fitting process."""
         model_vis = self.model.eval_vis(theta, *args, **kwargs)
-        model_axis = self.model.axis_vis
-        return model_vis, model_axis
+        return model_vis
+
+    def model4fit_numerical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
+        """The model image, that is fourier transformed for the fitting process"""
+        model_img = self.model.eval_model(theta, *args, **kwargs)
+        fourier = FFT(model_img, args[3])       # The wavelength should be args[3]
+        return fourier.do_fft2(), fourier.fftfreq, fourier.fftscale
 
     def get_best_fit(self, sampler):
         """Fetches the best fit values from the sampler"""
@@ -99,15 +122,32 @@ class MCMC:
     def plot_model_and_vis_curve(self, sampler, *args, **kwargs) -> None:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
-        theta_max = self.get_best_fit(sampler)
-        visdatamod = self.model.eval_vis(theta_max, *args, **kwargs)
-        vis2datamod = visdatamod*np.conj(visdatamod)
-        print(vis2datamod, "best model fit vis2")
-        print(vis2data, "real vi2data2")
+        fig, (ax1, ax2) = plt.subplots(1, 2)
 
-        best_fit_model = self.model.eval_vis(theta_max, *args[:-1], **kwargs)
-        plt.imshow(best_fit_model)
+        # Gets the best value and calculates a full model
+        theta_max = self.get_best_fit(sampler)
+        if self.numerical:
+            ...
+        else:
+            best_fit_model = self.model.eval_vis(theta_max, *args, **kwargs)
+
+        # Gets the model size and takes a slice of the middle for both vis2 and
+        # baselines
+        size_model = len(best_fit_model)
+        u, v = self.model.axis_vis, self.model.axis_vis[:, np.newaxis]
+        xvis_curve = np.sqrt(u**2+v**2)[size_model//2]
+        yvis_curve = best_fit_model[size_model//2]
+        wavelength = trunc(args[1]*1e06, 2)
+
+        # Combines the plots and gives descriptions to the axes
+        ax1.imshow(best_fit_model)
+        ax1.set_title(self.model.name + fr" model at {wavelength}$\mu$m")
+        ax1.set_xlabel(f"Resolution of {args[0]} px")
+        ax2.errorbar(xvis_curve, yvis_curve)
+        ax2.set_xlabel("Projected baselines [m]")
+        ax2.set_ylabel("Vis2")
         plt.show()
+        # plt.savefig("Gauss2D_to_model_data_fit.png")
 
     def plot_corner(self, sampler):
         """Plots the corner plot of the posterior spread"""
@@ -136,7 +176,6 @@ if __name__ == "__main__":
     fwhm = 1.
     initial = np.array([fwhm])
 
-
     # Readout Fits for real data
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     readout = ReadoutFits(f)
@@ -145,9 +184,10 @@ if __name__ == "__main__":
     wl_ind = 101
     sampling, wavelength = 128, readout.get_wl()[wl_ind]
 
-    # vis2data, vis2err = readout.get_vis24wl(wl_ind)
+    # Real vis2data and error
+    vis2data, vis2err = readout.get_vis24wl(wl_ind)
     # Test the fitting by inputting model data
-    vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
+    # vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
     uvcoords = readout.get_uvcoords()
 
     # The number of walkers (must be even) and the number of dimensions/parameters
@@ -162,14 +202,11 @@ if __name__ == "__main__":
 
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = (p0, nwalkers, ndim, niter_burn, niter)
+    # Set the data, the wavlength has to be the fourth argument [3]
     data = (vis2data, vis2err, sampling, wavelength, uvcoords)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Gauss2D, mc_params, data)
-    sampler, pos, prob, state = mcmc.pipeline()
+    mcmc = MCMC(Gauss2D, mc_params, data, numerical=False)
+    mcmc.pipeline()
 
-    # This plots the resulting model
-    mcmc.plot_model_and_vis_curve(sampler, sampling, wavelength, uvcoords)
 
-    # This plots the corner plots of the posterior spread
-    mcmc.plot_corner(sampler)

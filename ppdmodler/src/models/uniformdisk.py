@@ -20,21 +20,33 @@ class UniformDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
+    def __init__(self):
+        self.name = "Uniform Disk"
+        self._axis_mod, self._axis_vis = [], []
+
+    @property
+    def axis_mod(self):
+        return self._axis_mod
+
+    @property
+    def axis_vis(self):
+        return self._axis_vis
+
     @timeit
-    def eval_model(self, size: int, diameter: Union[int, float],
-                   sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
+    def eval_model(self, theta: List, flux: float, size: int,
+                   sampling: Optional[int] = None, centre: Optional[int] = None) -> np.ndarray:
         """Evaluates the model
 
         Parameters
         ----------
-        size: int
-            The size of the model image
         diameter: int
             The diameter of the sphere
-        sampling: int | None
-            The sampling of the object-plane
         flux: float
             The flux of the object
+        size: int
+            The size of the model image
+        sampling: int | None
+            The sampling of the object-plane
         centre: int | None
             The centre of the model image
 
@@ -47,8 +59,8 @@ class UniformDisk(Model):
         set_size()
         """
         # Converts the mas to radians
-        diameter = np.radians(diameter/3.6e6)
-        radius =  set_size(size, sampling, centre)
+        diameter = mas2rad(theta)
+        radius, self._axis_mod = set_size(size, sampling, centre)
 
         output_lst = np.zeros((size, size))
         output_lst[radius <= diameter/2] = 4*flux/(np.pi*diameter**2)
@@ -56,17 +68,21 @@ class UniformDisk(Model):
         return output_lst
 
     @timeit
-    def eval_vis(self, sampling: int, diameter: Union[int, float], wavelength: float) -> np.array:
+    def eval_vis(self, theta: List, sampling: int, wavelength:
+                 float, uvcoords: np.ndarray = None) -> np.ndarray:
         """Evaluates the visibilities of the model
 
         Parameters
         ---------
-        sampling: int
-            The sampling of the uv-plane
         diameter: int
             The diameter of the sphere
+        sampling: int
+            The sampling of the uv-plane
         wavelength: float
             The sampling wavelength
+        uvcoords: List[float], optional
+            If uv-coords are given, then the visibilities are calculated for
+            precisely these.
 
         Returns
         -------
@@ -76,17 +92,17 @@ class UniformDisk(Model):
         --------
         set_uvcoords()
         """
-        diameter = np.radians(diameter/3.6e6)
-        r = set_uvcoords(sampling, wavelength)
+        diameter = mas2rad(theta)
+        B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)
 
-        return 2*j1(np.pi*diameter*r)/(np.pi*diameter*r)
+        return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
     u = UniformDisk()
-    u_model = u.eval_model(512, 256.1)
+    u_model = u.eval_model(256.1, 1., 512)
     plt.imshow(u_model)
     plt.show()
 
-    u_vis = u.eval_vis(512, 256.1, 8e-06)
+    u_vis = u.eval_vis(256.1, 512, 8e-06)
     plt.imshow(u_vis)
     plt.show()

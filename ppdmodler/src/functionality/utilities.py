@@ -65,39 +65,37 @@ def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
         The angle in radians
     """
     if angle is None:
-        return np.deg2rad(1)
-    return np.deg2rad(angle)
+        return np.radians(1/3.6e6)
+    return np.radians(angle/3.6e6)
 
-def get_px_scaling(axis: np.ndarray):
-    """Gets the model's scaling from its sampling rate
+def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
+    """Gets the model's scaling from its sampling rate/size the wavelength and
+    the array's dimensionalities into 1/radians.
 
     Parameters
     ----------
-    axis: np.ndarray
+    ax: np.ndarray
         The axis from which the scaling is to be computed. For FFT it is
-        np.fft.fftfreq and for analytical model set_uvcoords
+        np.fft.fftfreq and for analytical model, set_uvcoords
 
     Return
     ------
     float
-        The px to uv-coord scaling
+        The px to meter scaling
     """
-    roll = np.floor(len(axis)/2).astype(int)
-    axis = np.roll(axis, roll, axis=0)
-    return np.diff(axis)[0][0]
+    axis_size = len(ax)
+    roll = np.floor(axis_size/2).astype(int)
+    axis = np.roll(ax, roll, axis=0)
+    return (np.diff(ax)[0]/(np.deg2rad(1))*wavelength*axis_size)
 
-def get_scaling_px2metr(model: np.ndarray, wavelength: float, uvcoords:
-                        np.ndarray) -> float:
+def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     """Calculates the axis scaling from the axis of an input image/model and
     returns it in meters baseline per pixel. Returns the uv-coords
 
     Parameters
     ----------
-    axis: np.ndarray
-        The axis from which the scaling is to be computed. For FFT it is
-        np.fft.fftfreq and for analytical model set_uvcoords
-    wavelength: float
-        The wavelength at which the scaling should take place
+    scaling: float
+        The scaling factor the uv-coords should be corresponded to
     uvcoords: np.array
         The real uvcoords
 
@@ -106,8 +104,6 @@ def get_scaling_px2metr(model: np.ndarray, wavelength: float, uvcoords:
     uvcoords: np.ndarray
         The rescaled uv-coords
     """
-    axis_size = len(axis)
-    scaling = (get_px_scaling(axis)/mas2rad())*wavelength*axis_size
     return uvcoords/scaling
 
 def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
@@ -168,7 +164,7 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(size: int, sampling: Optional[int] = None,  centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -236,7 +232,7 @@ def set_uvcoords(sampling: int, wavelength: float, uvcoords:
         # Star overhead sin(theta_0)=1 position
         u, v = axis, axis[:, np.newaxis]
 
-        B, axis = np.sqrt(u**2+v**2)/wavelength, axis
+        B = np.sqrt(u**2+v**2)/wavelength
     else:
         u, v = np.array([i[0] for i in uvcoords]), \
                 np.array([i[1] for i in uvcoords])
