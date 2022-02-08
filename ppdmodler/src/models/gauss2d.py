@@ -68,16 +68,16 @@ class Gauss2D(Model):
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
 
     @timeit
-    def eval_vis(self, sampling: int, fwhm: Union[int, float],
+    def eval_vis(self, theta: np.ndarray, sampling: int,
                  wavelength: float, uvcoords: np.ndarray = None) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
         ----------
-        sampling: int, optional
-            The sampling of the uv-plane
         fwhm: int | float
             The diameter of the sphere
+        sampling: int, optional
+            The sampling of the uv-plane
         wavelength: int
             The sampling wavelength
         uvcoords: List[float], optional
@@ -92,8 +92,9 @@ class Gauss2D(Model):
         --------
         set_uvcoords()
         """
-        B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
+        fwhm = theta
         fwhm = np.radians(fwhm/3.6e6)
+        B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
