@@ -27,16 +27,16 @@ from src.functionality.readout import ReadoutFits
 
 class MCMC:
     def __init__(self, model, mc_params: List[float]):
-        self.model = model
+        self.model = model()
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
 
-    def pipeline(self, lnprob, data) -> np.array:
+    def pipeline(self, data) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
         model"""
         # The EnsambleSampler gets the parameters. The args are the args put into the
         # lob_prob function. Additional parameter a can be used for the stepsize. None is
         # the default 
-        sampler = emcee.EnsembleSampler(self.nw, self.nd, lnprob, args=data)
+        sampler = emcee.EnsembleSampler(self.nw, self.nd, self.lnprob, args=data)
 
         # Burn-in of the sampler. Explores the parameter space. The walkers get settled
         # into the maximum of the density. Saves the walkers in the state variable
@@ -53,53 +53,52 @@ class MCMC:
 
         return sampler, pos, prob, state
 
-def model(theta: np.ndarray, sampling: int, wavelength: float, uvcoords:
-          np.ndarray) -> np.ndarray:
-    """The model defined for the MCMC process"""
-    fwhm = theta
-    model = Gauss2D()
-    model_vis = model.eval_vis(sampling, fwhm, wavelength, uvcoords)
-    model_axis = model.axis_vis
-    return model_vis, model_axis
+    def lnlike(self, theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.ndarray,
+               vis2err: np.ndarray, uvcoords: np.ndarray):
+        """Takes theta vector and the x, y and the yerr of the theta.
+        Returns a number corresponding to how good of a fit the model is to your
+        data for a given set of parameters, weighted by the data points. I.e. it is
+        more important"""
+        visdatamod, vis_axis = self.model2fit(theta, sampling, wavelength, uvcoords)
+        vis2datamod = visdatamod*np.conj(visdatamod)
+        return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
 
-def lnlike(theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.ndarray,
-           vis2err: np.ndarray, uvcoords: np.ndarray):
-    """Takes theta vector and the x, y and the yerr of the theta.
-    Returns a number corresponding to how good of a fit the model is to your
-    data for a given set of parameters, weighted by the data points. I.e. it is
-    more important"""
-    visdatamod, vis_axis = model(theta, sampling, wavelength, uvcoords)
-    vis2datamod = visdatamod*np.conj(visdatamod)
-    return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
+    def lnprior(self, theta):
+        """This function checks if all variables are within their priors (it is
+        setting the same). If all priors are satisfied it needs to return '0.0' and
+        if not then '-np.inf'"""
+        fwhm = theta
+        if fwhm < 100. and fwhm > 0.1:
+            return 0.0
+        else:
+            return -np.inf
 
-def lnprior(theta):
-    """This function checks if all variables are within their priors (it is
-    setting the same). If all priors are satisfied it needs to return '0.0' and
-    if not then '-np.inf'"""
-    fwhm = theta
-    if fwhm < 100. and fwhm > 0.1:
-        return 0.0
-    else:
-        return -np.inf
+    def lnprob(self, theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.array,
+               vis2err: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
+        """This function runs the lnprior and checks if it returned -np.inf, and
+        returns if it does. If not, (all priors are good) it returns the inlike for
+        that model (convention is lnprior + lnlike)
 
-def lnprob(theta: np.ndarray, sampling: int, wavelength: float, vis2data: np.array,
-           vis2err: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
-    """This function runs the lnprior and checks if it returned -np.inf, and
-    returns if it does. If not, (all priors are good) it returns the inlike for
-    that model (convention is lnprior + lnlike)
+        Parameters
+        ----------
+        theta: List
+            A vector that contains all the parameters of the model
 
-    Parameters
-    ----------
-    theta: List
-        A vector that contains all the parameters of the model
+        Returns
+        -------
+        """
+        lp = self.lnprior(theta)
+        if not lp == 0.0:
+            return -np.inf
+        return lp + self.lnlike(theta, sampling, wavelength, vis2data, vis2err, uvcoords)
 
-    Returns
-    -------
-    """
-    lp = lnprior(theta)
-    if not lp == 0.0:
-        return -np.inf
-    return lp + lnlike(theta, sampling, wavelength, vis2data, vis2err, uvcoords)
+    def model2fit(self, theta: np.ndarray, sampling: int, wavelength: float, uvcoords:
+              np.ndarray) -> np.ndarray:
+        """The model defined for the MCMC process"""
+        fwhm = theta
+        model_vis = self.model.eval_vis(sampling, fwhm, wavelength, uvcoords)
+        model_axis = self.model.axis_vis
+        return model_vis, model_axis
 
 
 def test_model(sampler) -> None:
@@ -136,9 +135,10 @@ def plot_model_and_vis_curve(sampler, sampling: int, wavelength: float, uvcoords
     plt.imshow(best_fit_model)
     plt.savefig("model_plot.png")
 
-def plot_corner(samples):
+def plot_corner(sampler):
     """Plots the corner plot of the posterior spread"""
     labels = ["FWHM"]
+    samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
     fig = corner.corner(samples, labels=labels)
     plt.show()
 
@@ -178,13 +178,10 @@ if __name__ == "__main__":
 
     # This calls the MCMC fitting
     mcmc = MCMC(Gauss2D, mc_params)
-    sampler, pos, prob, state = mcmc.pipeline(lnprob, data)
-    with open("sampler.npy", "wb") as f:
-        np.save(f, sampler.flatchain)
+    sampler, pos, prob, state = mcmc.pipeline(data)
 
     # This plots the resulting model
     plot_model_and_vis_curve(sampler, sampling, wavelength, uvcoords)
 
     # This plots the corner plots of the posterior spread
-    samples = np.load("sampler.npy")
-    plot_corner(samples)
+    plot_corner(sampler)
