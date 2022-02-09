@@ -19,6 +19,8 @@ from src.functionality.utilities import trunc
 # TODO: Make documentation in Evernote of this file and then remove unncessary
 # comments
 # TODO: Make this more generally applicable
+# TODO: Make plots of the model + fitting, that show the visibility curve, and
+# two more that show the # fit of the visibilities and the closure phases to the measured one
 
 class MCMC:
     def __init__(self, model, mc_params: List[float], data: List, numerical:

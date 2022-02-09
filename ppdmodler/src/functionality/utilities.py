@@ -164,7 +164,8 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
+             None, angles: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -177,8 +178,8 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = 
         The sampling of the object-plane
     centre: bool, optional
         A set centre of the object. Will be set automatically if default 'None' is kept
-    pos_angle: int | None, optional
-        This sets the positional angle of the ellipsis if not None
+    angles: int | None, optional
+        This sets the positional angles of the ellipsis if not None
 
     Returns
     -------
@@ -200,11 +201,19 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = 
 
     xc, yc = x-x0, y-y0
 
-    if pos_angle is not None:
-        pos_angle *= np.radians(1)
-        xc, yc = xc*np.sin(pos_angle), yc*np.cos(pos_angle)
+    if angles is not None:
+        try:
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = ellipsis_angles
+        except:
+            print("set_size(): Check input arguments, ellipsis_angles must be of the form ["
+                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+        a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
+        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
 
-    return np.sqrt(xc**2+yc**2)*mas2rad(), xc
+        return mas2rad(np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)), [ar, br]
+    else:
+        return mas2rad(np.sqrt(xc**2+yc**2)), xc
 
 def set_uvcoords(sampling: int, wavelength: float, uvcoords:
                  Optional[List[float]] = None) -> np.array:

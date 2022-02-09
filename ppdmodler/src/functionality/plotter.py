@@ -46,7 +46,7 @@ def gaussian(spat_freq: np.array, D: float) -> np.array:
     -------
     gaussian_fit: np.array
     """
-    return np.exp(-np.square(np.pi*D*spat_freq)/(4* np.log(2)))
+    return np.exp(-np.square(np.pi*D*spat_freq)/(4*np.log(2)))
 
 def airy(spat_freq: np.array, D: float) -> np.array:
     """An airy disk fit described by the 1st-order Bessel function
@@ -63,7 +63,7 @@ def airy(spat_freq: np.array, D: float) -> np.array:
     airy_disk_fit: np.array
     """
     radial_dist = spat_freq*D
-    return  2*j1(np.pi*radial_dist)/radial_dist/np.pi
+    return 2*j1(np.pi*radial_dist)/radial_dist/np.pi
 
 # Classes
 
@@ -135,18 +135,18 @@ class Plotter:
         """This is the main pipline of the class. It brings all the plots together into one consistent one"""
         print(f"Plotting {os.path.basename(Path(self.fits_file))}")
 
-        fig, axarr = plt.subplots(3, 6, figsize=(20, 10))
+        fig, axarr = plt.subplots(2, 6, figsize=(20, 8))
 
         # Flattens the multidimensional arrays into 1D
         ax, bx, cx, dx, ex, fx, = axarr[0].flatten()
         ax2, bx2, cx2, dx2, ex2, fx2 = axarr[1].flatten()
-        ax3, bx3, cx3, dx3, ex3, fx3 = axarr[2].flatten()
+        # ax3, bx3, cx3, dx3, ex3, fx3 = axarr[2].flatten()
 
         self.vis2_plot(axarr)
         self.t3phi_plot(axarr)
         self.fits_plot(ex2, do_fit=False)
-        self.waterfall_plot(fx2)
-        self.uv_plot(ax3)
+        # self.waterfall_plot(fx2)
+        self.uv_plot(fx2)
         # self.model_plot(bx3, cx3, gauss)
         # self.model_plot(dx3, ex3, ring)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
@@ -192,9 +192,7 @@ class Plotter:
 
         for j in range(4):
             axis = axarr[1, j%4]
-            axis.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0),
-                          marker='s', capsize=0., alpha=0.9, color='k',
-                          label=self.tel_t3phi[j])
+            # axis.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=self.tel_t3phi[j])
             axis.legend([self.tel_t3phi[j]], loc=2)
 
     def waterfall_plot(self, ax) -> None:
@@ -220,9 +218,12 @@ class Plotter:
             fwhm = 1/scaling_rad2arc/1000           # radians
 
             # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
-            xvals = np.linspace(50, 3*150)/3.6e-6
-            fitted_model= np.square(gaussian(xvals, fwhm))
-            ax.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+            xvals, yvals = self.baseline_distances, self.mean_bin_vis2
+            pars, cov = curve_fit(f=gaussian, xdata=xvals, ydata=yvals, p0=[fwhm], bounds=(-np.inf, np.inf))
+            print(pars)
+            # xvals = np.linspace(50, 150)/3.6e-6
+            # fitted_model= np.square(gaussian(xvals, fwhm))
+            ax.plot(xvals, gaussian(xvals, pars), label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
             # Airy-disk fit
             fwhm = 3/scaling_rad2arc/1000           # radians
@@ -286,7 +287,7 @@ class Plotter:
 
         ax2.imshow(np.log(abs(gauss_ft)), interpolation='none', extent=[-0.5, 0.5, -0.5, 0.5])
         # Rename the plots with the future information -> in all cases
-        ax2.set_title("Gauss FFT")
+        ax2.set_title(f"{model.name} FFT")
         ax2.set_xlabel("freq")
         ax2.axes.get_xaxis().set_ticks([])
         ax2.axes.get_yaxis().set_ticks([])
@@ -319,12 +320,12 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/diCha/PRODUCTS/nband/calib/"
+    data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
     print(subfolders)
 
     for i in subfolders:
-        Plotter(i, [0., 1.])
+        Plotter(i, [0., .4])
 
     # folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
     # Plotter(os.path.join(data_path, folder), [0., 0.15])

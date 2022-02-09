@@ -7,9 +7,6 @@ from typing import Any, Dict, List, Union, Optional
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords
 
-# Shows the full np.arrays, takes ages to print the arrays
-np.set_printoptions(threshold=sys.maxsize)
-
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
 
@@ -26,8 +23,8 @@ class Gauss2D(Model):
     """
     def __init__(self):
         self.name = "2D-Gaussian"
-        self._axis_mod= []
-        self._axis_vis= []
+        self._sampling, self._size = 0., 0.
+        self._axis_mod, self._axis_vis= [], []
 
     @property
     def axis_mod(self):
@@ -63,7 +60,7 @@ class Gauss2D(Model):
         --------
         set_size()
         """
-        fwhm = np.radians(fwhm/3.6e6)
+        fwhm = mas2rad(fwhm/3.6e6)
         radius, self._axis_mod  = set_size(size, sampling, centre)
 
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
