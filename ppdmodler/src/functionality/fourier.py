@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
 # Own modules
-from src.functionality.utilities import timeit, get_scaling_px2metr
+from src.models import Gauss2D
+from src.functionality.utilities import timeit, get_px_scaling
 
 # TODO: Make class and function documentation
 
@@ -24,33 +25,14 @@ class FFT:
 
     """
     # TODO: Make Zoom function work
-    def __init__(self, model: np.array, set_size: int, fits_file_path: Path,
-                 wavelength: float, step_size_fft: float = 1., greyscale: bool = False) -> None:
-        self.model = model                                                           # Evaluates the model
-        self.model_size = len(self.model)                                           # Gets the size of the model's image
-
-        # General variables
+    def __init__(self, model: np.array, wavelength: float, set_size: int = None,
+                 step_size_fft: float = 1., greyscale: bool = False) -> None:
+        self.model = model
+        self.model_size = len(self.model)
         self.set_size = set_size
-        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)                # x-axis of the FFT corresponding to px/img_size
-        self.roll = np.floor(self.model_size/2).astype(int)                         # Gets half the pictures size as int
-        self.freq = np.roll(self.fftfreq, self.roll, axis=0)                        # Rolls 0th-freq to centre
-        self.fftscale = np.diff(self.freq)[0]                                       # cycles/mas per px in FFT img
 
-    def fft_pipeline(self) -> [float, np.array, float, float]:
-        """A pipeline function that calls the functions of the FFT in order, and
-        avoids double calling of single functions
-
-        Returns
-        -------
-        ft: np.array
-            The fourier transform of the model
-        scaling: float
-            The scaling factor of the fourier transform
-        """
-        self.ft = self.do_fft2()
-        self.scaling = get_scaling_px2metr(self.fftscale)
-        # self.zoom_fft2()
-        return self.ft, self.scaling
+        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)
+        self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
     @timeit
     def do_fft2(self) -> np.array:
@@ -79,4 +61,4 @@ class FFT:
 if __name__ == "__main__":
     ring = Gauss2D()
     file_path = "/Users/scheuck/Documents/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    fourier = FFT(ring.eval_model(1024, 256.1), 1024, file_path, 8e-06)
+    fourier = FFT(ring.eval_model(2048, 256.1), 1024, file_path, 8e-06)

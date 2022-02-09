@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -5,6 +6,9 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords
+
+# Shows the full np.arrays, takes ages to print the arrays
+np.set_printoptions(threshold=sys.maxsize)
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -21,6 +25,7 @@ class Gauss2D(Model):
         Evaluates the visibilities of the model
     """
     def __init__(self):
+        self.name = "2D-Gaussian"
         self._axis_mod= []
         self._axis_vis= []
 
@@ -64,17 +69,21 @@ class Gauss2D(Model):
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
 
     @timeit
-    def eval_vis(self, sampling: int, fwhm: Union[int, float], wavelength: float) -> np.array:
+    def eval_vis(self, theta: np.ndarray, sampling: int,
+                 wavelength: float, uvcoords: np.ndarray = None) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
         ----------
-        sampling: int, optional
-            The sampling of the uv-plane
         fwhm: int | float
             The diameter of the sphere
         wavelength: int
             The sampling wavelength
+        sampling: int, optional
+            The sampling of the uv-plane
+        uvcoords: List[float], optional
+            If uv-coords are given, then the visibilities are calculated for
+            precisely these.
 
         Returns
         -------
@@ -84,8 +93,9 @@ class Gauss2D(Model):
         --------
         set_uvcoords()
         """
-        B, self._axis_vis  = set_uvcoords(sampling, wavelength)
+        fwhm = theta
         fwhm = np.radians(fwhm/3.6e6)
+        B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
@@ -98,7 +108,6 @@ if __name__ == "__main__":
     # TODO: Make scaling factor of px, the rest is already calculated to the
     # right distance/unit
 
-    g_vis = g.eval_vis(512, 256.1, 8e-06)
-    print(g_vis)
+    g_vis = g.eval_vis(35, 3.7e-06, 512)
     plt.imshow(g_vis)
     plt.show()

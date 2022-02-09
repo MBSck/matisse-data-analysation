@@ -17,15 +17,15 @@ class Delta(Model):
         Evaluates the visibilities of the model
     """
     @timeit
-    def eval_model(self, size: int, flux: float = 1.) -> np.array:
+    def eval_model(self, flux: float, size: int) -> np.array:
         """Evaluates the model
 
         Parameters
         ----------
-        size: int
-            The size of the model image
         flux: float | None
             The flux of the object
+        size: int
+            The size of the model image
 
         Returns
         --------
@@ -37,15 +37,15 @@ class Delta(Model):
         return output_array
 
     @timeit
-    def eval_vis(self, sampling: int, flux: float = 1.) -> np.array:
+    def eval_vis(self, flux: float, sampling: int) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
         ----------
-        sampling: int
-            The sampling of the uv-plane
         flux: float
             The flux of the object
+        sampling: int
+            The sampling of the uv-plane
 
         Returns
         -------
@@ -55,11 +55,11 @@ class Delta(Model):
 
 if __name__ == "__main__":
     d = Delta()
-    d_model = d.eval_model(512)
+    d_model = d.eval_model(1, 128)
     plt.imshow(d_model)
     plt.show()
 
-    d_vis = d.eval_vis(512)
+    d_vis = d.eval_vis(1, 128)
     plt.imshow(d_vis)
     plt.show()
 
