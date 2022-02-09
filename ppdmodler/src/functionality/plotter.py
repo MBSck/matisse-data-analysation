@@ -69,10 +69,11 @@ def airy(spat_freq: np.array, D: float) -> np.array:
 
 class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
-    def __init__(self, dirname: Path, vis_dim: List[float]) -> None:
+    def __init__(self, dirname: Path, vis_dim: Optional[List[float]] = None) -> None:
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
         self.dirname = dirname
         self.vis_dim = vis_dim
+        self.outname = ""
 
         if self.files is None:
             print("No files found! Check input path")
@@ -127,6 +128,7 @@ class Plotter:
 
             # Executes the plotting and cleans everything up
             self.do_plot()
+            self.write_values()
             self.close()
 
     def do_plot(self):
@@ -142,7 +144,7 @@ class Plotter:
 
         self.vis2_plot(axarr)
         self.t3phi_plot(axarr)
-        self.fits_plot(ex2)
+        self.fits_plot(ex2, do_fit=False)
         self.waterfall_plot(fx2)
         self.uv_plot(ax3)
         # self.model_plot(bx3, cx3, gauss)
@@ -156,6 +158,10 @@ class Plotter:
 
         # plots the squared visibility for different degrees and meters
         for i, o in enumerate(self.vis2data):
+            # Sets the vis_dim if it is None
+            # TODO: Rework this so it accounts for errors and really works as well
+            # if self.vis_dim is None:
+                # self.vis_dim = [0., np.mean(np.linalg.norm(o)*0.5]
             axis = axarr[0, i%6]
             axis.errorbar(self.wl*1e6, o, yerr=self.vis2err[i], marker='s',
                           label=self.tel_vis2[i], capsize=0., alpha=0.5)
@@ -202,28 +208,28 @@ class Plotter:
             ax.set_ylabel('vis2')
             ax.legend(loc='best')
 
-
-    def fits_plot(self, ax) -> None:
+    def fits_plot(self, ax, do_fit: bool = True) -> None:
         # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
         ax.errorbar(self.baseline_distances, self.mean_bin_vis2, yerr=self.std_bin_vis2, ls='None', fmt='o')
 
-        # Fits the data
-        scaling_rad2arc = 206265
+        if do_fit:
+            # Fits the data
+            scaling_rad2arc = 206265
 
-        # Gaussian fit
-        fwhm = 1/scaling_rad2arc/1000           # radians
+            # Gaussian fit
+            fwhm = 1/scaling_rad2arc/1000           # radians
 
-        # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
-        xvals = np.linspace(50, 3*150)/3.6e-6
-        fitted_model= np.square(gaussian(xvals, fwhm))
-        ax.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+            # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+            xvals = np.linspace(50, 3*150)/3.6e-6
+            fitted_model= np.square(gaussian(xvals, fwhm))
+            ax.plot(xvals/1e6, fitted_model*0.15, label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
-        # Airy-disk fit
-        fwhm = 3/scaling_rad2arc/1000           # radians
-        fitted_model = np.square(airy(xvals, fwhm))
-        ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
-        ax.set_ylim([0, 0.175])
-        ax.legend(loc='best')
+            # Airy-disk fit
+            fwhm = 3/scaling_rad2arc/1000           # radians
+            fitted_model = np.square(airy(xvals, fwhm))
+            ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+            ax.set_ylim([0, 0.175])
+            ax.legend(loc='best')
 
         ax.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
         ax.set_ylabel(r'$\bar{V}$')
@@ -290,16 +296,22 @@ class Plotter:
 
     def write_values(self) -> None:
         """"""
-        with open(outname[:~7]+"_phase_values.txt", 'w') as f:
+        with open(self.outname[:~7]+"_phase_values.txt", 'w') as f:
+            for i in range(6):
+                f.write(f"Vis2Data - {i}\n")
+                f.write(str(self.vis2data[i]) + '\n')
+                f.write("----------------------------------")
             for i in range(4):
-                f.write(str(unwrap_phase(t3phi[i])) + '\n')
+                f.write(f"Unwrapped phase - {i}\n")
+                f.write(str(unwrap_phase(self.t3phidata[i])) + '\n')
+                f.write("----------------------------------")
 
     def close(self) -> None:
         """Finishing up the plot and then saving it to the designated folder"""
         plt.tight_layout()
-        outname = self.dirname+'/'+self.fits_file.split('/')[-1]+'_qa.png'
+        self.outname = self.dirname+'/'+self.fits_file.split('/')[-1]+'_qa.png'
 
-        plt.savefig(outname, bbox_inches='tight')
+        plt.savefig(self.outname, bbox_inches='tight')
         plt.close()
 
 
@@ -307,16 +319,15 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/suAur/PRODUCTS/nband/calib_nband/"
-    # folders = [os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T04_52_11.AQUARIUS.rb_CALIBRATED"),
-    #           os.path.join(data_path, "2019-05-14T04_52_11.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED"),
-    #           os.path.join(data_path, "2019-05-14T05_28_03.AQUARIUS.rb_with_2019-05-14T06_12_59.AQUARIUS.rb_CALIBRATED")]
+    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/diCha/PRODUCTS/nband/calib/"
+    subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
+    print(subfolders)
 
-    # for i in folders:
-    #     Plotter(i, [0., 0.15])
+    for i in subfolders:
+        Plotter(i, [0., 1.])
 
-    folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
-    Plotter(os.path.join(data_path, folder), [0., 0.15])
+    # folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
+    # Plotter(os.path.join(data_path, folder), [0., 0.15])
     # ------
 
     # Main process for shell usage
