@@ -19,6 +19,29 @@ class Model(metaclass=ABCMeta):
     eval_vis2():
         Evaluates the visibilities of the model
     """
+    def __init__(self):
+        self.name = ""
+        self._size, self._sampling = 0, 0
+        self._wavelength = 0.
+        self.flux, self.total_flux = [], 0.
+        self._axis_mod, self._axis_vis = [], [], []
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def sampling(self):
+        return self._sampling
+
+    @property
+    def wavelength(self):
+        return self._wavelength
+
+    @property
+    def axis_mod(self):
+        return self._axis_mod
+
     @abstractmethod
     def eval_model() -> np.array:
         """Evaluates the model image

@@ -151,7 +151,7 @@ class Plotter:
         # self.model_plot(dx3, ex3, ring)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
 
-    def vis2_plot(self, axarr) -> None:
+    def vis2_plot(self, axarr, err=False) -> None:
         """Plots the squared visibilities"""
         # Sets the range for the squared visibility plots
         all_obs = [[],[],[],[],[],[]]
@@ -170,16 +170,17 @@ class Plotter:
             axis.set_xlabel("wl [micron]")
             all_obs[i%6].append(o)
 
-        # Plots the squared visibility for different degrees and metres
+        # Plots the squared visibility errors
         for j in range(6):
             axis = axarr[0, j%6]
-            pas = (np.degrees(np.arctan2(self.vcoords[j], self.ucoords[j]))-90)*-1
-            axis.errorbar(self.wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
-                          marker='s', capsize=0., alpha=0.9, color='k',
-                          label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
+            if err:
+                pas = (np.degrees(np.arctan2(self.vcoords[j], self.ucoords[j]))-90)*-1
+                axis.errorbar(self.wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
+                              marker='s', capsize=0., alpha=0.9, color='k',
+                              label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
             axis.legend(loc=2)
 
-    def t3phi_plot(self, axarr) -> None:
+    def t3phi_plot(self, axarr, err=False) -> None:
         """Plots the closure phase"""
         all_obs = [[],[],[],[]]
         for i, o in enumerate(self.t3phidata):
@@ -192,7 +193,9 @@ class Plotter:
 
         for j in range(4):
             axis = axarr[1, j%4]
-            # axis.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0), marker='s', capsize=0., alpha=0.9, color='k', label=self.tel_t3phi[j])
+            if err:
+                axis.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0),\
+                              marker='s', capsize=0., alpha=0.9, color='k', label=self.tel_t3phi[j])
             axis.legend([self.tel_t3phi[j]], loc=2)
 
     def waterfall_plot(self, ax) -> None:

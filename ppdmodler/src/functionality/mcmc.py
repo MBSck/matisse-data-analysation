@@ -78,7 +78,7 @@ class MCMC:
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         if self.numerical:
-            visdatamod, vis_axis, vis_scaling = self.model4fit_numerical(theta, *args, **kwargs)
+            visdatamod, visdataphase, vis_axis, vis_scaling = self.model4fit_numerical(theta, *args, **kwargs)
         else:
             visdatamod = self.model4fit_analytical(theta, *args, **kwargs)
 
@@ -112,8 +112,9 @@ class MCMC:
     def model4fit_numerical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
         model_img = self.model.eval_model(theta, *args, **kwargs)
-        fourier = FFT(model_img, args[3])       # The wavelength should be args[3]
-        return fourier.do_fft2(), fourier.fftfreq, fourier.fftscale
+        fourier = FFT(model_img, args[3])
+        ft, amp, phase = fourier.pipeline()       # The wavelength should be args[3]
+        return ft, amp, phase, fourier.fftfreq, fourier.fftscale
 
     def get_best_fit(self, sampler):
         """Fetches the best fit values from the sampler"""

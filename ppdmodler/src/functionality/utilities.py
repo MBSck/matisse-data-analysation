@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import inspect
 import time
 
 from typing import Any, Dict, List, Union, Optional
@@ -50,6 +51,31 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
         1 if 'x == y' or 0 else
     """
     return 1 if x == y else 0
+
+
+def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
+    """Zooms in on an image by cutting of the zero-padding
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The image to be zoomed in on
+    set_size: int, optional
+        The size for the image cut-off
+
+    Returns
+    -------
+    np.ndarray
+        The zoomed in array, with the zero-padding cut-off
+    """
+    array_center = len(array)//2
+    if set_size is None:
+        set_size = int(len(array)*0.15)
+
+    ind_low, ind_high = array_center-set_size,\
+            array_center+set_size
+
+    return array[ind_low:ind_high, ind_low:ind_high]
 
 def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     """Returns a given angle in mas/rad or the pertaining scaling factor
@@ -203,10 +229,13 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
 
     if angles is not None:
         try:
-            pos_angle_ellipsis, pos_angle_axis, inc_angle = ellipsis_angles
-        except:
-            print("set_size(): Check input arguments, ellipsis_angles must be of the form ["
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
+        except Exception as e:
+            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
                   "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+            print(e)
+            sys.exit()
+
         a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
         ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
                 a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
@@ -215,8 +244,8 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
     else:
         return mas2rad(np.sqrt(xc**2+yc**2)), xc
 
-def set_uvcoords(sampling: int, wavelength: float, uvcoords:
-                 Optional[List[float]] = None) -> np.array:
+def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
+                 uvcoords: np.ndarray = None) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
@@ -241,14 +270,31 @@ def set_uvcoords(sampling: int, wavelength: float, uvcoords:
         # Star overhead sin(theta_0)=1 position
         u, v = axis, axis[:, np.newaxis]
 
-        B = np.sqrt(u**2+v**2)/wavelength
     else:
+        axis = uvcoords
         u, v = np.array([i[0] for i in uvcoords]), \
                 np.array([i[1] for i in uvcoords])
 
-        B, axis = np.sqrt(u**2+v**2)/wavelength, uvcoords
+    if angles is not None:
+        try:
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
+        except Exception as e:
+            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
+                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+            print(e)
+            sys.exit()
 
-    return B, axis
+        # The ellipsis of the projected baselines
+        a, b = u*np.sin(pos_angle_ellipsis), v*np.cos(pos_angle_ellipsis)
+
+        # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
+        ath, bth = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
+    else:
+        B = np.sqrt(u**2+v**2)/wavelength
+
+    return B, uvcoords
 
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
@@ -302,8 +348,7 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
 
 if __name__ == "__main__":
-    print(set_uvcoords(10, 8e-06, [[10, 8], [5, 10]]))
-    print(np.exp(1e-9*1e-6))
+    zoom_array(np.zeros((128, 128)), set_size=100)
     # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
     # print(readout.get_uvcoords_vis2, "uvcoords")

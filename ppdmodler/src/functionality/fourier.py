@@ -13,7 +13,7 @@ from typing import Any, List, Dict, Optional, Union
 
 # Own modules
 from src.models import Gauss2D
-from src.functionality.utilities import timeit, get_px_scaling
+from src.functionality.utilities import timeit, get_px_scaling, zoom_array
 
 # TODO: Make class and function documentation
 
@@ -34,6 +34,16 @@ class FFT:
         self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)
         self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
+    def pipeline(self, zoom: bool = False)-> [np.ndarray, np.ndarray, np.ndarray]:
+        """Combines various functions and executes them"""
+        if zoom:
+            ft = zoom_array(self.do_fft2())
+        else:
+            ft = self.do_fft2()
+
+        amp, phase = self.get_ft_amp_phase(ft)
+        return ft, amp, phase
+
     @timeit
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT"""
@@ -44,16 +54,7 @@ class FFT:
         """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
         return fft.fftshift(fft.ifft2(fft.fftshift(self.model))).real
 
-    def zoom_fft2(self) -> None:
-        """This zooms in on the FFT in after zero-padding"""
-        ind_low_start, ind_low_end = 0, self.set_size//2
-        ind_high_start, ind_high_end = self.set_size//2, self.set_size
-        self.ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 0))
-        self.ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 1))
-        self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 0))
-        self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 1))
-
-    def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
+    def get_ft_amp_phase(self, ft: np.array) -> [np.array, np.array]:
         """Splits the real and imaginary part of the 2D-FFT into amplitude-,
          and phase-spectrum"""
         return np.abs(ft), np.angle(ft)

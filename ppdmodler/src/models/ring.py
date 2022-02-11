@@ -10,14 +10,12 @@ from src.functionality.constant import I
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
         delta_fct, blackbody_spec, mas2rad, trunc
 
-# TODO: Rescale the sizes of the models so that e.g. 512 points are up to 10
-# arcseconds
-# TODO: Make analytical model only one space wide (Ring)
 # TODO: Make the addition of the visibilities work properly, think of OOP
 # abilities
 
 class Ring(Model):
-    """Infinitesimal thin ring model
+    """Infinitesimal thin ring model. Can be both cirular or an ellipsoid, i.e.
+    inclined
 
     ...
 
@@ -27,89 +25,43 @@ class Ring(Model):
         Evaluates the model
     eval_vis2():
         Evaluates the visibilities of the model
+
+    See also
+    --------
+    set_size()
+    set_uvcoords()
     """
     def __init__(self):
         self.name = "Ring"
-        self._axis_mod, self._axis_mod_num, self._axis_vis = [], [], []
-
-    @property
-    def axis_mod(self):
-        return self._axis_mod
-
-    @property
-    def axis_mod_num(self):
-        return self._axis_mod_num
-
-    @property
-    def axis_vis(self):
-        return self._axis_vis
 
     @timeit
     def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None, centre: Optional[bool] = None) -> np.array:
+                   sampling: Optional[int] = None, centre: Optional[bool] =
+                   None, truncated: bool = False) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
         ----------
         r_0: int | float
             The radius of the ring
-        size: int
-            The size of the model image
-        sampling: int | None
-            The sampling of the object-plane
-        centre: int | None
-            The centre of the model image
-
-        Returns
-        --------
-        model: np.array
-
-        See also
-        --------
-        set_size()
-        """
-        try:
-            r_0 = mas2rad(theta)
-        except:
-            print("Ring.eval_mod(): Check input arguments, theta must be of the form [r_0]")
-            sys.exit()
-
-        # TODO: Ring is 2 pixels thick, reduce to one?
-        output_lst = np.zeros((sampling, sampling))
-        radius, self._axis_mod = set_size(size, sampling, centre)
-
-        r_0_trunc, radius_trunc = map(lambda x: trunc(x, 9), [r_0, radius])
-        print(r_0, radius)
-        print(r_0_trunc, radius_trunc)
-
-        output_lst[radius_trunc == r_0_trunc] = 1/(2*np.pi*r_0)
-
-        return output_lst
-
-    @timeit
-    def eval_mod_num(self, theta:  List, size: int,
-                     sampling: Optional[int] = None,
-                     centre: bool = None) -> np.array:
-        """Numerically evaluates the ring model
-        Parameters
-        ----------
-        r_0: int | float, optional
-            The minimum radius of the ring input in radians
-        r_max: int | float
-            The radius of the ring input in radians
-        inc_angle: float
-            The inclination angle of the ring
-        pos_angle_axis: float
-        pos_angle_ellipsis: float
+        pos_angle_ellipsis: int | float, optional
+        pos_angle_axis: int | float, optional
+        inc_angle: int | float, optional
+            The inclination angle of the disk
         size: int
             The size of the model image
         sampling: int, optional
-            The sampling of the uv-plane
+            The sampling of the object-plane
         centre: int, optional
             The centre of the model image
+        truncated: bool
+            Determines if the ring is calculated via
+            trunanciation or simply (x-x_-1) method.
+            Both are somewhat inaccurate, but truncation is more inaccurate.
+            Both yield full rings at a sampling rate of 128.
 
         Returns
-        -------
+        --------
         model: np.array
 
         See also
@@ -117,21 +69,33 @@ class Ring(Model):
         set_size()
         """
         try:
-            r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
-            pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[2:])
-        except:
-            print("Ring.eval_mod_num(): Check input arguments, theta must be of the form [r_0,"
-                  " r_max, pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+            if len(theta) <= 1:
+                r_0 = mas2rad(theta[0])
+            else:
+                r_0 = mas2rad(theta[0])
+                pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[1:])
+        except Exception as e:
+            print("Ring.eval_mod(): Check input arguments, theta must be of"
+                  " the form [r_0] or [r_0, pos_angle_ellipsis, pos_angle_axis,"
+                  " inc_angle]")
+            print(e)
             sys.exit()
 
-        radius, self._axis_mod_num = set_size(size, sampling, centre,
-                                              [pos_angle_ellipsis, pos_angle_axis, inc_angle])
+        self._size, self._sampling = size, sampling
 
-        radius[radius > r_max] = 0.
-        if inner_radius is None:
-            radius[radius < outer_radius-1] = 0.
+        if len(theta) > 1:
+            radius, self._axis_mod = set_size(size, sampling, centre,
+                                                  [pos_angle_ellipsis, pos_angle_axis, inc_angle])
         else:
-            radius[radius < inner_radius] = 0.
+            radius, self._axis_mod = set_size(size, sampling, centre)
+
+        if not truncated:
+            radius[radius > r_0+mas2rad(0.2)], radius[radius < r_0] = 0., 0.
+            radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
+        else:
+            r_0_trunc, radius_trunc = trunc(r_0, 9), trunc(radius, 9)
+            radius[np.where(radius_trunc != r_0_trunc)] = 0.
+            radius[np.where(radius_trunc == r_0_trunc)] = 1/(2*np.pi*r_0)
 
         return radius
 
@@ -173,11 +137,13 @@ class Ring(Model):
         try:
             r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
             q, T_0 = theta[2:]
-        except:
+        except Exception as e:
             print("Ring.eval_vis(): Check input arguments, theta must be of the form [r_0,"
                   " r_max, q, T_0]")
+            print(e)
             sys.exit()
 
+        self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)
 
         # Realtive brightness distribution
@@ -202,14 +168,16 @@ if __name__ == "__main__":
     plt.show()
 
     # fig, (ax1, ax2) = plt.subplots(1, 2)
-
-    r_model = r.eval_model(10, 20, 512)
-    plt.imshow(r_model)
+    span = 20.
+    for i in [2**x for x in range(5, 12)]:
+        print(i)
+        r_model = r.eval_model([5., 45, 45, 45], span, i)
+        plt.imshow(r_model, extent=[-span, span, -span, span])
+        plt.show()
 
     # r_vis = r.eval_vis([10., 256.1, 0.55, 6000], 512, 8e-06, do_flux=False)
     # print(r_vis, r_vis.shape)
     # ax2.imshow(np.abs(r_vis[0]))
-    plt.show()
     # plt.savefig("mode_ring.png")
 
     '''
