@@ -114,7 +114,7 @@ class MCMC:
         model_img = self.model.eval_model(theta, *args, **kwargs)
         fourier = FFT(model_img, args[3])
         ft, amp, phase = fourier.pipeline()       # The wavelength should be args[3]
-        return ft, amp, phase, fourier.fftfreq, fourier.fftscale
+        return amp, phase, fourier.fftfreq, fourier.fftscale
 
     def get_best_fit(self, sampler):
         """Fetches the best fit values from the sampler"""
