@@ -15,6 +15,7 @@ from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import trunc
 
+# TODO: Think of rewriting code so that params are taken differently
 # TODO: Think of way to implement the FFT fits -> See Jacob's code
 # TODO: Make documentation in Evernote of this file and then remove unncessary
 # comments
@@ -66,8 +67,8 @@ class MCMC:
         """Checks if all variables are within their priors (as well as
         determining them setting the same).
         If all priors are satisfied it needs to return '0.0' and if not '-np.inf'"""
-        fwhm = theta
-        if fwhm < 100. and fwhm > 0.1:
+        flux, fwhm = theta
+        if (fwhm < 100. and fwhm > 0.1):
             return 0.0
         else:
             return -np.inf
@@ -78,7 +79,15 @@ class MCMC:
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         if self.numerical:
-            visdatamod, visdataphase, vis_axis, vis_scaling = self.model4fit_numerical(theta, *args, **kwargs)
+            visdatamod, visdataphase, fourier = self.model4fit_numerical(theta, *args, **kwargs)
+            vis_axis, vis_scaling, vis_roll = fourier.fftfreq, \
+                    fourier.fftscale, fourier.model_size//2
+            print(vis_scaling)
+            xcoord, ycoord = [vis_roll+np.round(i[0]/vis_scaling).astype(int) for i in args[~0]], \
+                    [vis_roll+np.round(i[1]/vis_scaling).astype(int) for i in args[~0]]
+            print(uvcoords, "uv", xcoord, ycoord)
+            visdatamod = [visdatamod[j, i] for i, j in zip(xcoord, ycoord)]
+            print(visdatamod)
         else:
             visdatamod = self.model4fit_analytical(theta, *args, **kwargs)
 
@@ -111,10 +120,10 @@ class MCMC:
 
     def model4fit_numerical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img = self.model.eval_model(theta, *args, **kwargs)
-        fourier = FFT(model_img, args[3])
+        model_img = self.model.eval_model(theta, args[0])
+        fourier = FFT(model_img, args[1])
         ft, amp, phase = fourier.pipeline()       # The wavelength should be args[3]
-        return amp, phase, fourier.fftfreq, fourier.fftscale
+        return amp, phase, fourier
 
     def get_best_fit(self, sampler):
         """Fetches the best fit values from the sampler"""
@@ -176,8 +185,8 @@ class MCMC:
 if __name__ == "__main__":
     # Set the initial values for the parameters 
     # fwhm = 19.01185824931766         # Fitted value to model data
-    fwhm = 1.
-    initial = np.array([fwhm])
+    # Initial sets the theat
+    initial = np.array([1., 1.])
 
     # Readout Fits for real data
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
@@ -209,7 +218,7 @@ if __name__ == "__main__":
     data = (vis2data, vis2err, sampling, wavelength, uvcoords)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Gauss2D, mc_params, data, numerical=False)
+    mcmc = MCMC(Gauss2D, mc_params, data, numerical=True)
     mcmc.pipeline()
 
 

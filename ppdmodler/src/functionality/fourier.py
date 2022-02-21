@@ -60,6 +60,6 @@ class FFT:
         return np.abs(ft), np.angle(ft)
 
 if __name__ == "__main__":
-    ring = Gauss2D()
+    gauss = Gauss2D()
     file_path = "/Users/scheuck/Documents/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    fourier = FFT(ring.eval_model(2048, 256.1), 1024, file_path, 8e-06)
+    fourier = FFT(gauss.eval_model([1., 256.1], 2048), 1024, file_path, 8e-06)

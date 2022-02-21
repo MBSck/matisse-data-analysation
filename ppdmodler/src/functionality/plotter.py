@@ -106,7 +106,7 @@ class Plotter:
             self.all_tels.update(UT)
 
             '''
-            # Code for python 3.9, dic merging operator
+            # Code for python 3.9 and higher, dic merging operator
             self.all_tels = {1: "A0", 5: "B2", 13: "C0", 10: "D1"} | \
                     {28: "K0", 18: "G1", 13: "D0", 24: "J3"} | \
                     {1: "A0", 18: "G1", 23: "J2", 24: "J3"} | \

@@ -109,10 +109,10 @@ def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
     float
         The px to meter scaling
     """
-    axis_size = len(ax)
-    roll = np.floor(axis_size/2).astype(int)
-    axis = np.roll(ax, roll, axis=0)
-    return (np.diff(ax)[0]/(np.deg2rad(1))*wavelength*axis_size)
+    axis = np.roll(ax, (axis_size := len(ax))//2, 0)
+    result = np.diff(ax)[0]/wavelength
+    print(result)
+    return result
 
 def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     """Calculates the axis scaling from the axis of an input image/model and
@@ -158,9 +158,6 @@ def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     # TODO: Maybe make more efficient with numpy instead of list comprehension
     indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
     return np.ndarray.flatten(np.array(indices_lst))
-
-def interpolate():
-    ...
 
 def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: np.array,
                         dis: bool = False, intpol: bool = False) -> List:
@@ -348,7 +345,7 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
 
 if __name__ == "__main__":
-    zoom_array(np.zeros((128, 128)), set_size=100)
+    get_px_scaling([i for i in range(0, 10)], 1e-5)
     # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
 
     # print(readout.get_uvcoords_vis2, "uvcoords")
