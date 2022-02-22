@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.models import Gauss2D
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
-from src.functionality.utilities import trunc
+from src.functionality.utilities import trunc, correspond_uv2scale
 
 # TODO: Think of rewriting code so that params are taken differently
 # TODO: Think of way to implement the FFT fits -> See Jacob's code
@@ -38,7 +38,7 @@ class MCMC:
         mcmc.plot_corner(sampler)
 
         # This plots the resulting model
-        # mcmc.plot_model_and_vis_curve(sampler, sampling, wavelength)
+        mcmc.plot_model_and_vis_curve(sampler, sampling, wavelength, data[~0])
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -67,8 +67,8 @@ class MCMC:
         """Checks if all variables are within their priors (as well as
         determining them setting the same).
         If all priors are satisfied it needs to return '0.0' and if not '-np.inf'"""
-        flux, fwhm = theta
-        if (fwhm < 100. and fwhm > 0.1):
+        fwhm, flux = theta
+        if (fwhm < 100. and fwhm > 0.1) and (flux > 0.9 and flux < 1.):
             return 0.0
         else:
             return -np.inf
@@ -82,12 +82,10 @@ class MCMC:
             visdatamod, visdataphase, fourier = self.model4fit_numerical(theta, *args, **kwargs)
             vis_axis, vis_scaling, vis_roll = fourier.fftfreq, \
                     fourier.fftscale, fourier.model_size//2
-            print(vis_scaling)
-            xcoord, ycoord = [vis_roll+np.round(i[0]/vis_scaling).astype(int) for i in args[~0]], \
-                    [vis_roll+np.round(i[1]/vis_scaling).astype(int) for i in args[~0]]
-            print(uvcoords, "uv", xcoord, ycoord)
+
+            # Rescaling of the uv-coords to the corresponding image size
+            xcoord, ycoord = correspond_uv2scale(vis_scaling, vis_roll, args[~0])
             visdatamod = [visdatamod[j, i] for i, j in zip(xcoord, ycoord)]
-            print(visdatamod)
         else:
             visdatamod = self.model4fit_analytical(theta, *args, **kwargs)
 
@@ -138,18 +136,34 @@ class MCMC:
 
         # Gets the best value and calculates a full model
         theta_max = self.get_best_fit(sampler)
+
         if self.numerical:
-            ...
+            # For debugging only
+            theta_max = [theta_max]
+            theta_max.append(1.)
+            sampling = args[0]
+
+            visdatamod, visdataphase, fourier = self.model4fit_numerical(theta_max, *args, **kwargs)
+            vis_axis, vis_scaling, vis_roll = fourier.fftfreq, \
+                    fourier.fftscale, fourier.model_size//2
+
+            # To plot the model
+            best_fit_model = visdatamod
+
+            # Rescaling of the uv-coords to the corresponding image size
+            xcoord, ycoord = correspond_uv2scale(vis_scaling, vis_roll, args[~0])
+            visdatamod = [visdatamod[j, i] for i, j in zip(xcoord, ycoord)]
+            vis2datamod = visdatamod*np.conj(visdatamod)
         else:
             best_fit_model = self.model.eval_vis(theta_max, *args, **kwargs)
 
         # Gets the model size and takes a slice of the middle for both vis2 and
         # baselines
         size_model = len(best_fit_model)
-        u, v = self.model.axis_vis, self.model.axis_vis[:, np.newaxis]
+        u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
+        wavelength = trunc(args[1]*1e06, 2)
         xvis_curve = np.sqrt(u**2+v**2)[size_model//2]
         yvis_curve = best_fit_model[size_model//2]
-        wavelength = trunc(args[1]*1e06, 2)
 
         # Combines the plots and gives descriptions to the axes
         ax1.imshow(best_fit_model)
@@ -159,16 +173,19 @@ class MCMC:
         ax2.set_xlabel("Projected baselines [m]")
         ax2.set_ylabel("Vis2")
         plt.show()
-        # plt.savefig("Gauss2D_to_model_data_fit.png")
+        plt.savefig("Gauss2D_to_model_data_fit.png")
+
+        print(theta_max, vis2datamod)
 
     def plot_corner(self, sampler):
         """Plots the corner plot of the posterior spread"""
-        labels = ["FWHM"]
+        labels = ["FWHM", "FLUX"]
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
         fig = corner.corner(samples, labels=labels)
         plt.show()
 
     def test_model(self, sampler) -> None:
+        # TODO: Implement printout of theta_max
         # Another test of whether or not the sampling went well is the mean acceptance
         # fraction and the integrated autocorrelation time
         # Acceptance fraction has an entry for each walker -> It is a vector with the
@@ -220,5 +237,6 @@ if __name__ == "__main__":
     # This calls the MCMC fitting
     mcmc = MCMC(Gauss2D, mc_params, data, numerical=True)
     mcmc.pipeline()
+    print(vis2data)
 
 

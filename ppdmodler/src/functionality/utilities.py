@@ -110,11 +110,9 @@ def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
         The px to meter scaling
     """
     axis = np.roll(ax, (axis_size := len(ax))//2, 0)
-    result = np.diff(ax)[0]/wavelength
-    print(result)
-    return result
+    return np.diff(ax)[0]*wavelength/mas2rad()
 
-def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
+def correspond_uv2scale(scaling: float, roll: int, uvcoords: np.ndarray) -> float:
     """Calculates the axis scaling from the axis of an input image/model and
     returns it in meters baseline per pixel. Returns the uv-coords
 
@@ -122,6 +120,7 @@ def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     ----------
     scaling: float
         The scaling factor the uv-coords should be corresponded to
+
     uvcoords: np.array
         The real uvcoords
 
@@ -130,7 +129,9 @@ def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     uvcoords: np.ndarray
         The rescaled uv-coords
     """
-    return uvcoords/scaling
+    xcoord, ycoord = [roll+np.round(i[0]/scaling).astype(int) for i in uvcoords], \
+            [roll+np.round(i[1]/scaling).astype(int) for i in uvcoords]
+    return xcoord, ycoord
 
 def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     """Calculates the norm for a point. Takes the freq and checks both the
@@ -342,6 +343,28 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
     divisor = wavelength**5*np.exp(exp_numerator/exp_divisor)
 
     return numerator/divisor
+
+    def do_fit():
+        """Does automatic gauss fits"""
+        # Fits the data
+        scaling_rad2arc = 206265
+
+        # Gaussian fit
+        fwhm = 1/scaling_rad2arc/1000           # radians
+
+        # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+        xvals, yvals = self.baseline_distances, self.mean_bin_vis2
+        pars, cov = curve_fit(f=gaussian, xdata=xvals, ydata=yvals, p0=[fwhm], bounds=(-np.inf, np.inf))
+        # xvals = np.linspace(50, 150)/3.6e-6
+        # fitted_model= np.square(gaussian(xvals, fwhm))
+        ax.plot(xvals, gaussian(xvals, pars), label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+
+        # Airy-disk fit
+        fwhm = 3/scaling_rad2arc/1000           # radians
+        fitted_model = np.square(airy(xvals, fwhm))
+        ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+        ax.set_ylim([0, 0.175])
+        ax.legend(loc='best')
 
 
 if __name__ == "__main__":

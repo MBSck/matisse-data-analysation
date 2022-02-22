@@ -26,38 +26,46 @@ class FFT:
     """
     # TODO: Make Zoom function work
     def __init__(self, model: np.array, wavelength: float, set_size: int = None,
-                 step_size_fft: float = 1., greyscale: bool = False) -> None:
+                 pixelscale: float = 1., greyscale: bool = False) -> None:
         self.model = model
         self.model_size = len(self.model)
         self.set_size = set_size
 
-        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)
+        self.fftfreq = fft.fftfreq(self.model_size, d=pixelscale)
         self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
     def pipeline(self, zoom: bool = False)-> [np.ndarray, np.ndarray, np.ndarray]:
         """Combines various functions and executes them"""
         if zoom:
+            # TODO: This is broken as of 22.02.22 -> Fix
             ft = zoom_array(self.do_fft2())
         else:
-            ft = self.do_fft2()
+            ft, ft_raw  = self.do_fft2()
 
-        amp, phase = self.get_ft_amp_phase(ft)
+        amp, phase = self.get_ft_amp_phase(ft, ft_raw)
         return ft, amp, phase
 
     @timeit
     def do_fft2(self) -> np.array:
-        """Does the 2D-FFT and returns the 2D-FFT"""
-        return fft.fftshift(fft.fft2(fft.ifftshift(self.model)))
+        """Does the 2D-FFT and returns the 2D-FFT
+        Returns
+        --------
+        ft: np.ndarray
+        ft_raw: np.ndarray
+        """
+        return fft.fftshift(fft.fft2(fft.ifftshift(self.model))), \
+                fft.fft2(self.model)
 
     @timeit
     def do_ifft2(self) -> np.array:
         """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
         return fft.fftshift(fft.ifft2(fft.fftshift(self.model))).real
 
-    def get_ft_amp_phase(self, ft: np.array) -> [np.array, np.array]:
+    def get_ft_amp_phase(self, ft: np.ndarray, ft_raw: np.ndarray) -> [np.array, np.array]:
         """Splits the real and imaginary part of the 2D-FFT into amplitude-,
          and phase-spectrum"""
-        return np.abs(ft), np.angle(ft)
+        amp = np.abs(ft)/np.abs(ft_raw[0, 0])   # Figure out why this is done?
+        return amp, np.angle(ft, deg=True)
 
 if __name__ == "__main__":
     gauss = Gauss2D()
