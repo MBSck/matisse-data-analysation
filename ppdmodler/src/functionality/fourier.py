@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
 # Own modules
-from src.models import Gauss2D
+from src.models import Gauss2D, Ring
 from src.functionality.utilities import timeit, get_px_scaling, zoom_array
 
 # TODO: Make class and function documentation
@@ -68,6 +68,10 @@ class FFT:
         return amp, np.angle(ft, deg=True)
 
 if __name__ == "__main__":
-    gauss = Gauss2D()
-    file_path = "/Users/scheuck/Documents/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    fourier = FFT(gauss.eval_model([1., 256.1], 2048), 1024, file_path, 8e-06)
+    ring = Ring()
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    size = 2048
+    ft, amp, phase = FFT(model := ring.eval_model([20., 45, 45, 0], size), 1.25e-05).pipeline()
+    ax1.imshow(model)
+    ax2.imshow(amp)
+    plt.show()

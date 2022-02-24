@@ -3,14 +3,17 @@
 """Test file for a 2D-Gaussian PPD model, that is fit with MCMC; The emcee
 package"""
 
+import os
 import numpy as np
 import emcee
 import corner
 import matplotlib.pyplot as plt
 
+from pathlib import Path
+
 from typing import Any, Dict, List, Union, Optional
 
-from src.models import Gauss2D
+from src.models import Gauss2D, Ring, InclinedRing, InclinedDisk
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import trunc, correspond_uv2scale
@@ -22,23 +25,34 @@ from src.functionality.utilities import trunc, correspond_uv2scale
 # TODO: Make this more generally applicable
 # TODO: Make plots of the model + fitting, that show the visibility curve, and
 # two more that show the # fit of the visibilities and the closure phases to the measured one
+# TODO: Make save paths for every class so that you can specify where files are
+# being saved to
 
 class MCMC:
-    def __init__(self, model, mc_params: List[float], data: List, numerical:
-                 bool = True) -> None:
+    def __init__(self, model, data: List, mc_params: List[float],
+                 priors: List[List[float]], labels: List[str],
+                 numerical: bool = True, out_path: Path = None) -> None:
         self.model = model()
         self.data = data
+        self.priors, self.labels = priors, labels
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical = numerical
+        self.vis2data, self.vis2datamod = data[0], None
+        self.theta_max = None
+
+        self.out_path = out_path
 
     def pipeline(self) -> None:
         sampler, pos, prob, state = self.do_fit()
 
         # This plots the corner plots of the posterior spread
-        mcmc.plot_corner(sampler)
+        self.plot_corner(sampler)
 
         # This plots the resulting model
-        mcmc.plot_model_and_vis_curve(sampler, sampling, wavelength, data[~0])
+        self.plot_model_and_vis_curve(sampler, 2048, wavelength, data[~0])
+
+        # This saves the best-fit model data and the real data
+        self.save_fit_data(sampler)
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -66,34 +80,49 @@ class MCMC:
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
         determining them setting the same).
-        If all priors are satisfied it needs to return '0.0' and if not '-np.inf'"""
-        fwhm, flux = theta
-        if (fwhm < 100. and fwhm > 0.1) and (flux > 0.9 and flux < 1.):
+
+        If all priors are satisfied it needs to return '0.0' and if not '-np.inf'
+        This function checks for an unspecified amount of flat priors
+
+        Parameters
+        ----------
+        theta: List
+            A list of all the parameters that ought to be fitted
+
+        Returns
+        -------
+        float
+            Return-code 0.0 for within bounds and -np.inf for out of bound
+            priors
+        """
+        check_conditons = []
+        for i, o in enumerate(self.priors):
+            if (theta[i] > o[0] and theta[i] < o[1]):
+                check_conditons.append(True)
+            else:
+                check_conditons.append(False)
+
+        # Checks if all conditions are fulfilled
+        if all(check_conditons):
             return 0.0
         else:
             return -np.inf
 
     def lnlike(self, theta: np.ndarray, vis2data: np.ndarray, vis2err:
-               np.ndarray, *args, **kwargs):
+               np.ndarray, sampling, wavelength, uvcoords):
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         if self.numerical:
-            visdatamod, visdataphase, fourier = self.model4fit_numerical(theta, *args, **kwargs)
-            vis_axis, vis_scaling, vis_roll = fourier.fftfreq, \
-                    fourier.fftscale, fourier.model_size//2
-
-            # Rescaling of the uv-coords to the corresponding image size
-            xcoord, ycoord = correspond_uv2scale(vis_scaling, vis_roll, args[~0])
-            visdatamod = [visdatamod[j, i] for i, j in zip(xcoord, ycoord)]
+            visdatamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
         else:
-            visdatamod = self.model4fit_analytical(theta, *args, **kwargs)
+            visdatamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
 
         vis2datamod = visdatamod*np.conj(visdatamod)
         return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
 
-
-    def lnprob(self, theta: np.ndarray, vis2data, vis2err, *args, **kwargs) -> np.ndarray:
+    def lnprob(self, theta: np.ndarray, vis2data, vis2err, sampling,
+               wavelength, uvcoords) -> np.ndarray:
         """This function runs the lnprior and checks if it returned -np.inf, and
         returns if it does. If not, (all priors are good) it returns the inlike for
         that model (convention is lnprior + lnlike)
@@ -109,80 +138,77 @@ class MCMC:
         lp = self.lnprior(theta)
         if not lp == 0.0:
             return -np.inf
-        return lp + self.lnlike(theta, vis2data, vis2err, *args, **kwargs)
+        return lp + self.lnlike(theta, vis2data, vis2err, sampling, wavelength, uvcoords)
 
-    def model4fit_analytical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
+    def model4fit_analytical(self, theta: np.ndarray, sampling, wavelength,
+                             uvcoords) -> np.ndarray:
         """The analytical model defined for the fitting process."""
-        model_vis = self.model.eval_vis(theta, *args, **kwargs)
+        model_vis = self.model.eval_vis(theta, sampling, wavelength, uvcoords)
         return model_vis
 
-    def model4fit_numerical(self, theta: np.ndarray, *args, **kwargs) -> np.ndarray:
+    def model4fit_numerical(self, theta: np.ndarray, sampling, wavelength,
+                            uvcoords) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img = self.model.eval_model(theta, args[0])
-        fourier = FFT(model_img, args[1])
-        ft, amp, phase = fourier.pipeline()       # The wavelength should be args[3]
-        return amp, phase, fourier
+        model_img = self.model.eval_model(theta, sampling)
+        fr = FFT(model_img, wavelength)
+        ft, amp, phase = fr.pipeline()
 
-    def get_best_fit(self, sampler):
+        # rescaling of the uv-coords to the corresponding image size
+        xcoord, ycoord = correspond_uv2scale(fr.fftscale, fr.model_size//2, uvcoords)
+        amp = [amp[j, i] for i, j in zip(xcoord, ycoord)]
+        return amp, phase, ft
+
+    def get_best_fit(self, sampler) -> np.ndarray:
         """Fetches the best fit values from the sampler"""
         samples = sampler.get_chain(flat=True)
-        theta_max = samples[np.argmax(sampler.flatlnprobability)][0]
+        theta_max = samples[np.argmax(sampler.flatlnprobability)]
         return theta_max
 
-    def plot_model_and_vis_curve(self, sampler, *args, **kwargs) -> None:
+    def plot_model_and_vis_curve(self, sampler, sampling, wavelength, uvcoords) -> None:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
-        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 
         # Gets the best value and calculates a full model
-        theta_max = self.get_best_fit(sampler)
+        self.theta_max = self.get_best_fit(sampler)
 
         if self.numerical:
             # For debugging only
-            theta_max = [theta_max]
-            theta_max.append(1.)
-            sampling = args[0]
-
-            visdatamod, visdataphase, fourier = self.model4fit_numerical(theta_max, *args, **kwargs)
-            vis_axis, vis_scaling, vis_roll = fourier.fftfreq, \
-                    fourier.fftscale, fourier.model_size//2
-
-            # To plot the model
-            best_fit_model = visdatamod
-
-            # Rescaling of the uv-coords to the corresponding image size
-            xcoord, ycoord = correspond_uv2scale(vis_scaling, vis_roll, args[~0])
-            visdatamod = [visdatamod[j, i] for i, j in zip(xcoord, ycoord)]
+            visdatamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
             vis2datamod = visdatamod*np.conj(visdatamod)
+            self.vis2datamod = vis2datamod
+            best_fit_model = abs(ft)
         else:
-            best_fit_model = self.model.eval_vis(theta_max, *args, **kwargs)
+            best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
 
-        # Gets the model size and takes a slice of the middle for both vis2 and
-        # baselines
+        # Takes a slice of the model and shows vis2-baselines 
         size_model = len(best_fit_model)
         u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
-        wavelength = trunc(args[1]*1e06, 2)
-        xvis_curve = np.sqrt(u**2+v**2)[size_model//2]
-        yvis_curve = best_fit_model[size_model//2]
+        wavelength = trunc(wavelength*1e06, 2)
+        xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
+        yvis_curve = best_fit_model[centre]
 
         # Combines the plots and gives descriptions to the axes
         ax1.imshow(best_fit_model)
-        ax1.set_title(self.model.name + fr" model at {wavelength}$\mu$m")
-        ax1.set_xlabel(f"Resolution of {args[0]} px")
+        ax1.set_title(fr"{self.model.name}-model at {wavelength}$\mu$m")
+        ax1.set_xlabel(f"Resolution of {sampling} px")
         ax2.errorbar(xvis_curve, yvis_curve)
-        ax2.set_xlabel("Projected baselines [m]")
-        ax2.set_ylabel("Vis2")
-        plt.show()
-        plt.savefig("Gauss2D_to_model_data_fit.png")
+        ax2.set_xlabel(r"$B_p$ [m]")
+        ax2.set_ylabel("vis2")
 
-        print(theta_max, vis2datamod)
+        if self.out_path is None:
+            plt.savefig(f"{self.model.name}_model_after_fit.png")
+        else:
+            plt.savefig(os.path.join(self.out_path, f"{self.model.name}_model_after_fit.png"))
 
-    def plot_corner(self, sampler):
+    def plot_corner(self, sampler) -> None:
         """Plots the corner plot of the posterior spread"""
-        labels = ["FWHM", "FLUX"]
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
-        fig = corner.corner(samples, labels=labels)
-        plt.show()
+        fig = corner.corner(samples, labels=self.labels)
+        if self.out_path is None:
+            plt.savefig(f"{self.model.name}_corner_plot.png")
+        else:
+            plt.savefig(os.path.join(self.out_path, f"{self.model.name}_corner_plot.png"))
 
     def test_model(self, sampler) -> None:
         # TODO: Implement printout of theta_max
@@ -199,11 +225,43 @@ class MCMC:
         autocorr= np.mean(sampler.get_autocorr_time())
         print(f"Mean acceptance fraction {acceptance} and the autcorrelation time {autocorr}")
 
+    def save_fit_data(self, sampler) -> None:
+        """This saves the real data and the best-fitted model data"""
+        if self.out_path is not None:
+            with open(os.path.join(self.out_path, f"{self.model.name}_data.txt"), "w+") as f:
+                f.write("vis2data\n")
+                f.write(str(vis2data) + '\n')
+                f.write("-------------------\n")
+                f.write("vis2datamod\n")
+                f.write(str(self.vis2datamod)+ '\n')
+                f.write("-------------------\n")
+                f.write("theta - best fit\n")
+                f.write(str(self.theta_max)+ '\n')
+                f.write("-------------------\n")
+                f.write("labels\n")
+                f.write(str(self.labels)+ '\n')
+        else:
+            with open(f"{self.model.name}_data.txt", "w+") as f:
+                f.write("vis2data\n")
+                f.write(str(vis2data) + '\n')
+                f.write("-------------------\n")
+                f.write("vis2datamod\n")
+                f.write(str(self.vis2datamod)+ '\n')
+                f.write("-------------------\n")
+                f.write("theta - best fit\n")
+                f.write(str(self.theta_max)+ '\n')
+                f.write("-------------------\n")
+                f.write("labels\n")
+                f.write(str(self.labels)+ '\n')
+
+
 if __name__ == "__main__":
     # Set the initial values for the parameters 
     # fwhm = 19.01185824931766         # Fitted value to model data
-    # Initial sets the theat
-    initial = np.array([1., 1.])
+    # Initial sets the theta
+    initial = np.array([1., 45., 45., 45.])
+    priors = [[1., 50.], [0., 60.], [0., 60.], [0., 60.]]
+    labels = ["R_0", "POS_ANGLE_ELLIPSIS", "POS_ANGLE_AXIS", "INC_ANGLE"]
 
     # Readout Fits for real data
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
@@ -220,7 +278,7 @@ if __name__ == "__main__":
     uvcoords = readout.get_uvcoords()
 
     # The number of walkers (must be even) and the number of dimensions/parameters
-    nwalkers, ndim = 10, len(initial)
+    nwalkers, ndim = 20, len(initial)
 
     # Sets the steps of the burn-in and the max. steps
     niter_burn, niter = 100, 1000
@@ -235,8 +293,7 @@ if __name__ == "__main__":
     data = (vis2data, vis2err, sampling, wavelength, uvcoords)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Gauss2D, mc_params, data, numerical=True)
+    mcmc = MCMC(Ring, data, mc_params, priors, labels, numerical=True,
+                out_path="/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets")
     mcmc.pipeline()
-    print(vis2data)
-
 
