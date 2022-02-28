@@ -13,7 +13,7 @@ from pathlib import Path
 
 from typing import Any, Dict, List, Union, Optional
 
-from src.models import Gauss2D, Ring, InclinedRing, InclinedDisk
+from src.models import Gauss2D, Ring, InclinedDisk
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import trunc, correspond_uv2scale
@@ -31,13 +31,14 @@ from src.functionality.utilities import trunc, correspond_uv2scale
 class MCMC:
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
-                 numerical: bool = True, out_path: Path = None) -> None:
+                 numerical: bool = True, vis: bool = True, out_path: Path = None) -> None:
         self.model = model()
         self.data = data
         self.priors, self.labels = priors, labels
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
-        self.numerical = numerical
-        self.vis2data, self.vis2datamod = data[0], None
+        self.numerical, self.vis = numerical, vis
+        self.realdata, self.datamod = data[0], None
+        self.wavelength, self.uvcoords = data[3], data[~0]
         self.theta_max = None
 
         self.out_path = out_path
@@ -49,10 +50,10 @@ class MCMC:
         self.plot_corner(sampler)
 
         # This plots the resulting model
-        self.plot_model_and_vis_curve(sampler, 2048, wavelength, data[~0])
+        self.plot_model_and_vis_curve(sampler, 2048, self.wavelength, self.uvcoords)
 
         # This saves the best-fit model data and the real data
-        self.save_fit_data(sampler)
+        self.save_fit_data()
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -108,20 +109,25 @@ class MCMC:
         else:
             return -np.inf
 
-    def lnlike(self, theta: np.ndarray, vis2data: np.ndarray, vis2err:
+    def lnlike(self, theta: np.ndarray, realdata: np.ndarray, realerr:
                np.ndarray, sampling, wavelength, uvcoords):
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         if self.numerical:
-            visdatamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
+            datamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
         else:
-            visdatamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
+            datamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
 
-        vis2datamod = visdatamod*np.conj(visdatamod)
-        return -0.5*np.sum((vis2data-vis2datamod)**2/vis2err)
+        if self.vis:
+            realdata, realphase = realdata
+            realdataerr, realphaseerr = realerr
+        else:
+            datamod = datamod*np.conj(datamod)
 
-    def lnprob(self, theta: np.ndarray, vis2data, vis2err, sampling,
+        return -0.5*np.sum((realdata-datamod)**2/realerr)
+
+    def lnprob(self, theta: np.ndarray, realdata, realerr, sampling,
                wavelength, uvcoords) -> np.ndarray:
         """This function runs the lnprior and checks if it returned -np.inf, and
         returns if it does. If not, (all priors are good) it returns the inlike for
@@ -138,7 +144,7 @@ class MCMC:
         lp = self.lnprior(theta)
         if not lp == 0.0:
             return -np.inf
-        return lp + self.lnlike(theta, vis2data, vis2err, sampling, wavelength, uvcoords)
+        return lp + self.lnlike(theta, realdata, realerr, sampling, wavelength, uvcoords)
 
     def model4fit_analytical(self, theta: np.ndarray, sampling, wavelength,
                              uvcoords) -> np.ndarray:
@@ -174,9 +180,10 @@ class MCMC:
 
         if self.numerical:
             # For debugging only
-            visdatamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
-            vis2datamod = visdatamod*np.conj(visdatamod)
-            self.vis2datamod = vis2datamod
+            datamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
+            if not self.vis:
+                datamod = datamod*np.conj(datamod)
+            self.datamod = datamod
             best_fit_model = abs(ft)
         else:
             best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
@@ -194,12 +201,17 @@ class MCMC:
         ax1.set_xlabel(f"Resolution of {sampling} px")
         ax2.errorbar(xvis_curve, yvis_curve)
         ax2.set_xlabel(r"$B_p$ [m]")
-        ax2.set_ylabel("vis2")
+
+        if self.vis:
+            ax2.set_ylabel("vis/corr_flux")
+        else:
+            ax2.set_ylabel("vis2")
 
         if self.out_path is None:
             plt.savefig(f"{self.model.name}_model_after_fit.png")
         else:
             plt.savefig(os.path.join(self.out_path, f"{self.model.name}_model_after_fit.png"))
+        plt.show()
 
     def plot_corner(self, sampler) -> None:
         """Plots the corner plot of the posterior spread"""
@@ -225,75 +237,72 @@ class MCMC:
         autocorr= np.mean(sampler.get_autocorr_time())
         print(f"Mean acceptance fraction {acceptance} and the autcorrelation time {autocorr}")
 
-    def save_fit_data(self, sampler) -> None:
+    def write_data(self) -> str:
+        """Specifies how the fit data should be written"""
+        if self.vis:
+            write_str = f"visamp\n{str(self.realdata[0])}\n-------------------\n"\
+                    f"visphase\n{str(self.realdata[1])}\n-------------------\n"
+        else:
+            write_str = f"vis2data\n{str(self.realdata)}\n-------------------\n"
+
+        write_str += f"datamod\n{str(self.datamod)}\n-------------------\n"\
+                f"theta - best fit\n{str(self.theta_max)}\n-------------------\n"\
+                f"labels\n{str(self.labels)}\n"
+        return write_str
+
+    def save_fit_data(self) -> None:
         """This saves the real data and the best-fitted model data"""
         if self.out_path is not None:
             with open(os.path.join(self.out_path, f"{self.model.name}_data.txt"), "w+") as f:
-                f.write("vis2data\n")
-                f.write(str(vis2data) + '\n')
-                f.write("-------------------\n")
-                f.write("vis2datamod\n")
-                f.write(str(self.vis2datamod)+ '\n')
-                f.write("-------------------\n")
-                f.write("theta - best fit\n")
-                f.write(str(self.theta_max)+ '\n')
-                f.write("-------------------\n")
-                f.write("labels\n")
-                f.write(str(self.labels)+ '\n')
+                f.write(self.write_data())
         else:
             with open(f"{self.model.name}_data.txt", "w+") as f:
-                f.write("vis2data\n")
-                f.write(str(vis2data) + '\n')
-                f.write("-------------------\n")
-                f.write("vis2datamod\n")
-                f.write(str(self.vis2datamod)+ '\n')
-                f.write("-------------------\n")
-                f.write("theta - best fit\n")
-                f.write(str(self.theta_max)+ '\n')
-                f.write("-------------------\n")
-                f.write("labels\n")
-                f.write(str(self.labels)+ '\n')
+                f.write(self.write_data())
 
+def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = True):
+    """Fetches the required info and then gets the uvcoords and makes the
+    data"""
+    readout = ReadoutFits(fits_file)
 
-if __name__ == "__main__":
-    # Set the initial values for the parameters 
-    # fwhm = 19.01185824931766         # Fitted value to model data
-    # Initial sets the theta
-    initial = np.array([1., 45., 45., 45.])
-    priors = [[1., 50.], [0., 60.], [0., 60.], [0., 60.]]
-    labels = ["R_0", "POS_ANGLE_ELLIPSIS", "POS_ANGLE_AXIS", "INC_ANGLE"]
+    if vis:
+        temp_data = readout.get_vis4wl(wl_ind)
+        data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+    else:
+        data, dataerr = readout.get_vis24wl(wl_ind)
 
-    # Readout Fits for real data
-    f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    readout = ReadoutFits(f)
-
-    # Sets the wavelength the model is to be evaluated at
-    wl_ind = 101
-    sampling, wavelength = 128, readout.get_wl()[wl_ind]
-
-    # Real vis2data and error
-    vis2data, vis2err = readout.get_vis24wl(wl_ind)
-    # Test the fitting by inputting model data
-    # vis2data, vis2err = np.load("model_fit_test.npy"), np.mean(np.load("model_fit_test.npy"))*0.02
     uvcoords = readout.get_uvcoords()
+    wavelength = readout.get_wl()[wl_ind]
 
-    # The number of walkers (must be even) and the number of dimensions/parameters
-    nwalkers, ndim = 20, len(initial)
+    return (data, dataerr, sampling, wavelength, uvcoords)
 
-    # Sets the steps of the burn-in and the max. steps
-    niter_burn, niter = 100, 1000
-
+def set_mc_params(nwalkers, ndim, niter_burn, niter):
+    """Sets the mcmc parameters"""
     # This vector defines the starting points of each walker for the amount of
     # dimensions
+    # The number of walkers (must be even) and the number of dimensions/parameters
     p0 = np.random.rand(nwalkers, ndim)
 
-    # Set the mcmc parameters and the the data to be fitted.
-    mc_params = (p0, nwalkers, ndim, niter_burn, niter)
+    return (p0, nwalkers, ndim, niter_burn, niter)
+
+if __name__ == "__main__":
+    # Initial sets the theta
+    initial = np.array([10., 1.])
+    priors = [[1., 100.], [0.99, 1.]]
+    labels = ["FWHM", "FLUX"]
+
+    # File to read data from
+    f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
+    vis = True
+    out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
+
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = (vis2data, vis2err, sampling, wavelength, uvcoords)
+    data = set_data(fits_file=f,sampling=128, wl_ind=101, vis=vis)
+
+    # Set the mcmc parameters and the the data to be fitted.
+    mc_params = set_mc_params(nwalkers=20, ndim=len(initial), niter_burn=100, niter=1000)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Ring, data, mc_params, priors, labels, numerical=True,
-                out_path="/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets")
+    mcmc = MCMC(Gauss2D, data, mc_params, priors, labels, numerical=True,
+                vis=vis, out_path=out_path)
     mcmc.pipeline()
 
