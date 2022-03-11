@@ -31,12 +31,16 @@ from src.functionality.utilities import trunc, correspond_uv2scale
 class MCMC:
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
-                 numerical: bool = True, vis: bool = True, out_path: Path = None) -> None:
+                 numerical: bool = True, vis: bool = True,
+                 bb_params: List = None, out_path: Path = None) -> None:
         self.model = model()
         self.data = data
         self.priors, self.labels = priors, labels
+        self.bb_params = bb_params
+
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical, self.vis = numerical, vis
+
         self.realdata, self.datamod = data[0], None
         self.wavelength, self.uvcoords = data[3], data[~0]
         self.theta_max = None
@@ -155,7 +159,13 @@ class MCMC:
     def model4fit_numerical(self, theta: np.ndarray, sampling, wavelength,
                             uvcoords) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img = self.model.eval_model(theta, sampling)
+        if self.vis:
+            model_img = self.model.eval_model(theta, sampling,
+                                              wavelength=wavelength,
+                                              bb_params=self.bb_params)
+        else:
+            model_img = self.model.eval_model(theta, sampling)
+
         fr = FFT(model_img, wavelength)
         ft, amp, phase = fr.pipeline()
 
@@ -166,7 +176,7 @@ class MCMC:
 
     def get_best_fit(self, sampler) -> np.ndarray:
         """Fetches the best fit values from the sampler"""
-        samples = sampler.get_chain(flat=True)
+        samples = sampler.flatchain
         theta_max = samples[np.argmax(sampler.flatlnprobability)]
         return theta_max
 
@@ -286,14 +296,15 @@ def set_mc_params(nwalkers, ndim, niter_burn, niter):
 
 if __name__ == "__main__":
     # Initial sets the theta
-    initial = np.array([10., 1.])
-    priors = [[1., 100.], [0.99, 1.]]
-    labels = ["FWHM", "FLUX"]
+    initial = np.array([20., 0.55])
+    priors = [[1., 100.], [0.00, 1.00]]
+    labels = ["FWHM", "Q"]
+    bb_params = [1500, 19]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    vis = True
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
+    vis = True
 
     # Set the data, the wavlength has to be the fourth argument [3]
     data = set_data(fits_file=f,sampling=128, wl_ind=101, vis=vis)
@@ -301,8 +312,9 @@ if __name__ == "__main__":
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = set_mc_params(nwalkers=20, ndim=len(initial), niter_burn=100, niter=1000)
 
+
     # This calls the MCMC fitting
     mcmc = MCMC(Gauss2D, data, mc_params, priors, labels, numerical=True,
-                vis=vis, out_path=out_path)
+                vis=vis, bb_params=bb_params, out_path=out_path)
     mcmc.pipeline()
 

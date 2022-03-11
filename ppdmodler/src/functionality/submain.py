@@ -20,15 +20,12 @@ def comparefft2modvis(model, wavelength):
 
 def main():
     fig, (ax1, ax2) = plt.subplots(1, 2)
-    sampling = 1024
-    gauss_mod = Gauss2D().eval_model([100., 1.], 10., sampling)
+    wavelength = 8e-6
+    gauss_mod = Gauss2D().eval_model([10., 0.55, 150.], 128, wavelength=wavelength, do_flux=True)
     ax1.imshow(gauss_mod)
 
-    ft, amp, phase = FFT(gauss_mod, 8e-6).pipeline()
-    print(amp, phase)
-    ft_size = len(ft)
-    print(amp[ft_size//2][ft_size//2-3:ft_size//2+3])
-    ax2.imshow(np.log(abs(ft)))
+    ft, amp, phase = FFT(gauss_mod, wavelength).pipeline()
+    ax2.imshow(abs(amp))
     plt.show()
 
     '''

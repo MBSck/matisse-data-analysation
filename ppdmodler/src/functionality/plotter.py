@@ -56,9 +56,12 @@ class Plotter:
             self.readout = ReadoutFits(file)
 
             # Fetches all the relevant data from the '.fits'-file
+            self.visdata, self.viserr = map(lambda x: x[:6], self.readout.get_vis()[:2])
+            self.visphase, self.visphaseerr = map(lambda x: x[:6], self.readout.get_vis()[2:4])
             self.vis2data, self.vis2err = map(lambda x: x[:6], self.readout.get_vis2()[:2])
             self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
             self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
+            self.vissta = self.readout.get_vis()[~0]
             self.ucoords, self.vcoords = map(lambda x: x[:6], self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()[11:-17]
 
@@ -82,6 +85,7 @@ class Plotter:
             '''
 
             # Sets the descriptors of the telescopes' baselines and the closure # phases
+            self.tel_vis = np.array([("-".join([self.all_tels[t] for t in duo])) for duo in self.vissta])
             self.tel_vis2 = np.array([("-".join([self.all_tels[t] for t in duo])) for duo in self.vis2sta])
             self.tel_t3phi = np.array([("-".join([self.all_tels[t] for t in trio])) for trio in self.t3phista])
 
@@ -134,10 +138,39 @@ class Plotter:
 
         # Do the plotting
         self.uv_plot(cx)
+        self.vis_plot_all(bx)
         self.vis2_plot_all(ax2)
         self.t3phi_plot_all(bx2)
         self.vis24baseline_plot(cx2)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
+
+    def vis_plot_all(self, ax, err: bool = False) -> None:
+        # Sets the range for the squared visibility plots
+        all_obs = [[],[],[],[],[],[]]
+
+        # plots the squared visibility for different degrees and meters
+        for i, o in enumerate(self.visdata):
+            # Sets the vis_dim if it is None
+            # TODO: Rework this so it accounts for errors and really works as well
+            # if self.vis_dim is None:
+                # self.vis_dim = [0., np.mean(np.linalg.norm(o)*0.5]
+            baseline = np.around(np.sqrt(self.ucoords[i]**2+self.vcoords[i]**2), 2)
+            pas = np.around((np.degrees(np.arctan2(self.vcoords[i], self.ucoords[i]))-90)*-1, 2)
+            ax.errorbar(self.wl*1e6, o[11:-17], yerr=self.vis2err[i][11:-17], marker='s',
+                          label=fr"{self.tel_vis[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
+                          capsize=0., alpha=0.5)
+            ax.set_ylim([self.vis_dim[0], self.vis_dim[1]])
+            ax.set_ylabel("vis")
+            ax.set_xlabel("wl [micron]")
+            all_obs[i%6].append(o[11:-17])
+
+        # Plots the squared visibility errors
+        if err:
+            for j in range(6):
+                    ax.errorbar(self.wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
+                                  marker='s', capsize=0., alpha=0.9, color='k',
+                                  label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
+        ax.legend(loc=2, prop={'size': 6})
 
     def vis2_plot_all(self, ax, err: bool = False) -> None:
         # Sets the range for the squared visibility plots
@@ -336,7 +369,8 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
+    data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/openTime/hd104327/calib"
+    # data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
 
     for i in subfolders:

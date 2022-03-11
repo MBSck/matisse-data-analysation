@@ -238,9 +238,9 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
         ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
                 a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
 
-        return mas2rad(np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)), [ar, br]
+        return np.sqrt(ar**2+br**2*np.cos(inc_angle)**2), [ar, br]
     else:
-        return mas2rad(np.sqrt(xc**2+yc**2)), xc
+        return np.sqrt(xc**2+yc**2), xc
 
 def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
                  uvcoords: np.ndarray = None) -> np.array:
@@ -294,6 +294,27 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
     return B, uvcoords
 
+def sublimation_radius(T_sub: int, L_star: int):
+    """Calculates the sublimation radius of the disk
+
+    Parameters
+    ----------
+    T_sub: int
+        The sublimation temperature of the disk. Usually fixed to 1500 K
+    L_star: int
+        The star's luminosity
+    distance: int
+        Distance in parsec
+
+    Returns
+    -------
+    R_sub: int
+        The sublimation_radius in au
+    """
+    L_star *= SOLAR_LUMINOSITY
+
+    return np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))/AU_M
+
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
 
@@ -340,7 +361,7 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
     exp_numerator = PLANCK_CONST*SPEED_OF_LIGHT
     exp_divisor = wavelength*BOLTZMAN_CONST*T
-    divisor = wavelength**5*np.exp(exp_numerator/exp_divisor)
+    divisor = wavelength**5*(np.exp(exp_numerator/exp_divisor)-1)
 
     return numerator/divisor
 
@@ -368,18 +389,8 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
 
 if __name__ == "__main__":
-    get_px_scaling([i for i in range(0, 10)], 1e-5)
-    # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
+    # get_px_scaling([i for i in range(0, 10)], 1e-5)
 
-    # print(readout.get_uvcoords_vis2, "uvcoords")
-    # readout.do_uv_plot(readout.get_uvcoords_vis2)
-    # print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
-
-    # radius= set_size(512, 1, None)
-    # print(radius, "radius", theta, "theta")
-
-    # B = set_uvcoords(512, 8e-06)
-    # print(B)
-    # radius = set_size(512)
-    # r = set_size(512, 5)
-    # print(radius, radius.shape, "----", r, r.shape)
+    radius, axis = set_size(128)
+    print(r_0  := sublimation_radius(1500, 19, 140))
+    flux = blackbody_spec(radius, 0.55, r_0, 150, 8e-06)

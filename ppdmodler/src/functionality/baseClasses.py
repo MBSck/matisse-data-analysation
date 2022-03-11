@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
+from src.functionality.utilities import blackbody_spec
+
 
 # Classes
 
