@@ -13,15 +13,21 @@ ppdmodler/dist/
 ppdmodler/ppdmodler.egg-info/
 ppdmodler/src/ppdmodler.egg-info/
 query/getdata_ESO_archive.py
-observation/
+observation/P108
+observation/manualsEso
+observation/CALIBRATOR_FIND_1.6
+/observation/CALIBRATOR_FIND_1.6.zip
+observation/obmaking/obs
+observation/obmaking/MATISSE_create_OB_2.py
+observation/obmaking/query_CDS.py
 
 # Ignored files
+__pycache__
 .DS_Store
 *.log
-obmaking/*
 dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
 
 # Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
-!/obmaking/main.py
-!/obmaking/scratch.py
-!/obmaking/autoscrapper.py
+!/observation/obmaking/main.py
+!/observation/obmaking/parseOBplan.py
+!/observation/obmaking/uploader.py
