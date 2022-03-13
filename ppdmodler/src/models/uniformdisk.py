@@ -22,15 +22,6 @@ class UniformDisk(Model):
     """
     def __init__(self):
         self.name = "Uniform Disk"
-        self._axis_mod, self._axis_vis = [], []
-
-    @property
-    def axis_mod(self):
-        return self._axis_mod
-
-    @property
-    def axis_vis(self):
-        return self._axis_vis
 
     @timeit
     def eval_model(self, theta: List, flux: float, size: int,
@@ -59,7 +50,14 @@ class UniformDisk(Model):
         set_size()
         """
         # Converts the mas to radians
-        diameter = mas2rad(theta)
+        try:
+            diameter = mas2rad(theta)
+        except:
+            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
+                  " the form [diameter]")
+            sys.exit()
+
+        self._size, self._sampling = size, sampling
         radius, self._axis_mod = set_size(size, sampling, centre)
 
         output_lst = np.zeros((size, size))
@@ -92,7 +90,14 @@ class UniformDisk(Model):
         --------
         set_uvcoords()
         """
-        diameter = mas2rad(theta)
+        try:
+            diameter = mas2rad(theta)
+        except:
+            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
+                  " the form [diameter]")
+            sys.exit()
+
+        self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)
 
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)

@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import inspect
 import time
 
 from typing import Any, Dict, List, Union, Optional
@@ -51,6 +52,31 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
+
+def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
+    """Zooms in on an image by cutting of the zero-padding
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The image to be zoomed in on
+    set_size: int, optional
+        The size for the image cut-off
+
+    Returns
+    -------
+    np.ndarray
+        The zoomed in array, with the zero-padding cut-off
+    """
+    array_center = len(array)//2
+    if set_size is None:
+        set_size = int(len(array)*0.15)
+
+    ind_low, ind_high = array_center-set_size,\
+            array_center+set_size
+
+    return array[ind_low:ind_high, ind_low:ind_high]
+
 def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     """Returns a given angle in mas/rad or the pertaining scaling factor
 
@@ -83,12 +109,10 @@ def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
     float
         The px to meter scaling
     """
-    axis_size = len(ax)
-    roll = np.floor(axis_size/2).astype(int)
-    axis = np.roll(ax, roll, axis=0)
-    return (np.diff(ax)[0]/(np.deg2rad(1))*wavelength*axis_size)
+    axis = np.roll(ax, (axis_size := len(ax))//2, 0)
+    return np.diff(ax)[0]*wavelength/mas2rad()
 
-def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
+def correspond_uv2scale(scaling: float, roll: int, uvcoords: np.ndarray) -> float:
     """Calculates the axis scaling from the axis of an input image/model and
     returns it in meters baseline per pixel. Returns the uv-coords
 
@@ -96,6 +120,7 @@ def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     ----------
     scaling: float
         The scaling factor the uv-coords should be corresponded to
+
     uvcoords: np.array
         The real uvcoords
 
@@ -104,7 +129,9 @@ def correspond_uv2scale(scaling: float, uvcoords: np.ndarray) -> float:
     uvcoords: np.ndarray
         The rescaled uv-coords
     """
-    return uvcoords/scaling
+    xcoord, ycoord = [roll+np.round(i[0]/scaling).astype(int) for i in uvcoords], \
+            [roll+np.round(i[1]/scaling).astype(int) for i in uvcoords]
+    return xcoord, ycoord
 
 def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     """Calculates the norm for a point. Takes the freq and checks both the
@@ -132,9 +159,6 @@ def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
     # TODO: Maybe make more efficient with numpy instead of list comprehension
     indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
     return np.ndarray.flatten(np.array(indices_lst))
-
-def interpolate():
-    ...
 
 def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: np.array,
                         dis: bool = False, intpol: bool = False) -> List:
@@ -164,7 +188,8 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = None, pos_angle: Optional[int] = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
+             None, angles: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -177,8 +202,8 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = 
         The sampling of the object-plane
     centre: bool, optional
         A set centre of the object. Will be set automatically if default 'None' is kept
-    pos_angle: int | None, optional
-        This sets the positional angle of the ellipsis if not None
+    angles: int | None, optional
+        This sets the positional angles of the ellipsis if not None
 
     Returns
     -------
@@ -200,14 +225,25 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] = 
 
     xc, yc = x-x0, y-y0
 
-    if pos_angle is not None:
-        pos_angle *= np.radians(1)
-        xc, yc = xc*np.sin(pos_angle), yc*np.cos(pos_angle)
+    if angles is not None:
+        try:
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
+        except Exception as e:
+            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
+                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+            print(e)
+            sys.exit()
 
-    return np.sqrt(xc**2+yc**2)*mas2rad(), xc
+        a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
+        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
 
-def set_uvcoords(sampling: int, wavelength: float, uvcoords:
-                 Optional[List[float]] = None) -> np.array:
+        return np.sqrt(ar**2+br**2*np.cos(inc_angle)**2), [ar, br]
+    else:
+        return np.sqrt(xc**2+yc**2), xc
+
+def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
+                 uvcoords: np.ndarray = None) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
@@ -232,14 +268,52 @@ def set_uvcoords(sampling: int, wavelength: float, uvcoords:
         # Star overhead sin(theta_0)=1 position
         u, v = axis, axis[:, np.newaxis]
 
-        B = np.sqrt(u**2+v**2)/wavelength
     else:
+        axis = uvcoords
         u, v = np.array([i[0] for i in uvcoords]), \
                 np.array([i[1] for i in uvcoords])
 
-        B, axis = np.sqrt(u**2+v**2)/wavelength, uvcoords
+    if angles is not None:
+        try:
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
+        except Exception as e:
+            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
+                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
+            print(e)
+            sys.exit()
 
-    return B, axis
+        # The ellipsis of the projected baselines
+        a, b = u*np.sin(pos_angle_ellipsis), v*np.cos(pos_angle_ellipsis)
+
+        # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
+        ath, bth = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
+                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
+    else:
+        B = np.sqrt(u**2+v**2)/wavelength
+
+    return B, uvcoords
+
+def sublimation_radius(T_sub: int, L_star: int):
+    """Calculates the sublimation radius of the disk
+
+    Parameters
+    ----------
+    T_sub: int
+        The sublimation temperature of the disk. Usually fixed to 1500 K
+    L_star: int
+        The star's luminosity
+    distance: int
+        Distance in parsec
+
+    Returns
+    -------
+    R_sub: int
+        The sublimation_radius in au
+    """
+    L_star *= SOLAR_LUMINOSITY
+
+    return np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))/AU_M
 
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
@@ -287,25 +361,36 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
     exp_numerator = PLANCK_CONST*SPEED_OF_LIGHT
     exp_divisor = wavelength*BOLTZMAN_CONST*T
-    divisor = wavelength**5*np.exp(exp_numerator/exp_divisor)
+    divisor = wavelength**5*(np.exp(exp_numerator/exp_divisor)-1)
 
     return numerator/divisor
 
+    def do_fit():
+        """Does automatic gauss fits"""
+        # Fits the data
+        scaling_rad2arc = 206265
+
+        # Gaussian fit
+        fwhm = 1/scaling_rad2arc/1000           # radians
+
+        # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+        xvals, yvals = self.baseline_distances, self.mean_bin_vis2
+        pars, cov = curve_fit(f=gaussian, xdata=xvals, ydata=yvals, p0=[fwhm], bounds=(-np.inf, np.inf))
+        # xvals = np.linspace(50, 150)/3.6e-6
+        # fitted_model= np.square(gaussian(xvals, fwhm))
+        ax.plot(xvals, gaussian(xvals, pars), label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+
+        # Airy-disk fit
+        fwhm = 3/scaling_rad2arc/1000           # radians
+        fitted_model = np.square(airy(xvals, fwhm))
+        ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+        ax.set_ylim([0, 0.175])
+        ax.legend(loc='best')
+
 
 if __name__ == "__main__":
-    print(set_uvcoords(10, 8e-06, [[10, 8], [5, 10]]))
-    print(np.exp(1e-9*1e-6))
-    # readout = ReadoutFits("TARGET_CAL_INT_0001bcd_calibratedTEST.fits")
+    # get_px_scaling([i for i in range(0, 10)], 1e-5)
 
-    # print(readout.get_uvcoords_vis2, "uvcoords")
-    # readout.do_uv_plot(readout.get_uvcoords_vis2)
-    # print(readout.get_ucoords(readout.get_uvcoords_vis2), readout.get_vcoords(readout.get_uvcoords_vis2))
-
-    # radius= set_size(512, 1, None)
-    # print(radius, "radius", theta, "theta")
-
-    # B = set_uvcoords(512, 8e-06)
-    # print(B)
-    # radius = set_size(512)
-    # r = set_size(512, 5)
-    # print(radius, radius.shape, "----", r, r.shape)
+    radius, axis = set_size(128)
+    print(r_0  := sublimation_radius(1500, 19, 140))
+    flux = blackbody_spec(radius, 0.55, r_0, 150, 8e-06)

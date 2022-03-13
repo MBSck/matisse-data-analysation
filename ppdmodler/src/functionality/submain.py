@@ -19,6 +19,16 @@ def comparefft2modvis(model, wavelength):
             (np.mean(np.abs(model_vis)), np.mean(np.abs(ft)))
 
 def main():
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    wavelength = 8e-6
+    gauss_mod = Gauss2D().eval_model([10., 0.55, 150.], 128, wavelength=wavelength, do_flux=True)
+    ax1.imshow(gauss_mod)
+
+    ft, amp, phase = FFT(gauss_mod, wavelength).pipeline()
+    ax2.imshow(abs(amp))
+    plt.show()
+
+    '''
     file = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     readout = ReadoutFits(file)
     wavelength = readout.get_wl()[80]
@@ -35,6 +45,7 @@ def main():
     print(uvcoords, "The corresponded vis2data")
     # plt.imshow(model_vis)
     # plt.show()
+    '''
 
     '''
     # Set up the parameters of the problem.

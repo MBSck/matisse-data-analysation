@@ -1,14 +1,13 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import inspect
 
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
-from src.functionality.utilities import timeit, set_size, set_uvcoords
-
-# Shows the full np.arrays, takes ages to print the arrays
-np.set_printoptions(threshold=sys.maxsize)
+from src.functionality.utilities import timeit, set_size, set_uvcoords,\
+        mas2rad, blackbody_spec, sublimation_radius
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -26,34 +25,34 @@ class Gauss2D(Model):
     """
     def __init__(self):
         self.name = "2D-Gaussian"
-        self._axis_mod= []
-        self._axis_vis= []
-
-    @property
-    def axis_mod(self):
-        return self._axis_mod
-
-    @property
-    def axis_vis(self):
-        return self._axis_vis
 
     @timeit
-    def eval_model(self, size: int, fwhm: Union[int, float],
-                   sampling: Optional[int] = None, flux: float = 1., centre: Optional[int] = None) -> np.array:
+    def eval_model(self, theta: List, size: int,
+                   sampling: Optional[int] = None, wavelength: float = None,
+                   centre: Optional[int] = None,
+                   bb_params: Optional[List[float]] = None) -> np.array:
         """Evaluates the model
 
         Parameters
         ----------
-        size: int
-            The size of the model image
         fwhm: int | float
             The fwhm of the gaussian
-        sampling: int | None
+        q: float, optional
+            The power law index
+        size: int
+            The size of the model image
+        sampling: int, optional
             The sampling of the object-plane
-        flux: float
-            The flux of the object
-        centre: int | None
+        wavelength: float, optional
+            The measurement wavelength
+        centre: int, optional
             The centre of the model image
+        T_sub: int
+            The sublimation temperature
+        Luminosity_star: float
+            The Luminosity of the star
+        do_flux: bool, optional
+            Calculates the flux if set to true
 
         Returns
         --------
@@ -63,10 +62,27 @@ class Gauss2D(Model):
         --------
         set_size()
         """
-        fwhm = np.radians(fwhm/3.6e6)
+        try:
+            fwhm, flux = mas2rad(theta[0]), 1
+            if len(theta) > 1:
+                q = theta[1]
+
+        except:
+            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
+                  " the form [fwhm] or [fwhm, q, T_0]")
+            sys.exit()
+
+        self._size, self._sampling = size, sampling
         radius, self._axis_mod  = set_size(size, sampling, centre)
 
-        return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
+        if bb_params is not None:
+            T_sub, L_star = bb_params
+            r_sub = sublimation_radius(T_sub, L_star)
+            flux = blackbody_spec(radius, q, r_sub, T_sub, wavelength)
+
+        radius *= mas2rad()
+
+        return (flux/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
 
     @timeit
     def eval_vis(self, theta: np.ndarray, sampling: int,
@@ -93,21 +109,23 @@ class Gauss2D(Model):
         --------
         set_uvcoords()
         """
-        fwhm = theta
-        fwhm = np.radians(fwhm/3.6e6)
+        try:
+            fwhm = mas2rad(theta)
+        except:
+            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
+                      " the form [fwhm]")
+            sys.exit()
+
+        self._sampling = sampling
         B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
 if __name__ == "__main__":
     g = Gauss2D()
-    # g_model = g.eval_model(512, 256.1)
-    # plt.imshow(g_model)
-    # plt.show()
+    g_model = g.eval_model([1., 0.55], 300, 128, wavelength=8e-06,
+                           bb_params=[1500, 19])
+    plt.imshow(g_model)
+    plt.show()
 
-    # TODO: Make scaling factor of px, the rest is already calculated to the
-    # right distance/unit
-
-    g_vis = g.eval_vis(35, 3.7e-06, 512)
-    plt.imshow(g_vis)
     plt.show()

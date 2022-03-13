@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
 # Own modules
-from src.models import Gauss2D
-from src.functionality.utilities import timeit, get_px_scaling
+from src.models import Gauss2D, Ring, InclinedDisk
+from src.functionality.utilities import timeit, get_px_scaling, zoom_array
 
 # TODO: Make class and function documentation
 
@@ -26,39 +26,75 @@ class FFT:
     """
     # TODO: Make Zoom function work
     def __init__(self, model: np.array, wavelength: float, set_size: int = None,
-                 step_size_fft: float = 1., greyscale: bool = False) -> None:
+                 pixelscale: float = 1.) -> None:
         self.model = model
         self.model_size = len(self.model)
         self.set_size = set_size
 
-        self.fftfreq = fft.fftfreq(self.model_size, d=step_size_fft)
+        self.fftfreq = fft.fftfreq(self.model_size, d=pixelscale)
         self.fftscale = get_px_scaling(self.fftfreq, wavelength)
+
+    def pipeline(self, zoom: bool = False, vis: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
+        """Combines various functions and executes them
+
+        Parameters
+        ----------
+        zoom: bool, optional
+            Zooms the FFT to remove the zero padding
+        vis: bool
+            The normed FFT by its max. amplitude center output
+
+        Returns
+        -------
+        ft: np.ndarray
+            The FFT
+        corr_flux/vis: np.ndarray
+            Either returns the unnormed correlated fluxes or the normed
+            visibilities depending on the 'vis' parameter setting
+        phase: np.ndarray
+            The phase of the FFT
+        """
+        if zoom:
+            # TODO: This is broken as of 22.02.22 -> Fix
+            ft = zoom_array(self.do_fft2())
+        else:
+            ft, ft_raw  = self.do_fft2()
+
+        amp, phase = np.abs(ft), np.angle(ft, deg=True)
+
+        if vis:
+            amp /= np.abs(ft_raw[0, 0])   # Figure out why this is done?
+
+        return ft, amp, phase
 
     @timeit
     def do_fft2(self) -> np.array:
-        """Does the 2D-FFT and returns the 2D-FFT"""
-        return fft.fftshift(fft.fft2(fft.ifftshift(self.model)))
+        """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the
+        middle
+
+        Returns
+        --------
+        ft: np.ndarray
+        ft_raw: np.ndarray
+        """
+        return fft.fftshift(fft.fft2(fft.ifftshift(self.model))), \
+                fft.fft2(self.model)
 
     @timeit
     def do_ifft2(self) -> np.array:
-        """Does the inverse 2D-FFT and returns the inverse 2D-FFT"""
+        """Does the inverse 2D-FFT and shifts the centre to the middle
+
+        Returns
+        -------
+        ift: np.ndarray
+        """
         return fft.fftshift(fft.ifft2(fft.fftshift(self.model))).real
 
-    def zoom_fft2(self) -> None:
-        """This zooms in on the FFT in after zero-padding"""
-        ind_low_start, ind_low_end = 0, self.set_size//2
-        ind_high_start, ind_high_end = self.set_size//2, self.set_size
-        self.ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 0))
-        self.ft = np.delete(ft[:], np.arange(ind_low_start, ind_low_end, 1))
-        self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 0))
-        self.ft = np.delete(ft[:], np.arange(ind_high_start, ind_high_end, 1))
-
-    def get_ft_amp_phase(ft: [np.array, int]) -> [np.array, np.array]:
-        """Splits the real and imaginary part of the 2D-FFT into amplitude-,
-         and phase-spectrum"""
-        return np.abs(ft), np.angle(ft)
-
 if __name__ == "__main__":
-    ring = Gauss2D()
-    file_path = "/Users/scheuck/Documents/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    fourier = FFT(ring.eval_model(2048, 256.1), 1024, file_path, 8e-06)
+    ring = InclinedDisk()
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    size = 2048
+    ft, amp, phase = FFT(model := ring.eval_model([39., 40., 45, 45, 0], size), 1.25e-05).pipeline()
+    ax1.imshow(model)
+    ax2.imshow(amp)
+    plt.show()
