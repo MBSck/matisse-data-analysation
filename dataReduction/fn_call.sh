@@ -50,7 +50,11 @@ start=`date +%s`
 
 #----------Do the L-band-------------------------------
 if [ "$CHECK_LBAND" == true ]; then
-	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=10 --overwrite=TRUE --maxIter=1 --paramL=/corrFlux=TRUE/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=FALSE/spectralBinning=11/  --skipN  #--tplSTART=2021-02-28T08:13:00
+    if [ "$DO_FLUX" == true]; then
+        python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=10 --overwrite=TRUE --maxIter=1 --paramL=/corrFlux=TRUE/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=TRUE/spectralBinning=11/  --skipN  #--tplSTART=2021-02-28T08:13:00
+    else
+        python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=10 --overwrite=TRUE --maxIter=1 --paramL=/corrFlux=FALSE/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=TRUE/spectralBinning=11/  --skipN  #--tplSTART=2021-02-28T08:13:00
+    fi
 
 	#------ move the results to a labelled folder ----------
     if [ -d "$3/lband" ]; then
@@ -62,7 +66,11 @@ if [ "$CHECK_LBAND" == true ]; then
 
 #----------Do the N-band-------------------------------
 else
-	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=TRUE/coherentAlgo=2/corrFlux=TRUE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
+    if [ "$DO_FLUX" == true]; then
+        python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=TRUE/coherentAlgo=2/corrFlux=TRUE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
+    else
+        python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=FALSE/coherentAlgo=2/corrFlux=TRUE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
+    fi
 
 	#------ move the results to a labelled folder ----------
     if [ -d "$3/nband" ]; then
