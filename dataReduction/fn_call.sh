@@ -16,7 +16,7 @@ DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data
 TARGETLIST=
 
 # And give specific folder if only folder is to be reduced
-TARGET=openTime/pds73
+TARGET= GTO/hd142666/RAW/20190514
 TARGETDIR=$DATADIR/$TARGET
 
 # Will define the folders if TARGETLIST is left empty
@@ -27,8 +27,11 @@ RESDIR=$TARGETDIR/PRODUCTS
 # Checks if reductions for both bands should be done -> implement that
 DO_BOTH=true
 
-# Defaults to L-band data reduction 
+# True is L-band data reduction, false N-band
 CHECK_LBAND=true
+
+# If this is true, then the flux is reduced and not the visibilities**2
+DO_FLUX=true
 
 make_directory() {
 for i in "$@"
@@ -45,10 +48,9 @@ do_reduction() {
 
 start=`date +%s`
 
-
 #----------Do the L-band-------------------------------
 if [ "$CHECK_LBAND" == true ]; then
-	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=10 --overwrite=TRUE --maxIter=1 --paramL=/corrFlux=FALSE/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=FALSE/spectralBinning=11/  --skipN  #--tplSTART=2021-02-28T08:13:00
+	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=10 --overwrite=TRUE --maxIter=1 --paramL=/corrFlux=TRUE/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=FALSE/spectralBinning=11/  --skipN  #--tplSTART=2021-02-28T08:13:00
 
 	#------ move the results to a labelled folder ----------
     if [ -d "$3/lband" ]; then
@@ -60,7 +62,7 @@ if [ "$CHECK_LBAND" == true ]; then
 
 #----------Do the N-band-------------------------------
 else
-	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=TRUE/coherentAlgo=2/corrFlux=FALSE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
+	python automaticPipeline.py --dirRaw=$1 --dirCalib=$2 --dirResult=$3 --nbCore=4 --overwrite=TRUE --maxIter=1 --paramN=/useOpdMod=TRUE/coherentAlgo=2/corrFlux=TRUE/compensate=[pb,rb,nl,if,bp,od]/coherentIntegTime=0.2/cumulBlock=FALSE/spectralBinning=11/replaceTel=2  --skipL 
 
 	#------ move the results to a labelled folder ----------
     if [ -d "$3/nband" ]; then
