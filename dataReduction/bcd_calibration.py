@@ -223,6 +223,7 @@ def cphase_calib(f1: Path, f2: Path, f3: Path, f4: Path) -> None:
     myhdu['oi_t3'].data['t3phi'] = corr_cphases
     myhdu.writeto(files[s].split('.fits')[0].replace('out-out','').replace('in-in','').replace('out-in','').replace('in-out','') + 'bcd_calibratedTEST.fits', overwrite=True )
 
+    '''
     fig,axarr = plt.subplots(2,2)
     groups = [[],[],[],[]]
     for i in range(len(corr_cphases)):
@@ -246,6 +247,7 @@ def cphase_calib(f1: Path, f2: Path, f3: Path, f4: Path) -> None:
     plt.savefig('../plots/bcd/%s.png'%(hdu1[0].header['eso tpl start'].replace(":","_") ))
     # plt.show()
     plt.close()
+    '''
     return
 
 
@@ -431,6 +433,7 @@ def vis2_calib(f1: Path, f2: Path, f3: Path, f4: Path, cflux: bool = False) -> N
 
     myhdu.writeto(files[s].split('.fits')[0].replace('out-out','').replace('in-in','').replace('out-in','').replace('in-out','') + 'bcd_calibratedTEST.fits', overwrite=True )
 
+    '''
     fig,axarr = plt.subplots(2, 3)
 
     groups = [[],[],[],[],[],[]]
@@ -447,7 +450,6 @@ def vis2_calib(f1: Path, f2: Path, f3: Path, f4: Path, cflux: bool = False) -> N
         print(np.nanmedian(g, 0) )
         ax.errorbar(wl*1e6, np.nanmedian(g, 0), yerr=np.nanstd(g, 0),ls='--', lw=2, zorder=2, color='k')
 
-
     # plt.show()
     plt.close()
 
@@ -458,6 +460,7 @@ def vis2_calib(f1: Path, f2: Path, f3: Path, f4: Path, cflux: bool = False) -> N
     plt.savefig('../plots/bcd/%s.png'%(hdu1[0].header['eso tpl start'].replace(":","_") ))
     # plt.show()
     plt.close()
+    '''
     return
 
 

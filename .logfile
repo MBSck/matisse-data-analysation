@@ -1,0 +1,9 @@
+
+Start time     : 2022-03-02T15:54:28
+Program name   : esorex
+Severity level : [ INFO  ] 
+
+15:54:28 [ INFO  ] : [tid=000] This is EsoRex, version 3.13.1
+15:54:28 [ INFO  ] : [tid=000] using the libraries: CPL = 7.1, CFITSIO = 3.36, WCSLIB = 4.24, FFTW (normal precision) = 3.3.4-sse2, FFTW (single precision) = 3.3.4-sse2, CPL FLOP counting is unavailable, enable with -DCPL_ADD_FLOPS, OPENMP = 201107
+15:54:28 [ INFO  ] : [tid=000] Invocation command line was: esorex mat_cal_oifits 2022-02-19T07_00_22.AQUARIUS.rb_with_2022-02-19T06_31_49.AQUARIUS.rb_CALIBRATED.sof
+15:54:28 [ INFO  ] mat_cal_oifits_create: [tid=000] Parameters created.

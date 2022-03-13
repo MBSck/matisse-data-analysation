@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 {
 #location of the data folders (target, calib, output/execution_directory)
-DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/hd104327/PRODUCTS/nband
+DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/pds73/PRODUCTS/nband
 EXECDIR=/home/scheuck/scripts
 
 
@@ -36,7 +36,9 @@ do_oicalib() {
 # do
 #     printf "%s is in %s\n" "$i" "${RAWLIST[$i]}"
 # done
-do_oicalib mat_raw_estimates.2022-01-23T07_37_08.AQUARIUS.rb mat_raw_estimates.2022-01-23T07_04_32.AQUARIUS.rb
+do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb   
+do_oicalib mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb 
+do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb 
 
 exit 0
 }

@@ -16,7 +16,7 @@ DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data
 TARGETLIST=
 
 # And give specific folder if only folder is to be reduced
-TARGET=openTime/uxOri
+TARGET=openTime/pds73
 TARGETDIR=$DATADIR/$TARGET
 
 # Will define the folders if TARGETLIST is left empty
@@ -28,7 +28,7 @@ RESDIR=$TARGETDIR/PRODUCTS
 DO_BOTH=true
 
 # Defaults to L-band data reduction 
-CHECK_LBAND=false
+CHECK_LBAND=true
 
 make_directory() {
 for i in "$@"
