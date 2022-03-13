@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-
-#location of the data folders (target, calib, output/execution_directory)
-TARGET=hd142666
-FOLDER=calib_nband/UTs
-DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/$TARGET/PRODUCTS/$FOLDER
+{
+#location of the data folders
+DATADIR=/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/uxOri/PRODUCTS/nband/calib
 EXECDIR=/data/beegfs/astro-storage/groups/matisse/scheuck/scripts
 
 
@@ -19,3 +17,4 @@ do
 done
 
 exit 0
+}
