@@ -8,12 +8,29 @@ from typing import Any, Dict, List, Union, Optional
 
 import MATISSE_create_OB_2 as ob
 
+# TODO: Make this work for n-band as well
+# TODO: High res cal file is erroneous
+# TODO: Make standard setting for resolution possible
+# TODO: Make setting both resolutions possible
+
 def load_dict(file_path):
     with open(file_path, "rb") as fp:
         return pickle.load(fp)
 
-# TODO: Make this work for n-band as well
-# TODO: High res cal file is erroneous
+def set_res(standard_res: List):
+    """placeholder function until setting both res is understood with josef's
+    code"""
+    # TODO: Remove this and make it work with get_res_dit function for all of
+    # the code
+    dit = 1.
+
+    if "MR" in standard_res:
+        dit = 1.3
+    if "HR" in standard_res:
+        dit = 3.
+
+    return f"L-{standard_res[0]}_N-{standard_res[1]}", dit
+
 def get_res_dit(resolution: str):
     """Gets the dit for the resolution input
 
@@ -57,7 +74,8 @@ def shell_main():
         make_cal_obs(cal_lst, sci_lst, tag_lst, interferometric_array_config, outdir=os.getcwd())
 
 def make_sci_obs(sci_lst: List, interferometric_array_config: str,
-                 outdir: str, resolution: str = None) -> None:
+                 outdir: str, resolution: str = None,
+                 standard_res: List = ["LR", "LR"]) -> None:
     """Gets the inputs from a list and calls the 'mat_gen_ob' for every list element
 
     Parameters
@@ -70,6 +88,9 @@ def make_sci_obs(sci_lst: List, interferometric_array_config: str,
         The output directory, where the '.obx'-files will be created in
     resolution: str, optional
         The resolution of the OB
+    standard_res: List, optional
+        The default spectral resolutions for L- and N-band. Set to low for both
+        as a default
 
     Returns
     -------
@@ -80,7 +101,7 @@ def make_sci_obs(sci_lst: List, interferometric_array_config: str,
             if i in res_dict:
                 resolution, dit = get_res_dit(res_dict[i])
             else:
-                resolution, dit = "L-LR_N-LR", 1.
+                resolution, dit = set_res(standard_res)
 
             ob.mat_gen_ob(i, interferometric_array_config, 'SCI', outdir=outdir,\
                           spectral_setups=[resolution], obs_tpls=[ob.obs_ft_tpl],\
@@ -90,7 +111,7 @@ def make_sci_obs(sci_lst: List, interferometric_array_config: str,
 
 def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                  interferometric_array_config: str, outdir: str,
-                 resolution: str = None) -> None:
+                 resolution: str = None, standard_res: List = ["LR", "LR"]) -> None:
     """Checks if there are sublists in the calibration list and calls the 'mat_gen_ob' with the right inputs
     to generate the calibration objects.
     The input lists correspond to each other index-wise (e.g., cal_lst[1], sci_lst[1], tag_lst[1]; etc.)
@@ -109,6 +130,9 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         The output directory, where the '.obx'-files will be created in
     resolution: str, optional
         The resolution of the OB
+    standard_res: List, optional
+        The default spectral resolutions for L- and N-band. Set to low for both
+        as a default
 
     Returns
     -------
@@ -121,7 +145,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
             if sci_lst[i] in res_dict:
                 resolution, dit = get_res_dit(res_dict[sci_lst[i]])
             else:
-                resolution, dit = "L-LR_N-LR", 1.
+                resolution, dit = set_res(standard_res)
 
             # Checks if list item is itself a list
             if isinstance(o, list):
@@ -140,7 +164,8 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         print("Skipped OB - Check")
 
 def ob_pipeline(array: str, outpath: str, path2file: str = None,
-                manual_lst: List = None, res_dict: Dict = None) -> int:
+                manual_lst: List = None, res_dict: Dict = None,
+                standard_res: List = ["LR", "LR"]) -> int:
     """Gets all functionality and automatically creates the OBs
 
     Parameters
@@ -153,11 +178,15 @@ def ob_pipeline(array: str, outpath: str, path2file: str = None,
         The manual list input
     res_dict: Dict, optional
         A dict with entries corresponding to non low-resolution
+    standard_res: List, optional
+        The default spectral resolutions for L- and N-band. Set to low for both
+        as a default
     """
     if manual_lst:
         sci_lst, cal_lst, tag_lst = manual_lst
-        make_sci_obs(sci_lst, array, outpath, res_dict)
-        make_cal_obs(cal_lst, sci_lst, tag_lst, array, outpath, res_dict)
+        make_sci_obs(sci_lst, array, outpath, res_dict, standard_res)
+        make_cal_obs(cal_lst, sci_lst, tag_lst, array,\
+                     outpath, res_dict, standard_res)
 
     if path2file:
         # Load dict
@@ -173,8 +202,9 @@ def ob_pipeline(array: str, outpath: str, path2file: str = None,
             time.sleep(1)
 
             sci_lst, cal_lst, tag_lst = o
-            make_sci_obs(sci_lst, array, temp_path, res_dict)
-            make_cal_obs(cal_lst, sci_lst, tag_lst, array, temp_path, res_dict)
+            make_sci_obs(sci_lst, array, temp_path, res_dict, standard_res)
+            make_cal_obs(cal_lst, sci_lst, tag_lst, array,\
+                         temp_path, res_dict, standard_res)
 
     return 0
 
@@ -184,15 +214,24 @@ if __name__ == "__main__":
     list_file_path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P108/march2022/"
     ob_plan_file = "nights_OB.txt"
     path2file = os.path.join(list_file_path, ob_plan_file)
-    outpath = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/obmaking/obs/test"
+    outdir = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/obmaking/obs/"
+    outpath = os.path.join(outdir, "run9")
+
+    if not os.path.exists(outpath):
+        os.mkdir(outpath)
+
+    # Manual lists
+    sci_lst = ["HD 50138", "HD 38120", "Z CMa", "Bet Leo", "Eta Corvi",
+               "HD 98922", "HP Cha"]
+    cal_lst = ["HD 52666", "HD 39364", "HD 57890", "HD 104207", "HD 109379",
+               ["HD 91942", "HD 102461"], ["HD 102461", "HD 92305"]]
+    tag_lst = ["LN", "LN", "LN", "LN", "LN", ["LN", "LN"], ["LN", "LN"]]
 
     # Specifies the res_dict
-    res_dict = {"R Mon": "MR", "HD 95881": "MR", "HD 100453": "MR",
-                "V1028 Cen": "MR", "IRAS 13481": "HR", "HD 141569": "MR",
-                "HD 144432": "MR"}
+    res_dict = {"HD 38120": "LR", "HP Cha": "LR"}
 
     # Pipeline for ob creation
-    ob_pipeline("large", outpath, path2file, res_dict=res_dict)
+    ob_pipeline("small", outpath, manual_lst=[sci_lst, cal_lst, tag_lst], res_dict=res_dict, standard_res=["MR", "LR"])
 
     # For shell implementation
     # shell_main()
