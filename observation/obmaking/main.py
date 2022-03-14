@@ -221,14 +221,12 @@ if __name__ == "__main__":
         os.mkdir(outpath)
 
     # Manual lists
-    sci_lst = ["HD 50138", "HD 38120", "Z CMa", "Bet Leo", "Eta Corvi",
-               "HD 98922", "HP Cha"]
-    cal_lst = ["HD 52666", "HD 39364", "HD 57890", "HD 104207", "HD 109379",
-               ["HD 91942", "HD 102461"], ["HD 102461", "HD 92305"]]
-    tag_lst = ["LN", "LN", "LN", "LN", "LN", ["LN", "LN"], ["LN", "LN"]]
+    sci_lst = ["R_Mon"]
+    cal_lst = ["HD 49161"]
+    tag_lst = ["LN"]
 
     # Specifies the res_dict
-    res_dict = {"HD 38120": "LR", "HP Cha": "LR"}
+    res_dict = {}
 
     # Pipeline for ob creation
     ob_pipeline("small", outpath, manual_lst=[sci_lst, cal_lst, tag_lst], res_dict=res_dict, standard_res=["MR", "LR"])
