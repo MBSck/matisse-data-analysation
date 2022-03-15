@@ -8,43 +8,34 @@ from src.functionality.utilities import timeit, set_size, set_uvcoords, \
         temperature_gradient, blackbody_spec
 from src.models.ring import Ring
 
-class IntegrateRings:
-    """Adds 2D rings up/integrates them to create new models (e.g., a uniform disk or a ring structure)
+class CompoundModel(Model):
+    """Adds 2D rings up/integrates them to create new models (e.g., a uniform
+    disk or a ring structure with or without inclination)
 
     ...
 
-    Parameters
-    ----------
-    min_radius: int
-    max_radius: int
-    step_size: int
-    q: float
-    T_0: int
-    wavelength: float
-
-    Returns
-    -------
-    None
-
     Methods
     -------
-    add_rings2D():
+    integrate_rings():
         This adds the rings up to various models and shapes
-    uniformly_bright_disk():
-        Calls the add_rings() function with the right parameters to create a uniform disk
-    optically_thin_disk():
-        Calls the add_rings() function with the right parameters to create a disk with an inner rim
-    optically_thick_disk():
         ...
-    rimmed_disk():
+    integrate_rings_vis():
         ...
     """
-    def integrate_rings(self, size: int, min_radius: int, max_radius: int, q: float, T_0: int, wavelength: float,
-                        sampling: Optional[int] = None, optical_depth: float = 1., centre: Optional[int] = None) -> np.array:
-        """This adds the ring's analytical model up to various models
+    def eval_model(self, size: int, min_radius: int, max_radius: int,
+                        q: float, T_sub: int, wavelength: float,
+                        sampling: Optional[int] = None, optical_depth: float = 1.,
+                        centre: Optional[int] = None) -> np.array:
+        """Evaluates the model
 
         Parameters
         ----------
+        min_radius: int
+        max_radius: int
+        step_size: int
+        q: float
+        T_sub: int
+        wavelength: float
 
         Returns
         -------
@@ -52,7 +43,6 @@ class IntegrateRings:
         See also
         --------
         """
-        # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((size, size))
 
         if sampling is None:
@@ -61,17 +51,21 @@ class IntegrateRings:
         for i in np.linspace(min_radius, max_radius):
             # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
             flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
-            ring_array = Ring().eval_model(size, i, sampling, centre)*flux
+            ring_array = Ring().eval_model(size, i, sampling, centre)
             output_lst[np.where(ring_array > 0)] = flux/(np.pi*max_radius)
 
         return output_lst
 
-    def integrate_rings_vis(self, sampling: int, min_radius: int, max_radius: int, q: float, T_0: int,
+    def eval_vis(self, sampling: int, min_radius: int, max_radius: int, q: float, T_0: int,
                             wavelength: float, optical_depth: float = 1.) -> np.array:
-        """This adds the ring's analytical visibility up to various models
+        """Evaluates the visibilities of the model
 
         Parameters
         ----------
+        wavelength: float
+            The sampling wavelength
+        sampling: int
+            The sampling of the uv-plane
 
         Returns
         -------
@@ -79,7 +73,6 @@ class IntegrateRings:
         See also
         --------
         """
-        # TODO: Make this more performant -> Super slow
         output_lst = np.zeros((sampling, sampling)).astype(np.complex256)
         total_flux = 0
 

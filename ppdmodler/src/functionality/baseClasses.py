@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.utilities import blackbody_spec
+from src.functionality.utilities import blackbody_spec, sublimation_radius
 
 
 # Classes
@@ -23,6 +23,7 @@ class Model(metaclass=ABCMeta):
     """
     def __init__(self):
         self.name = ""
+        self._radius = []
         self._size, self._sampling = 0, 0
         self._wavelength = 0.
         self.flux, self.total_flux = [], 0.
@@ -43,6 +44,20 @@ class Model(metaclass=ABCMeta):
     @property
     def axis_mod(self):
         return self._axis_mod
+
+    def get_flux(self, wavelength: float, q: float, T_sub: int, L_star: float) -> np.array:
+        """Calculates the total flux of the model
+        wavelength: float, optional
+            The measurement wavelength
+        q: float
+            The power law index
+        T_sub: int
+            The sublimation temperature
+        L_star: float
+            The Luminosity of the star
+        """
+        r_sub = sublimation_radius(T_sub, L_star)
+        return blackbody_spec(self._radius, q, r_sub, T_sub, wavelength)
 
     @abstractmethod
     def eval_model() -> np.array:

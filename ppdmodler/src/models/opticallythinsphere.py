@@ -54,9 +54,10 @@ class OpticallyThinSphere(Model):
             sys.exit()
 
         self._size, self._sampling = size, sampling
-        radius, self._axis_mod = set_size(size, sampling, centre)
+        self._radius, self._axis_mod = set_size(size, sampling, centre)
 
-        return np.array([[(6*flux/(np.pi*(diameter**2)))*np.sqrt(1-(2*j/diameter)**2) if j <= diameter/2 else 0 for j in i] for i in radius])
+        return np.array([[(6*flux/(np.pi*(diameter**2)))*np.sqrt(1-(2*j/diameter)**2)\
+               if j <= diameter/2 else 0 for j in i] for i in self._radius])
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float) -> np.array:

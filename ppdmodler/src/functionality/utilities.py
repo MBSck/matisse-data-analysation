@@ -357,13 +357,12 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
         The spectral radiance (the power per unit solid angle) of a black-body
     """
     T = temperature_gradient(radius, q, r_0, T_0)
-    numerator = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)
 
-    exp_numerator = PLANCK_CONST*SPEED_OF_LIGHT
-    exp_divisor = wavelength*BOLTZMAN_CONST*T
-    divisor = wavelength**5*(np.exp(exp_numerator/exp_divisor)-1)
+    factor = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)/wavelength**5
+    exponent = (PLANCK_CONST*SPEED_OF_LIGHT)/(wavelength*BOLTZMAN_CONST*T)
+    divisor = np.exp(exponent)-1
 
-    return numerator/divisor
+    return factor/divisor
 
     def do_fit():
         """Does automatic gauss fits"""

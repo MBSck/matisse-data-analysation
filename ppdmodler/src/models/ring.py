@@ -37,8 +37,8 @@ class Ring(Model):
 
     @timeit
     def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None, centre: Optional[bool] =
-                   None) -> np.array:
+                   sampling: Optional[int] = None,
+                   centre: Optional[bool] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
@@ -82,15 +82,15 @@ class Ring(Model):
         self._size, self._sampling = size, sampling
 
         if len(theta) > 2:
-            radius, self._axis_mod = set_size(size, sampling, centre,
+            self._radius, self._axis_mod = set_size(size, sampling, centre,
                                                   [pos_angle_ellipsis, pos_angle_axis, inc_angle])
         else:
-            radius, self._axis_mod = set_size(size, sampling, centre)
+            self._radius, self._axis_mod = set_size(size, sampling, centre)
 
-        radius[radius > r_0+mas2rad(1.)], radius[radius < r_0] = 0., 0.
-        radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
+        self._radius[self._radius > r_0+mas2rad(1.)], self._radius[self._radius < r_0] = 0., 0.
+        self._radius[np.where(self._radius != 0)] = 1/(2*np.pi*r_0)
 
-        return radius
+        return self._radius
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float, uvcoords:

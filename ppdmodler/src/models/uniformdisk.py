@@ -24,7 +24,7 @@ class UniformDisk(Model):
         self.name = "Uniform Disk"
 
     @timeit
-    def eval_model(self, theta: List, flux: float, size: int,
+    def eval_model(self, theta: List, size: int,
                    sampling: Optional[int] = None, centre: Optional[int] = None) -> np.ndarray:
         """Evaluates the model
 
@@ -32,8 +32,6 @@ class UniformDisk(Model):
         ----------
         diameter: int
             The diameter of the sphere
-        flux: float
-            The flux of the object
         size: int
             The size of the model image
         sampling: int | None
@@ -58,12 +56,12 @@ class UniformDisk(Model):
             sys.exit()
 
         self._size, self._sampling = size, sampling
-        radius, self._axis_mod = set_size(size, sampling, centre)
+        self._radius, self._axis_mod = set_size(size, sampling, centre)
 
-        output_lst = np.zeros((size, size))
-        output_lst[radius <= diameter/2] = 4*flux/(np.pi*diameter**2)
+        self._radius[self._radius <= diameter/2] = 4*flux/(np.pi*diameter**2)
+        self._radius[self._radius > diameter/2] = 0.
 
-        return output_lst
+        return self._radius
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength:

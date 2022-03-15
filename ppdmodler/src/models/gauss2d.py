@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        mas2rad, blackbody_spec, sublimation_radius
+        mas2rad
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -29,8 +29,7 @@ class Gauss2D(Model):
     @timeit
     def eval_model(self, theta: List, size: int,
                    sampling: Optional[int] = None, wavelength: float = None,
-                   centre: Optional[int] = None,
-                   bb_params: Optional[List[float]] = None) -> np.array:
+                   centre: Optional[int] = None) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -47,12 +46,6 @@ class Gauss2D(Model):
             The measurement wavelength
         centre: int, optional
             The centre of the model image
-        T_sub: int
-            The sublimation temperature
-        Luminosity_star: float
-            The Luminosity of the star
-        do_flux: bool, optional
-            Calculates the flux if set to true
 
         Returns
         --------
@@ -63,26 +56,17 @@ class Gauss2D(Model):
         set_size()
         """
         try:
-            fwhm, flux = mas2rad(theta[0]), 1
-            if len(theta) > 1:
-                q = theta[1]
-
+            fwhm = mas2rad(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [fwhm] or [fwhm, q, T_0]")
+                  " the form [fwhm]")
             sys.exit()
 
         self._size, self._sampling = size, sampling
-        radius, self._axis_mod  = set_size(size, sampling, centre)
+        self._radius, self._axis_mod  = set_size(size, sampling, centre)
+        self._radius *= mas2rad()
 
-        if bb_params is not None:
-            T_sub, L_star = bb_params
-            r_sub = sublimation_radius(T_sub, L_star)
-            flux = blackbody_spec(radius, q, r_sub, T_sub, wavelength)
-
-        radius *= mas2rad()
-
-        return (flux/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*radius**2)/fwhm**2)
+        return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
     @timeit
     def eval_vis(self, theta: np.ndarray, sampling: int,
@@ -110,7 +94,7 @@ class Gauss2D(Model):
         set_uvcoords()
         """
         try:
-            fwhm = mas2rad(theta)
+            fwhm = mas2rad(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
                       " the form [fwhm]")
@@ -123,9 +107,11 @@ class Gauss2D(Model):
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model([1., 0.55], 300, 128, wavelength=8e-06,
-                           bb_params=[1500, 19])
-    plt.imshow(g_model)
+    g_model = g.eval_model([3.], 128, 300, wavelength=8e-06)
+    print(g._radius)
+    g_flux = g.get_flux(8e-6, 0.55, 1500, 19)
+    print(g_flux)
+    plt.imshow(g_model*g_flux)
     plt.show()
 
     plt.show()

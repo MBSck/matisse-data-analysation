@@ -221,8 +221,8 @@ if __name__ == "__main__":
         os.mkdir(outpath)
 
     # Manual lists
-    sci_lst = ["R_Mon"]
-    cal_lst = ["HD 49161"]
+    sci_lst = ["HD 135344 B"]
+    cal_lst = [""]
     tag_lst = ["LN"]
 
     # Specifies the res_dict

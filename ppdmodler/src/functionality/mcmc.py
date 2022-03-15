@@ -19,12 +19,14 @@ from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import trunc, correspond_uv2scale
 
 # TODO: Think of rewriting code so that params are taken differently
-# TODO: Think of way to implement the FFT fits -> See Jacob's code
 # TODO: Make documentation in Evernote of this file and then remove unncessary
 # comments
 # TODO: Make this more generally applicable
 # TODO: Make plots of the model + fitting, that show the visibility curve, and
 # two more that show the # fit of the visibilities and the closure phases to the measured one
+# TODO: Make one plot that shows a model of the start parameters and the
+# uv-points plotted on top, before fitting starts and options to then change
+# them in order to get the best fit (Even multiple times)
 # TODO: Make save paths for every class so that you can specify where files are
 # being saved to
 
@@ -126,6 +128,10 @@ class MCMC:
         if self.vis:
             realdata, realphase = realdata
             realdataerr, realphaseerr = realerr
+
+            # Multiplies the total_flux onto the vis to get corr_flux
+            mode_tot_flux = self.model.get_flux(wavelength, *self.bb_params)
+            datamod *= mode_tot_flux
         else:
             datamod = datamod*np.conj(datamod)
 
@@ -161,8 +167,7 @@ class MCMC:
         """The model image, that is fourier transformed for the fitting process"""
         if self.vis:
             model_img = self.model.eval_model(theta, sampling,
-                                              wavelength=wavelength,
-                                              bb_params=self.bb_params)
+                                              wavelength=wavelength)
         else:
             model_img = self.model.eval_model(theta, sampling)
 
@@ -193,6 +198,8 @@ class MCMC:
             datamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
             if not self.vis:
                 datamod = datamod*np.conj(datamod)
+            else:
+                self.model.get_flux(wavelength, *self.bb_params)
             self.datamod = datamod
             best_fit_model = abs(ft)
         else:
@@ -296,10 +303,10 @@ def set_mc_params(nwalkers, ndim, niter_burn, niter):
 
 if __name__ == "__main__":
     # Initial sets the theta
-    initial = np.array([20., 0.55])
-    priors = [[1., 100.], [0.00, 1.00]]
+    initial = np.array([20.])
+    priors = [[1., 100.] ]
     labels = ["FWHM", "Q"]
-    bb_params = [1500, 19]
+    bb_params = [0.55, 1500, 19]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
