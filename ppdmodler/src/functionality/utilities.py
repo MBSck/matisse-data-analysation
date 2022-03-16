@@ -12,12 +12,6 @@ from functools import wraps
 
 from src.functionality.constant import *
 
-# TODO: Check how the indices are sorted, why do they change? They change even independent of the scaling
-# TODO: Change euclidean distance to interpolation in order to get coordinates
-
-# Shows the full np.arrays, takes ages to print the arrays
-# np.set_printoptions(threshold=sys.maxsize)
-
 # Functions
 
 def trunc(values, decs=0):
@@ -238,9 +232,9 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
         ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
                 a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
 
-        return np.sqrt(ar**2+br**2*np.cos(inc_angle)**2), [ar, br]
+        return mas2rad(np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)), [ar, br]
     else:
-        return np.sqrt(xc**2+yc**2), xc
+        return mas2rad(np.sqrt(xc**2+yc**2)), xc
 
 def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
                  uvcoords: np.ndarray = None) -> np.array:

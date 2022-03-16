@@ -1,33 +1,39 @@
+# Specific stuff to ignore
 # Ignored folder
 assets/
 LateX/
-__pycache__/
-.idea/
 oca_pipeline/
 drsCodeGuide/
-LateX/
 GTOProposals/
 otherPeoplesScripts/
+
 ppdmodler/build/
 ppdmodler/dist/
 ppdmodler/ppdmodler.egg-info/
 ppdmodler/src/ppdmodler.egg-info/
+
+# Ignored files
+dataReduction/avg_oifits.py
+dataReduction/fluxcal.py
+dataReduction/mat_reduce_all_drs.py
+dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
+
 query/getdata_ESO_archive.py
+
 observation/P108
 observation/manualsEso
 observation/CALIBRATOR_FIND_1.6
-/observation/CALIBRATOR_FIND_1.6.zip
+observation/CALIBRATOR_FIND_1.6.zip
 observation/obmaking/obs
 observation/obmaking/MATISSE_create_OB_2.py
 observation/obmaking/query_CDS.py
+
+# General stuff to ignore
+# Ignored folder
+__pycache__/
+.idea/
 
 # Ignored files
 __pycache__
 .DS_Store
 *.log
-dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
-
-# Files from ignored folder that need to be pushed. If main directory is excluded then files cannot be reincluded
-!/observation/obmaking/main.py
-!/observation/obmaking/parseOBplan.py
-!/observation/obmaking/uploader.py

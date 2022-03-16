@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from src.functionality.readout import ReadoutFits
 from src.functionality.fourier import FFT
-from src.models import Gauss2D
+from src.models import Gauss2D, Ring
 
 # Shows the full np.arrays, takes ages to print the arrays
 # np.set_printoptions(threshold=sys.maxsize)
@@ -16,16 +16,21 @@ def main():
     wavelength = readout.get_wl()[80]
 
     # How to use corr_flux with vis in model
-    g = Gauss2D()
-    model = g.eval_model([1.], 128, 256, wavelength)
-    flux = g.get_flux(wavelength, 0.55, 1500, 19)
+    # g = Gauss2D()
+    # model = g.eval_model([1.], 128, 256)
+    # flux = g.get_flux(0.55, 1500, 19, wavelength)
+
+    r = Ring()
+    model = r.eval_model([5.], 128, 256)
+    flux = r.get_flux(0.55, 1500, 19, wavelength)
 
     ft, amp, phase = FFT(model, wavelength).pipeline(vis=True)
 
-    amp *= flux
+    amp *= np.sum(flux)
 
-    print(amp)
-    plt.imshow(amp)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.imshow(amp)
+    ax2.imshow(np.log(amp))
     plt.show()
 
 if __name__ == "__main__":

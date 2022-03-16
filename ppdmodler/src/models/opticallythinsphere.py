@@ -1,4 +1,6 @@
+import sys
 import numpy as np
+import inspect
 import matplotlib.pyplot as plt
 
 from typing import Any, Dict, List, Union, Optional
@@ -19,10 +21,12 @@ class OpticallyThinSphere(Model):
         Evaluates the visibilities of the model
     """
     def __init__(self):
-        self.name = "Optically Thin Sphere"
+        super().__init__()
+        self.name = "Optically-Thin-Sphere"
 
     @timeit
-    def eval_model(self, theta: List, flux: float, size: int, sampling: Optional[int] = None, centre: Optional[int] = None) -> np.array:
+    def eval_model(self, theta: List, size: int, sampling: Optional[int] = None,
+                   centre: Optional[int] = None) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -47,7 +51,7 @@ class OpticallyThinSphere(Model):
         set_size()
         """
         try:
-            diameter = mas2rad(theta)
+            diameter = mas2rad(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
                   " the form [diameter]")
@@ -56,8 +60,10 @@ class OpticallyThinSphere(Model):
         self._size, self._sampling = size, sampling
         self._radius, self._axis_mod = set_size(size, sampling, centre)
 
-        return np.array([[(6*flux/(np.pi*(diameter**2)))*np.sqrt(1-(2*j/diameter)**2)\
+        output = np.array([[(6/(np.pi*(diameter**2)))*np.sqrt(1-(2*j/diameter)**2)\
                if j <= diameter/2 else 0 for j in i] for i in self._radius])
+
+        return output
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float) -> np.array:
@@ -81,7 +87,7 @@ class OpticallyThinSphere(Model):
         set_uvcoords()
         """
         try:
-            diameter = mas2rad(theta)
+            diameter = mas2rad(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
                   " the form [diameter]")
@@ -94,11 +100,9 @@ class OpticallyThinSphere(Model):
 
 if __name__ == "__main__":
     o = OpticallyThinSphere()
-    o_model = o.eval_model(256.1, 1., 128)
-    plt.imshow(o_model)
-    plt.show()
 
-    o_vis = o.eval_vis(256.1, 128, 8e-06)
-    plt.imshow(o_vis)
+    o_model = o.eval_model([1.], 128, 256)
+    print(o.get_flux(0.55, 1500, 19, 8e-6))
+    plt.imshow(o_model)
     plt.show()
 

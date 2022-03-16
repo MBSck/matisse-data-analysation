@@ -6,7 +6,10 @@ import inspect
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
-from src.functionality.utilities import timeit
+from src.functionality.utilities import timeit, sublimation_radius
+
+
+# TODO: Implement flux for centre of picture
 
 class Delta(Model):
     """Delta function/Point source model
@@ -39,7 +42,7 @@ class Delta(Model):
         model: np.array
         """
         try:
-            flux = float(theta)
+            flux = float(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must"
                   " be of the form [flux]")
@@ -68,7 +71,7 @@ class Delta(Model):
         visibility: np.array
         """
         try:
-            flux = float(theta)
+            flux = float(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must"
                   " be of the form [flux]")
@@ -84,7 +87,7 @@ if __name__ == "__main__":
     # plt.imshow(d_model)
     # plt.show()
 
-    d_vis = d.eval_vis([1, 10], 128)
-    plt.imshow(d_vis)
+    d_model = d.eval_model([1.], 128)
+    plt.imshow(d_model)
     plt.show()
 

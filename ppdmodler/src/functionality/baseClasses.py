@@ -23,11 +23,9 @@ class Model(metaclass=ABCMeta):
     """
     def __init__(self):
         self.name = ""
-        self._radius = []
+        self._radius, self._radius_range = [], []
         self._size, self._sampling = 0, 0
-        self._wavelength = 0.
-        self.flux, self.total_flux = [], 0.
-        self._axis_mod, self._axis_vis = [], [], []
+        self._axis_mod, self._axis_vis = [], []
 
     @property
     def size(self):
@@ -45,8 +43,11 @@ class Model(metaclass=ABCMeta):
     def axis_mod(self):
         return self._axis_mod
 
-    def get_flux(self, wavelength: float, q: float, T_sub: int, L_star: float) -> np.array:
+    def get_flux(self, q: float, T_sub: int, L_star: float, wavelength: float) -> np.array:
         """Calculates the total flux of the model
+
+        Parameters
+        ----------
         wavelength: float, optional
             The measurement wavelength
         q: float
@@ -55,9 +56,18 @@ class Model(metaclass=ABCMeta):
             The sublimation temperature
         L_star: float
             The Luminosity of the star
+
+        Returns
+        -------
+        flux: np.ndarray
         """
         r_sub = sublimation_radius(T_sub, L_star)
-        return blackbody_spec(self._radius, q, r_sub, T_sub, wavelength)
+        flux = blackbody_spec(self._radius, q, r_sub, T_sub, wavelength)
+
+        if self._radius_range:
+            flux[self._radius_range] = 0
+
+        return flux
 
     @abstractmethod
     def eval_model() -> np.array:

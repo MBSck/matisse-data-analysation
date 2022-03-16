@@ -1,3 +1,5 @@
+import sys
+import inspect
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -21,6 +23,7 @@ class UniformDisk(Model):
         Evaluates the visibilities of the model
     """
     def __init__(self):
+        super().__init__()
         self.name = "Uniform Disk"
 
     @timeit
@@ -47,21 +50,24 @@ class UniformDisk(Model):
         --------
         set_size()
         """
-        # Converts the mas to radians
         try:
-            diameter = mas2rad(theta)
+            diameter = mas2rad(theta[0])
         except:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
                   " the form [diameter]")
             sys.exit()
 
         self._size, self._sampling = size, sampling
-        self._radius, self._axis_mod = set_size(size, sampling, centre)
+        radius, self._axis_mod = set_size(size, sampling, centre)
+        print(diameter, radius)
 
-        self._radius[self._radius <= diameter/2] = 4*flux/(np.pi*diameter**2)
-        self._radius[self._radius > diameter/2] = 0.
+        self._radius = radius.copy()
+        self._radius_range = np.where(radius > diameter/2)
 
-        return self._radius
+        radius[radius <= diameter/2] = 4/(np.pi*diameter**2)
+        radius[radius > diameter/2] = 0.
+
+        return radius
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength:
@@ -102,10 +108,10 @@ class UniformDisk(Model):
 
 if __name__ == "__main__":
     u = UniformDisk()
-    u_model = u.eval_model(256.1, 1., 512)
+
+    u_model = u.eval_model([2.], 128, 512)
+    u_flux = u.get_flux(0.55, 1500, 19, 8e-6)
+    print(u._radius_range)
     plt.imshow(u_model)
     plt.show()
 
-    u_vis = u.eval_vis(256.1, 512, 8e-06)
-    plt.imshow(u_vis)
-    plt.show()

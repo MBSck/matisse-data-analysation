@@ -33,6 +33,7 @@ class Ring(Model):
     set_uvcoords()
     """
     def __init__(self):
+        super().__init__()
         self.name = "Ring"
 
     @timeit
@@ -82,15 +83,18 @@ class Ring(Model):
         self._size, self._sampling = size, sampling
 
         if len(theta) > 2:
-            self._radius, self._axis_mod = set_size(size, sampling, centre,
+            radius, self._axis_mod = set_size(size, sampling, centre,
                                                   [pos_angle_ellipsis, pos_angle_axis, inc_angle])
         else:
-            self._radius, self._axis_mod = set_size(size, sampling, centre)
+            radius, self._axis_mod = set_size(size, sampling, centre)
 
-        self._radius[self._radius > r_0+mas2rad(1.)], self._radius[self._radius < r_0] = 0., 0.
-        self._radius[np.where(self._radius != 0)] = 1/(2*np.pi*r_0)
+        self._radius = radius.copy()
 
-        return self._radius
+        radius[radius > r_0+mas2rad(1.)], radius[radius < r_0] = 0., 0.
+        self._radius_range = np.where(radius == 0)
+        radius[self._radius_range] = 1/(2*np.pi*r_0)
+
+        return radius
 
     @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float, uvcoords:
@@ -156,27 +160,9 @@ class Ring(Model):
 
 if __name__ == "__main__":
     r = Ring()
-    # inclined_ring =  r.eval_mod_num([50., 60, 45, 45], 512)
-    # plt.imshow(inclined_ring)
 
-    # fig, (ax1, ax2) = plt.subplots(1, 2)
-    # span = 20.
-    # for i in [2**x for x in range(5, 12)]:
-    #     print(i)
-    #     r_model = r.eval_model([5., 45, 45, 45], span, i)
-    #     plt.imshow(r_model, extent=[-span, span, -span, span])
-    #     plt.show()
-
-    r_vis = r.eval_model([10.], 512)
-    plt.imshow(np.abs(r_vis))
+    r_model = r.eval_model([1.], 128, 256)
+    print(r_flux := r.get_flux(8e-6, 0.55, 1500, 19))
+    plt.imshow(r_model)
     plt.show()
-    # print(r_vis, r_vis.shape)
-    # ax2.imshow(np.abs(r_vis[0]))
-    # plt.savefig("mode_ring.png")
-
-    '''
-    r_num = r.eval_numerical(1024, 10)
-    plt.imshow(r_num)
-    plt.show()
-    '''
 

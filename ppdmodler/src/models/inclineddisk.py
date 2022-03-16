@@ -29,12 +29,13 @@ class InclinedDisk(Model):
     """
 
     def __init__(self):
+        super().__init__()
         self.name = "Inclined Disk"
 
     @timeit
     def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None, centre: Optional[bool] =
-                   None) -> np.array:
+                   sampling: Optional[int] = None,
+                   centre: Optional[bool] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
@@ -83,7 +84,10 @@ class InclinedDisk(Model):
         else:
             radius, self._axis_mod = set_size(size, sampling, centre)
 
+        self._radius = radius.copy()
+
         radius[radius > r_max], radius[radius < r_0] = 0., 0.
+        self._radius_range = np.where(radius == 0)
         radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
 
         return radius
@@ -207,7 +211,7 @@ class InclinedDisk(Model):
 
 if __name__ == "__main__":
     inclined = InclinedDisk()
-    model = inclined.eval_model([30., 50., 45, 45, 45], 512)
+    model = inclined.eval_model([3., 5., 45, 45, 45], 512)
     plt.imshow(model)
     plt.show()
 

@@ -28,7 +28,7 @@ class Gauss2D(Model):
 
     @timeit
     def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None, wavelength: float = None,
+                   sampling: Optional[int] = None,
                    centre: Optional[int] = None) -> np.array:
         """Evaluates the model
 
@@ -64,7 +64,6 @@ class Gauss2D(Model):
 
         self._size, self._sampling = size, sampling
         self._radius, self._axis_mod  = set_size(size, sampling, centre)
-        self._radius *= mas2rad()
 
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
