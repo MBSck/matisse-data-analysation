@@ -17,6 +17,8 @@ dataReduction/avg_oifits.py
 dataReduction/fluxcal.py
 dataReduction/mat_reduce_all_drs.py
 dataReduction/show_allred.py
+dataReduction/intmodlib.py
+dataReduction/interferometric_modelling.py
 dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
 
 query/getdata_ESO_archive.py
