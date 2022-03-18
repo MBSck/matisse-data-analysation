@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords, mas2rad
-from src.models import InclinedDisk
+from src.models import InclinedDisk, Delta
 
 class CompoundModel(Model):
     """Adds 2D rings up/integrates them to create new models (e.g., a uniform
@@ -23,10 +23,10 @@ class CompoundModel(Model):
     integrate_rings_vis():
         ...
     """
-    def __init__(self):
+    def __init__(self ):
         super().__init__()
         self.name = "Compound-Model"
-        self.r_outer_edge = 0.
+        self.r_outer = 0.
         self._radius_range = []
 
     def eval_model(self, theta: List[float], size: int,
@@ -48,8 +48,8 @@ class CompoundModel(Model):
         """
         try:
             pos_angle_ellipsis, pos_angle_axis, inc_angle = theta[:3]
-            radii_lst = mas2rad(np.array(theta[3:]))
-            self.r_outer_edge = mas2rad(theta[~0])
+            param_lst = np.array(theta[3:])
+            self.r_outer = mas2rad(theta[~0])
         except Exception as e:
             print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
                   " the form [pos_angle_ellipsis, pos_angle_axis, inc_angle,"
@@ -57,20 +57,27 @@ class CompoundModel(Model):
             print(e)
             sys.exit()
 
-        combined_model = np.zeros((size, size))
+        if sampling is None:
+            sampling = size
+
+        combined_model = np.zeros((sampling, sampling))
+        combined_model += Delta().eval_model([1.], sampling)
+
+        # TODO: Make list and dict that checks for the models and then uses
+        # their specified eval_model functions as well as the right theta
+        # slicing
+
+        for i in range(0, len_param_lst := len(param_lst), 2):
+            if i != len_param_lst-3:
+                r_0, r_max = param_lst[i], param_lst[i+1]
+                theta_mod = [r_0, r_max, pos_angle_ellipsis, pos_angle_axis, inc_angle]
+                combined_model += InclinedDisk().eval_model(theta_mod, size,\
+                                                          sampling, outer_r=self.r_outer)
+
         self._radius, self._axis_mod = set_size(size, sampling,\
                                                 angles=[pos_angle_ellipsis, pos_angle_axis, inc_angle])
-
-        for i in range(0, len_radii := len(radii_lst), 2):
-            print(radii_lst)
-            if i != len_radii-3:
-                r_0, r_max = radii_lst[i], radii_lst[i+1]
-                print(r_0, r_max)
-
+        self._radius_range = np.where(combined_model == 0.)
         # Optically thick (t_v >> 1 -> e^(-t_v)=0, else optically thin)
-        # flux = blackbody_spec(i, q, min_radius, T_0, wavelength)*(1-np.exp(-optical_depth))
-        # ring_array = Ring().eval_model(size, i, sampling, centre)
-        # combined_model[np.where(ring_array > 0)] = 1/(np.pi*self.r_outer_edge)
 
         return combined_model
 
@@ -106,7 +113,8 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     cp = CompoundModel()
-    cp_model = cp.eval_model([45, 45, 45, 2., 10., 20., 40., 60., 80.], 128, 256)
-    # plt.imshow(cp_model)
-    # plt.show()
+    for i in range(0, 360, 10):
+        cp_model = cp.eval_model([i, i, i, 0.17167066, 4.2379771], 128, 4096)
+        plt.imshow(cp_model)
+        plt.show()
 

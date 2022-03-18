@@ -1,96 +1,61 @@
 #!/usr/bin/env python3
 
 import os
-import glob
+import time
+import subprocess
 
-author = "Marten Scheuck"
+PATH2SCRIPT = 
 
-"""Credit to Jozsef Varga, who's script this is based upon. DRS for both flux
-and vis2"""
+def set_script_arguments(rawdir: str, calibdir: str, resdir: str,
+                         do_l: bool, do_flux: bool) -> str:
+    """Sets the arguments that are then passed to the 'automaticPipline.py'
+    script"""
+    directories = f" --dirRaw={rawdir} --dirCalib={calibdir} --dirResult={resdir} "
+    general_params = "--nbCore=10 --overwrite=TRUE --maxIter=1 "
 
-SPECTRALBINNING_L = '5' #DRS option (tried value = 5 and 10 - matisse_redM), default for LR: '1'
-SPECTRALBINNING_N = '7' #21 #DRS option, default for LR: '7' (tried value = 49 - matisse_redM and some matisse_red6)
+    if do_flux:
+        corr_flux = "TRUE"
+    else:
+        corr_flux = "FALSE"
 
-DRS_MODES = ["coherent", "incoherent"]
+    param_l_band = f"--paramL=/corrFlux={corr_flux}/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=TRUE/spectralBinning=11/ "
 
-#for coherent visibilities: '/corrFlux=FALSE/useOpdMod=FALSE/coherentAlgo=2/compensate="[pb,rb,nl,if,bp,od]"/'
-PARAM_L_LIST = ['/spectralBinning='+SPECTRALBINNING_L+'/corrFlux=TRUE/useOpdMod=FALSE/coherentAlgo=2/compensate="[pb,rb,nl,if,bp,od]"/',
-               '/spectralBinning='+SPECTRALBINNING_L+'/compensate="pb,rb,nl,if,bp,od"/']
+    if do_l:
+        additional_params = "--skipN"
+    else:
+        additional_params = "--skipL"
 
-PARAM_N_LIST_AT = ['/replaceTel=3/corrFlux=TRUE/useOpdMod=TRUE/coherentAlgo=2/spectralBinning='+SPECTRALBINNING_N,
-                  '/replaceTel=3/spectralBinning='+SPECTRALBINNING_N]
-PARAM_N_LIST_UT = ['/replaceTel=0/corrFlux=TRUE/useOpdMod=TRUE/coherentAlgo=2/spectralBinning='+SPECTRALBINNING_N,
-                  '/replaceTel=0/spectralBinning='+SPECTRALBINNING_N]
+    return directories+general_params+param_l_band+additional_params
 
+def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool) -> int:
+    """Runs the pipeline for coherent and incoherent reduction."""
+    if not os.path.exists(resdir):
+        os.makedirs(resdir)
 
-def run_pipeline(input_path: str, output_path: str, data: dict, do_L: bool = True,
-                 do_plot: bool = False, do_reduction: bool = True):
-    # Set params and other values
-    skip_L, skip_N =  int(not do_L), int(do_L)
-    night, tpl_start, tel, dil, din = map(data.get, data)
+    for i in [True, False]:
+        tic = time.perf_counter()
+        path = "/".join(path_lst := ["coherent" if i else "incoherent", "lband" if do_l else "nband" ])
+        script_params = set_script_arguments(rawdir, calibdir, resdir,
+                                             do_l, do_flux=i)
+        if not os.path.exists(subdir := os.path.join(resdir, path)):
+            os.makedirs(subdir)
 
-    # ----------run the pipeline-------------------------------
-    for i, o in enumerate(DRS_MODES):
-        resdir = os.path.join(output_path, o, night, tpl_start.replace(':', '_'))
+        subprocess.call(["python", PATH2SCRIPT, script_params], stdout=PIPE, stderr=PIPE)
 
-        if not os.path.exists(resdir):
-            os.makedirs(resdir)
+        try:
+            os.system(f"mv -f {os.path.join(resdir, 'Iter1/*.rb')} {subdir}")
+        except Exception as e:
+            print(e)
 
-        if do_reduction:
-            # Clears the old *.sof'-files
-            if do_L:
-                resdir_l = glob.glob(os.path.join(resdir, "Iter1/*HAWAII*/"))
-                if resdir_l:
-                    shutil.rmtree(resdir_l[0])
-                soffiles = glob.glob(os.path.join(resdir, "/Iter1/*HAWAII*.sof*"))
+        toc = time.perf_counter()
+        print(f"Executed the {path_lst[0]} {path_lst[1]} reduction in {tic-tic}"
+              " seconds")
 
-                if soffiles:
-                    for file in soffiles:
-                        os.remove(file)
-            else:
-                resdir_n = glob.glob(os.path.join(resdir, "/Iter1/*AQUARIUS*/"))
-                if resdir_n:
-                    shutil.rmtree(resdir_n[0])
-                soffiles = glob.glob(os.path.join(resdir, "/Iter1/*AQUARIUS*.sof*"))
-                if soffiles:
-                    for file in soffiles:
-                        os.remove(file)
-
-            # Sets the correct params for the array
-            if tel == 'UTs':
-                PARAM_N_LIST = PARAMN_LIST_UT
-            if tel == 'ATs':
-                PARAM_N_LIST = PARAMN_LIST_AT
-
-            # Set the correct binning 
-            if 'HIGH' in din:
-                for k, l in enumerate(PARAM_N_LIST):
-                    PARAM_N_LIST[k] = l.replace('spectralBinning=7','spectralBinning=49')
-            else:
-                for m, n in enumerate(PARAM_N_LIST):
-                    PARAM_N_LIST[m] = n.replace('spectralBinning=49','spectralBinning=7')
-
-            # first try to find calibration files in RAWDIR+'/calibration_files/'
-            if os.path.exists(os.path.join(rawdir, "calibration_files")):
-                res = mat_autoPipeline.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir, dirCalib=os.patj.join(rawdir, "calibration_files"), nbCore=6, tplstartsel=tpl_start,
-                                              resol='', paramL=PARAM_L_LIST[i], paramN=PARAMN_LIST[i], overwrite=0, maxIter=1,
-                                              skipL=skip_L, skipN=skip_N)
-                if res == 2: #if missing calibration
-                    # if calibration files were not found, then use general calibration directory (CALIBDIR)
-                    res = mat_autoPipeline.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir, dirCalib=calibdir, nbCore=6, tplstartsel=tpl_start,
-                                              resol='', paramL=PARAM_L_LIST[i], paramN=PARAMN_LIST[i], overwrite=0, maxIter=1,
-                                              skipL=skip_L, skipN=skip_N)
-            else:
-                # if there is no calibration directory within the night folder, then use general calibration directory (CALIBDIR)
-                res = mat_autoPipeline.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir, dirCalib=rawdir, nbCore=6, tplstartsel=tpl_start,
-                                              resol='', paramL=PARAM_L_LIST[i], paramN=PARAM_N_LIST[i], overwrite=0, maxIter=1,
-                                              skipL=skip_L, skipN=skip_N)
-
+    return 0
 
 if __name__ == "__main__":
-    datadir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/RAW/20190514"
-    resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test_20190514"
-    data = {"night": "2019-05-13", "tpl_start": "2019-05-14T05:28:03",
-            "tel": "UTs", "dil": "LOW", "din": "LOW"}
-    run_pipeline(datadir, resdir, data, do_L=False)
+    rawdir = "Hello"
+    calibdir = "Peter"
+    resdir = "Pedigrew"
 
+    reduction_pipeline(rawdir, calibdir, resdir, do_l=True)

@@ -5,7 +5,7 @@ import corner
 
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import set_uvcoords, correspond_uv2model
-from src.models import Gauss2D
+from src.models import Gauss2D, CompoundModel
 from src.functionality.fourier import FFT
 
 # Shows the full np.arrays, takes ages to print the arrays
@@ -21,10 +21,12 @@ def comparefft2modvis(model, wavelength):
 def main():
     fig, (ax1, ax2) = plt.subplots(1, 2)
     wavelength = 8e-6
-    gauss_mod = Gauss2D().eval_model([10., 0.55, 150.], 128, wavelength=wavelength, do_flux=True)
-    ax1.imshow(gauss_mod)
+    cp = CompoundModel()
+    cp_model = cp.eval_model([130.15469669, 140.19231673, 83.54664411, 0.17167066, 4.2379771], 128)
+    ax1.imshow(cp_model)
 
-    ft, amp, phase = FFT(gauss_mod, wavelength).pipeline()
+    ft, amp, phase = FFT(cp_model, wavelength).pipeline(vis2=True)
+    amp = amp*np.conj(amp)
     ax2.imshow(abs(amp))
     plt.show()
 

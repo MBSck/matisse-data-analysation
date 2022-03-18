@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from src.functionality.readout import ReadoutFits
 from src.functionality.fourier import FFT
-from src.models import Gauss2D, Ring
+from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk
 
 # Shows the full np.arrays, takes ages to print the arrays
 # np.set_printoptions(threshold=sys.maxsize)
@@ -20,9 +20,9 @@ def main():
     # model = g.eval_model([1.], 128, 256)
     # flux = g.get_flux(0.55, 1500, 19, wavelength)
 
-    r = Ring()
-    model = r.eval_model([5.], 128, 256)
-    flux = r.get_flux(0.55, 1500, 19, wavelength)
+    cp = CompoundModel(InclinedDisk)
+    model = cp.eval_model([45, 45, 45, 1., 3., 4., 6., 7., 10.], 128, 256)
+    flux = cp.get_flux(0.55, 1500, 19, wavelength)
 
     ft, amp, phase = FFT(model, wavelength).pipeline(vis=True)
 

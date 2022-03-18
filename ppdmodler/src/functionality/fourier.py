@@ -34,7 +34,7 @@ class FFT:
         self.fftfreq = fft.fftfreq(self.model_size, d=pixelscale)
         self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
-    def pipeline(self, zoom: bool = False, vis: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
+    def pipeline(self, zoom: bool = False, vis2: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
         """Combines various functions and executes them
 
         Parameters
@@ -62,8 +62,9 @@ class FFT:
 
         amp, phase = np.abs(ft), np.angle(ft, deg=True)
 
-        if vis:
-            amp /= np.abs(ft_raw[0, 0])   # Figure out why this is done?
+        if vis2:
+            # Norms the vis
+            amp /= np.abs(ft_raw[0, 0])
 
         return ft, amp, phase
 

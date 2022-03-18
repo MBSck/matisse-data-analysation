@@ -24,6 +24,7 @@ class Gauss2D(Model):
         Evaluates the visibilities of the model
     """
     def __init__(self):
+        super().__init__()
         self.name = "2D-Gaussian"
 
     @timeit

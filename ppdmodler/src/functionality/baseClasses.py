@@ -65,7 +65,7 @@ class Model(metaclass=ABCMeta):
         flux = blackbody_spec(self._radius, q, r_sub, T_sub, wavelength)
 
         if self._radius_range:
-            flux[self._radius_range] = 0
+            flux[self._radius_range] = 0.
 
         return flux
 

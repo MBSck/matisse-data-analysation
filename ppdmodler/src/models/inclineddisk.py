@@ -35,7 +35,8 @@ class InclinedDisk(Model):
     @timeit
     def eval_model(self, theta: List, size: int,
                    sampling: Optional[int] = None,
-                   centre: Optional[bool] = None) -> np.array:
+                   centre: Optional[bool] = None,
+                   outer_r: Optional[float] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
@@ -54,6 +55,8 @@ class InclinedDisk(Model):
             The sampling of the object-plane
         centre: int, optional
             The centre of the model image
+        outer_r: float, optional
+            The outer radius if this model is used in the CompoundModel class
 
         Returns
         --------
@@ -88,7 +91,10 @@ class InclinedDisk(Model):
 
         radius[radius > r_max], radius[radius < r_0] = 0., 0.
         self._radius_range = np.where(radius == 0)
-        radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
+        if outer_r:
+            r_max = outer_r
+
+        radius[np.where(radius != 0)] = 1/(2*np.pi*r_max)
 
         return radius
 

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from typing import Any, Dict, List, Union, Optional
 
-from src.models import Gauss2D, Ring, InclinedDisk
+from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import trunc, correspond_uv2scale
@@ -33,7 +33,7 @@ from src.functionality.utilities import trunc, correspond_uv2scale
 class MCMC:
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
-                 numerical: bool = True, vis: bool = True,
+                 numerical: bool = True, vis: bool = False,
                  bb_params: List = None, out_path: Path = None) -> None:
         self.model = model()
         self.data = data
@@ -42,10 +42,12 @@ class MCMC:
 
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical, self.vis = numerical, vis
+        self.vis2 = not self.vis
 
         self.realdata, self.datamod = data[0], None
         self.wavelength, self.uvcoords = data[3], data[~0]
         self.theta_max = None
+        self.x, self.y = 0, 0
 
         self.out_path = out_path
 
@@ -84,6 +86,49 @@ class MCMC:
 
         return sampler, pos, prob, state
 
+    def lnprob(self, theta: np.ndarray, realdata, realerr, sampling,
+               wavelength, uvcoords) -> np.ndarray:
+        """This function runs the lnprior and checks if it returned -np.inf, and
+        returns if it does. If not, (all priors are good) it returns the inlike for
+        that model (convention is lnprior + lnlike)
+
+        Parameters
+        ----------
+        theta: List
+            A vector that contains all the parameters of the model
+
+        Returns
+        -------
+        """
+        lp = self.lnprior(theta)
+
+        if not np.isfinite(lp):
+            return -np.inf
+
+        return lp + self.lnlike(theta, realdata, realerr, sampling, wavelength, uvcoords)
+
+    def lnlike(self, theta: np.ndarray, realdata: np.ndarray, realerr:
+               np.ndarray, sampling, wavelength, uvcoords):
+        """Takes theta vector and the x, y and the yerr of the theta.
+        Returns a number corresponding to how good of a fit the model is to your
+        data for a given set of parameters, weighted by the data points.  That it is more important"""
+        if self.numerical:
+            datamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
+        else:
+            datamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
+
+        if self.vis:
+            realdata, realphase = realdata
+            realdataerr, realphaseerr = realerr
+
+            # Multiplies the total_flux onto the vis to get corr_flux
+            model_tot_flux = np.sum(self.model.get_flux(wavelength, *self.bb_params))
+            datamod *= model_tot_flux
+        else:
+            datamod = datamod*np.conj(datamod)
+
+        return -0.5*np.sum((realdata-datamod/realerr)**2)
+
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
         determining them setting the same).
@@ -104,57 +149,16 @@ class MCMC:
         """
         check_conditons = []
         for i, o in enumerate(self.priors):
-            if (theta[i] > o[0] and theta[i] < o[1]):
+            if o[0] < theta[i] < o[1]:
                 check_conditons.append(True)
             else:
                 check_conditons.append(False)
 
-        # Checks if all conditions are fulfilled
+        # Checks if all priors are fulfilled
         if all(check_conditons):
             return 0.0
         else:
             return -np.inf
-
-    def lnlike(self, theta: np.ndarray, realdata: np.ndarray, realerr:
-               np.ndarray, sampling, wavelength, uvcoords):
-        """Takes theta vector and the x, y and the yerr of the theta.
-        Returns a number corresponding to how good of a fit the model is to your
-        data for a given set of parameters, weighted by the data points.  That it is more important"""
-        if self.numerical:
-            datamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
-        else:
-            datamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
-
-        if self.vis:
-            realdata, realphase = realdata
-            realdataerr, realphaseerr = realerr
-
-            # Multiplies the total_flux onto the vis to get corr_flux
-            mode_tot_flux = self.model.get_flux(wavelength, *self.bb_params)
-            datamod *= mode_tot_flux
-        else:
-            datamod = datamod*np.conj(datamod)
-
-        return -0.5*np.sum((realdata-datamod)**2/realerr)
-
-    def lnprob(self, theta: np.ndarray, realdata, realerr, sampling,
-               wavelength, uvcoords) -> np.ndarray:
-        """This function runs the lnprior and checks if it returned -np.inf, and
-        returns if it does. If not, (all priors are good) it returns the inlike for
-        that model (convention is lnprior + lnlike)
-
-        Parameters
-        ----------
-        theta: List
-            A vector that contains all the parameters of the model
-
-        Returns
-        -------
-        """
-        lp = self.lnprior(theta)
-        if not lp == 0.0:
-            return -np.inf
-        return lp + self.lnlike(theta, realdata, realerr, sampling, wavelength, uvcoords)
 
     def model4fit_analytical(self, theta: np.ndarray, sampling, wavelength,
                              uvcoords) -> np.ndarray:
@@ -172,11 +176,11 @@ class MCMC:
             model_img = self.model.eval_model(theta, sampling)
 
         fr = FFT(model_img, wavelength)
-        ft, amp, phase = fr.pipeline()
+        ft, amp, phase = fr.pipeline(vis2=self.vis2)
 
         # rescaling of the uv-coords to the corresponding image size
-        xcoord, ycoord = correspond_uv2scale(fr.fftscale, fr.model_size//2, uvcoords)
-        amp = [amp[j, i] for i, j in zip(xcoord, ycoord)]
+        self.xcoord, self.ycoord = correspond_uv2scale(fr.fftscale, fr.model_size//2, uvcoords)
+        amp = [amp[j, i] for i, j in zip(self.xcoord, self.ycoord)]
         return amp, phase, ft
 
     def get_best_fit(self, sampler) -> np.ndarray:
@@ -192,18 +196,25 @@ class MCMC:
 
         # Gets the best value and calculates a full model
         self.theta_max = self.get_best_fit(sampler)
+        print(self.theta_max, "Theta max")
 
         if self.numerical:
             # For debugging only
             datamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
-            if not self.vis:
-                datamod = datamod*np.conj(datamod)
-            else:
+            if self.vis:
                 self.model.get_flux(wavelength, *self.bb_params)
+            else:
+                datamod = datamod*np.conj(datamod)
+
             self.datamod = datamod
-            best_fit_model = abs(ft)
+            # TODO: fix this!
+            best_fit_model = self.model.eval_model(self.theta_max, sampling)
+            best_fit_model = abs(FFT(best_fit_model, wavelength).pipeline(vis2=True)[1])
         else:
             best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
+
+        # Correspond the best fit to the uv coords
+        print(datamod, "best fit data", self.realdata, "real data")
 
         # Takes a slice of the model and shows vis2-baselines 
         size_model = len(best_fit_model)
@@ -276,7 +287,7 @@ class MCMC:
             with open(f"{self.model.name}_data.txt", "w+") as f:
                 f.write(self.write_data())
 
-def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = True):
+def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = False):
     """Fetches the required info and then gets the uvcoords and makes the
     data"""
     readout = ReadoutFits(fits_file)
@@ -289,39 +300,43 @@ def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = True):
 
     uvcoords = readout.get_uvcoords()
     wavelength = readout.get_wl()[wl_ind]
+    print(data)
 
     return (data, dataerr, sampling, wavelength, uvcoords)
 
-def set_mc_params(nwalkers, ndim, niter_burn, niter):
+def set_mc_params(initial, nwalkers, ndim, niter_burn, niter):
     """Sets the mcmc parameters"""
     # This vector defines the starting points of each walker for the amount of
     # dimensions
-    # The number of walkers (must be even) and the number of dimensions/parameters
-    p0 = np.random.rand(nwalkers, ndim)
+    p0 = [np.array(initial) + 1e-7*np.random.randn(ndim) for i in range(nwalkers)]
 
     return (p0, nwalkers, ndim, niter_burn, niter)
 
 if __name__ == "__main__":
+    # TODO: make the code work for the compound model make the compound model
+    # work
     # Initial sets the theta
-    initial = np.array([20.])
-    priors = [[1., 100.] ]
-    labels = ["FWHM", "Q"]
+    initial = np.array([45., 45., 45., 0.5, 3.5, 5.2, 7.6])
+    priors = [[0., 360.], [0., 360.], [0., 360.],
+              [.1, 3.], [3., 5.], [5., 7.], [7., 9.]]
+    labels = ["ELL_ANGLE", "AX_ANGLE", "INC_ANGLE","R_1", "R_2", "R_3" ,"R_4"]
     bb_params = [0.55, 1500, 19]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
-    vis = True
+
+    # Specifies if corr_flux is use 'vis=True' or vis2 'vis=False'
+    vis = False
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f,sampling=128, wl_ind=101, vis=vis)
+    data = set_data(fits_file=f, sampling=512, wl_ind=101, vis=vis)
 
     # Set the mcmc parameters and the the data to be fitted.
-    mc_params = set_mc_params(nwalkers=20, ndim=len(initial), niter_burn=100, niter=1000)
-
+    mc_params = set_mc_params(initial=initial, nwalkers=100, ndim=len(initial), niter_burn=100, niter=1000)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Gauss2D, data, mc_params, priors, labels, numerical=True,
+    mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
                 vis=vis, bb_params=bb_params, out_path=out_path)
     mcmc.pipeline()
 

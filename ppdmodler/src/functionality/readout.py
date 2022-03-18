@@ -107,7 +107,7 @@ class ReadoutFits:
             The vis2err for a specific wavelength
         """
         vis2data, vis2err  = map(lambda x: x[:6], self.get_vis2()[:2])
-        vis2datawl, vis2errwl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [vis2data, vis2err])
+        vis2data4wl, vis2err4wl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [vis2data, vis2err])
 
         return vis2data4wl, vis2err4wl
 
