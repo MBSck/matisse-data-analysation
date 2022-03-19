@@ -4,7 +4,7 @@ import os
 import time
 import subprocess
 
-PATH2SCRIPT = 
+PATH2SCRIPT = "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools/automaticPipeline.py"
 
 def set_script_arguments(rawdir: str, calibdir: str, resdir: str,
                          do_l: bool, do_flux: bool) -> str:
@@ -34,13 +34,16 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool) -> i
 
     for i in [True, False]:
         tic = time.perf_counter()
-        path = "/".join(path_lst := ["coherent" if i else "incoherent", "lband" if do_l else "nband" ])
+        path_lst = ["coherent" if i else "incoherent", "lband" if do_l else "nband" ]
+        path = "/".join(path_lst)
         script_params = set_script_arguments(rawdir, calibdir, resdir,
                                              do_l, do_flux=i)
-        if not os.path.exists(subdir := os.path.join(resdir, path)):
+        subdir = os.path.join(resdir, path)
+        if not os.path.exists(subdir):
             os.makedirs(subdir)
 
-        subprocess.call(["python", PATH2SCRIPT, script_params], stdout=PIPE, stderr=PIPE)
+        process_name = "python " + PATH2SCRIPT + " " + script_params
+        process = subprocess.run(process_name, shell=True)
 
         try:
             os.system(f"mv -f {os.path.join(resdir, 'Iter1/*.rb')} {subdir}")
@@ -54,8 +57,8 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool) -> i
     return 0
 
 if __name__ == "__main__":
-    rawdir = "Hello"
-    calibdir = "Peter"
-    resdir = "Pedigrew"
+    rawdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/RAW/20190514"
+    calibdir = rawdir
+    resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
     reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
