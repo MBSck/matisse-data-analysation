@@ -4,52 +4,59 @@ import os
 import time
 import subprocess
 
+from typing import Any, Dict, List, Union, Optional
+
+# TODO: Look up high spectral binning and make savefile somehow show all
+# important values
+# from mat_tools import mat_autoPipeline as mp
+
 PATH2SCRIPT = "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools/automaticPipeline.py"
 
-def set_script_arguments(rawdir: str, calibdir: str, resdir: str,
-                         do_l: bool, do_flux: bool) -> str:
-    """Sets the arguments that are then passed to the 'automaticPipline.py'
+def set_script_arguments(do_flux: bool, array: str,
+                         spectral_binning: List = [5, 7]) -> str:
+    """Sets the arguments that are then passed to the 'mat_autoPipeline.py'
     script"""
-    directories = f" --dirRaw={rawdir} --dirCalib={calibdir} --dirResult={resdir} "
-    general_params = "--nbCore=10 --overwrite=TRUE --maxIter=1 "
+    binning_L, binning_N = spectral_binning
 
-    if do_flux:
-        corr_flux = "TRUE"
-    else:
-        corr_flux = "FALSE"
+    tel = 3 if array == "AT" else 0
+    flux = "corrFlux=TRUE/useOpdMod=TRUE/coherentAlgo=2/" if do_flux else ""
 
-    param_l_band = f"--paramL=/corrFlux={corr_flux}/coherentAlgo=2/compensate=[pb,rb,nl,if,bp,od]/cumulBlock=TRUE/spectralBinning=11/ "
+    paramL_lst = f"/spectralBinning={binning_L}/{flux}compensate='pb,rb,nl,if,bp,od'"
+    paramN_lst = f"/replaceTel={tel}/{flux}spectralBinning={binning_N}"
 
-    if do_l:
-        additional_params = "--skipN"
-    else:
-        additional_params = "--skipL"
+    return (paramL_lst, paramN_lst)
 
-    return directories+general_params+param_l_band+additional_params
-
-def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool) -> int:
+def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool,
+                       array: str) -> int:
     """Runs the pipeline for coherent and incoherent reduction."""
     if not os.path.exists(resdir):
         os.makedirs(resdir)
 
     for i in [True, False]:
+        # Takes the time at the start of execution
         tic = time.perf_counter()
+
         path_lst = ["coherent" if i else "incoherent", "lband" if do_l else "nband" ]
         path = "/".join(path_lst)
-        script_params = set_script_arguments(rawdir, calibdir, resdir,
-                                             do_l, do_flux=i)
+        paramL, paramN = set_script_arguments(do_flux=i, array)
+        skipL, skipN = int(not do_l), int(do_l)
+
         subdir = os.path.join(resdir, path)
         if not os.path.exists(subdir):
             os.makedirs(subdir)
 
-        process_name = "python " + PATH2SCRIPT + " " + script_params
-        process = subprocess.run(process_name, shell=True)
-
+        res = mp.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir,
+                                  dirCalib=calibdir,
+                                  nbCore=6, resol='',
+                                  paramL=paramL, paramN=paramN,
+                                  overwrite=0, maxIter=1,
+                                  skipL=skipL, skipN=skipN)
         try:
             os.system(f"mv -f {os.path.join(resdir, 'Iter1/*.rb')} {subdir}")
         except Exception as e:
             print(e)
 
+        # Takes the time at end of execution
         toc = time.perf_counter()
         print(f"Executed the {path_lst[0]} {path_lst[1]} reduction in {tic-tic}"
               " seconds")
@@ -61,4 +68,4 @@ if __name__ == "__main__":
     calibdir = rawdir
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
-    reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
+    # reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
