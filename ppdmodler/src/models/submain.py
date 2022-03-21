@@ -20,11 +20,11 @@ def main():
     # model = g.eval_model([1.], 128, 256)
     # flux = g.get_flux(0.55, 1500, 19, wavelength)
 
-    cp = CompoundModel(InclinedDisk)
+    cp = CompoundModel()
     model = cp.eval_model([45, 45, 45, 1., 3., 4., 6., 7., 10.], 128, 256)
-    flux = cp.get_flux(0.55, 1500, 19, wavelength)
+    flux = cp.get_flux(0.55, 1500, 19, 140, wavelength)
 
-    ft, amp, phase = FFT(model, wavelength).pipeline(vis=True)
+    ft, amp, phase = FFT(model, wavelength).pipeline(vis2=True)
 
     amp *= np.sum(flux)
 

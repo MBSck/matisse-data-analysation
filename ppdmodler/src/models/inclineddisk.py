@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords, \
-        temperature_gradient, blackbody_spec, mas2rad
+        temperature_gradient, mas2rad
 
 # TODO: Finish revamping both the eval_mod and eval_vis so the fit to the new
 # data format

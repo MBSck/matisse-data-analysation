@@ -71,8 +71,8 @@ def get_nights(lines: List, search_term: str = "Night",
     return night_dict
 
 
-def save_night_lst(input_dict: List, output_name: str):
-    with open(output_name, "wb") as fp:
+def save_night_lst(input_dict: List, output_path: str):
+    with open(output_path, "wb") as fp:
         pickle.dump(input_dict, fp)
 
 

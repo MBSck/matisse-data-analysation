@@ -288,7 +288,7 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
     return B, uvcoords
 
-def sublimation_radius(T_sub: int, L_star: int):
+def sublimation_radius(T_sub: int, L_star: int, distance: float):
     """Calculates the sublimation radius of the disk
 
     Parameters
@@ -303,11 +303,11 @@ def sublimation_radius(T_sub: int, L_star: int):
     Returns
     -------
     R_sub: int
-        The sublimation_radius in au
+        The sublimation_radius in radians
     """
     L_star *= SOLAR_LUMINOSITY
-
-    return np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))/AU_M
+    sub_radius_au = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))/AU_M
+    return (sub_radius_au/distance)*ARCSEC2RADIANS
 
 def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
     """Temperature gradient model determined by power-law distribution.
@@ -331,8 +331,9 @@ def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: i
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
     return T_0*(radius/r_0)**(-q)
 
-def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wavelength: float):
-    """Gets the blackbody spectrum at a certain T(r). Per Ring wavelength and temperature dependent
+def plancks_law_nu(radius: float, q: float, r_0: Union[int, float], T_0: int, wavelength: float):
+    """Gets the blackbody spectrum at a certain T(r). Wavelength and
+    temperature dependent. The wavelength will be converted to frequency
 
     Parameters
     ----------
@@ -344,16 +345,19 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
         The initial radius
     T_0: float
         The temperature at r_0
+    wavelength: float
+        The wavelength to be converted to frequency
 
     Returns
     -------
-    Planck's law B_lambda(lambda, T): float
+    Planck's law/B_nu(nu, T): float
         The spectral radiance (the power per unit solid angle) of a black-body
     """
     T = temperature_gradient(radius, q, r_0, T_0)
 
-    factor = (2*PLANCK_CONST*SPEED_OF_LIGHT**2)/wavelength**5
-    exponent = (PLANCK_CONST*SPEED_OF_LIGHT)/(wavelength*BOLTZMAN_CONST*T)
+    nu = SPEED_OF_LIGHT/wavelength
+    factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
+    exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)
     divisor = np.exp(exponent)-1
 
     return factor/divisor
@@ -384,6 +388,11 @@ def blackbody_spec(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
 
-    radius, axis = set_size(128)
+    radius, axis = set_size(300, 300)
+    print(radius)
     print(r_0  := sublimation_radius(1500, 19, 140))
-    flux = blackbody_spec(radius, 0.55, r_0, 150, 8e-06)
+    flux = plancks_law_nu(radius, 0.55, r_0, 150, 8e-06)
+    plt.imshow(flux*1e26)
+    plt.show()
+    print((300/140)*ARCSEC2RADIANS)
+    print(flux)

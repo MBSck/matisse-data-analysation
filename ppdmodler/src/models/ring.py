@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.functionality.baseClasses import Model
 from src.functionality.constant import I
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        delta_fct, blackbody_spec, mas2rad, trunc
+        delta_fct, mas2rad, trunc
 
 # TODO: Make the addition of the visibilities work properly, think of OOP
 # abilities

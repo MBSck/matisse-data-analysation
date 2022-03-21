@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.utilities import blackbody_spec, sublimation_radius
+from src.functionality.utilities import plancks_law_nu, sublimation_radius
 
 
 # Classes
@@ -43,7 +43,7 @@ class Model(metaclass=ABCMeta):
     def axis_mod(self):
         return self._axis_mod
 
-    def get_flux(self, q: float, T_sub: int, L_star: float, wavelength: float) -> np.array:
+    def get_flux(self, q: float, T_sub: int, L_star: float, distance: float, wavelength: float) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
@@ -61,8 +61,8 @@ class Model(metaclass=ABCMeta):
         -------
         flux: np.ndarray
         """
-        r_sub = sublimation_radius(T_sub, L_star)
-        flux = blackbody_spec(self._radius, q, r_sub, T_sub, wavelength)
+        r_sub = sublimation_radius(T_sub, L_star, distance)
+        flux = plancks_law_nu(self._radius, q, r_sub, T_sub, wavelength)
 
         if self._radius_range:
             flux[self._radius_range] = 0.
