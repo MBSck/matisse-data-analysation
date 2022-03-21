@@ -45,7 +45,7 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool,
         if not os.path.exists(subdir):
             os.makedirs(subdir)
 
-        res = mp.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir,
+        mp.mat_autoPipeline(dirRaw=rawdir, dirResult=resdir,
                                   dirCalib=calibdir,
                                   nbCore=6, resol='',
                                   paramL=paramL, paramN=paramN,
