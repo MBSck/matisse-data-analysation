@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Union, Optional
 
 # TODO: Look up high spectral binning and make savefile somehow show all
 # important values
-# from mat_tools import mat_autoPipeline as mp
+from mat_tools import mat_autoPipeline as mp
 
 PATH2SCRIPT = "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools/automaticPipeline.py"
 
@@ -38,7 +38,7 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str, do_l: bool,
 
         path_lst = ["coherent" if i else "incoherent", "lband" if do_l else "nband" ]
         path = "/".join(path_lst)
-        paramL, paramN = set_script_arguments(do_flux=i, array)
+        paramL, paramN = set_script_arguments(i, array)
         skipL, skipN = int(not do_l), int(do_l)
 
         subdir = os.path.join(resdir, path)
@@ -68,4 +68,4 @@ if __name__ == "__main__":
     calibdir = rawdir
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
-    # reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
+    reduction_pipeline(rawdir, calibdir, resdir, False, "UT")
