@@ -38,6 +38,16 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
 
     for i in [True, False]:
         for j in [True, False]:
+
+            # Takes the time at the start of execution
+            start_time = time.time()
+
+            path_lst = ["coherent" if j else "incoherent", "lband" if i else "nband" ]
+            path = "/".join(path_lst)
+            subdir = os.path.join(resdir, path)
+            paramL, paramN = set_script_arguments(j, array)
+            skipL, skipN = int(not i), int(i)
+
             # Removes the old '.sof'-files
             try:
                 os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
@@ -47,15 +57,6 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
                 print("Removing of '.sof'- and '.rb'-files to {subdir} failed!")
                 print(e)
 
-            # Takes the time at the start of execution
-            start_time = time.time()
-
-            path_lst = ["coherent" if j else "incoherent", "lband" if i else "nband" ]
-            path = "/".join(path_lst)
-            paramL, paramN = set_script_arguments(j, array)
-            skipL, skipN = int(not i), int(i)
-
-            subdir = os.path.join(resdir, path)
             if not os.path.exists(subdir):
                 os.makedirs(subdir)
 
