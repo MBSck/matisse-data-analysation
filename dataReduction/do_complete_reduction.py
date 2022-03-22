@@ -38,6 +38,13 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
 
     for i in [True, False]:
         for j in [True, False]:
+            # Removes the old '.sof'-files
+            try:
+                os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
+            except Exception as e:
+                print("Removing of '.sof'-files to {subdir} failed!")
+                print(e)
+
             # Takes the time at the start of execution
             start_time = time.time()
 
@@ -60,12 +67,6 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
                 os.system(f"mv -f {os.path.join(resdir, 'Iter1/*.rb')} {subdir}")
             except Exception as e:
                 print("Moving of files to {subdir} failed!")
-                print(e)
-
-            try:
-                os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
-            except Exception as e:
-                print("Removing of '.sof'-files to {subdir} failed!")
                 print(e)
 
             # Takes the time at end of execution
