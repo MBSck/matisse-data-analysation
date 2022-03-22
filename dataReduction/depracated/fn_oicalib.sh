@@ -36,9 +36,9 @@ do_oicalib() {
 # do
 #     printf "%s is in %s\n" "$i" "${RAWLIST[$i]}"
 # done
-do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb   
-do_oicalib mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb 
-do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb 
+do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb
+do_oicalib mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb mat_raw_estimates.2022-02-19T06_31_49.AQUARIUS.rb
+do_oicalib mat_raw_estimates.2022-02-19T06_00_08.AQUARIUS.rb mat_raw_estimates.2022-02-19T07_00_22.AQUARIUS.rb
 
 exit 0
 }

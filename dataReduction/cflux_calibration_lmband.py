@@ -144,11 +144,11 @@ for i in range(len(targets)):
         calib_err=np.array(temp_calib_err)
         calib_relerr = calib_err / calib_val
 
-        #need to correct for resolution effects!!!!! 
+        #need to correct for resolution effects!!!!!
         ######################
         ## set this value! ###
         ######################
-        d = 2.353381 #mas, diameter of calibrator star 
+        d = 2.353381 #mas, diameter of calibrator star
         bls = np.sqrt( np.square(u) + np.square(v)  )
         #use uniform disk Fourier Transform to correct the visibilities
         for b in range(len(calib_val)):

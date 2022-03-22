@@ -6,10 +6,12 @@ import subprocess
 
 from typing import Any, Dict, List, Union, Optional
 
-# TODO: Look up high spectral binning and make savefile somehow show all
-# important values
+from fluxcal import fluxcal
 from mat_tools import mat_autoPipeline as mp
 
+# TODO: Look up high spectral binning and make savefile somehow show all
+
+# important values
 PATH2SCRIPT = "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools/automaticPipeline.py"
 
 def set_script_arguments(do_flux: bool, array: str,
@@ -68,4 +70,15 @@ if __name__ == "__main__":
     calibdir = rawdir
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
-    reduction_pipeline(rawdir, calibdir, resdir, False, "UT")
+    # reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
+
+    sci_file = ""
+    cal_file = ""
+    output_file = ""
+    cal_database_dir = ""
+    cal_database_path = []
+    output_fig_dir = ""
+
+    fluxcal(sci_file, cal_file, output_file,
+            cal_database_paths, 'corrflux',
+            output_fig_dir)
