@@ -6,7 +6,6 @@ import subprocess
 
 from typing import Any, Dict, List, Union, Optional
 
-from fluxcal import fluxcal
 from mat_tools import mat_autoPipeline as mp
 
 # TODO: Look up high spectral binning and make savefile somehow show all
@@ -71,14 +70,5 @@ if __name__ == "__main__":
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
     # reduction_pipeline(rawdir, calibdir, resdir, do_l=True)
+    reduction_pipeline(rawdir, calibdir, resdir, do_l=False)
 
-    sci_file = ""
-    cal_file = ""
-    output_file = ""
-    cal_database_dir = ""
-    cal_database_path = []
-    output_fig_dir = ""
-
-    fluxcal(sci_file, cal_file, output_file,
-            cal_database_paths, 'corrflux',
-            output_fig_dir)
