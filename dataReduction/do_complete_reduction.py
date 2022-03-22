@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Union, Optional
 from mat_tools import mat_autoPipeline as mp
 
 # TODO: Look up high spectral binning and make savefile somehow show all
+# High spectral binning is 7, 49
 
 # important values
 PATH2SCRIPT = "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/oca_pipeline/tools/automaticPipeline.py"
@@ -58,6 +59,13 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
             try:
                 os.system(f"mv -f {os.path.join(resdir, 'Iter1/*.rb')} {subdir}")
             except Exception as e:
+                print("Moving of files to {subdir} failed!")
+                print(e)
+
+            try:
+                os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
+            except Exception as e:
+                print("Removing of '.sof'-files to {subdir} failed!")
                 print(e)
 
             # Takes the time at end of execution
