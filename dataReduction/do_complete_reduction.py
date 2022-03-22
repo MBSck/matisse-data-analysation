@@ -69,6 +69,6 @@ if __name__ == "__main__":
     calibdir = rawdir
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/test"
 
-    # reduction_pipeline(rawdir, calibdir, resdir, True, array)
-    reduction_pipeline(rawdir, calibdir, resdir, False, array)
+    reduction_pipeline(rawdir, calibdir, resdir, True, "UT")
+    reduction_pipeline(rawdir, calibdir, resdir, False, "UT")
 
