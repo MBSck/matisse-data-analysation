@@ -41,7 +41,8 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
             # Removes the old '.sof'-files
             try:
                 os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
-                os.system(f"rm {os.path.join(resdir, 'Iter1/*.rb')}")
+                os.system(f"rm -r {os.path.join(resdir, 'Iter1/*.rb')}")
+                print("Old files deleted!")
             except Exception as e:
                 print("Removing of '.sof'- and '.rb'-files to {subdir} failed!")
                 print(e)
