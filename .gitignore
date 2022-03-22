@@ -7,6 +7,8 @@ drsCodeGuide/
 GTOProposals/
 otherPeoplesScripts/
 
+dataReduction/calib_spec_databases
+
 ppdmodler/build/
 ppdmodler/dist/
 ppdmodler/ppdmodler.egg-info/
