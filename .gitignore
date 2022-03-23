@@ -27,11 +27,11 @@ query/getdata_ESO_archive.py
 
 observation/P108
 observation/manualsEso
-observation/CALIBRATOR_FIND_1.6
-observation/CALIBRATOR_FIND_1.6.zip
-observation/obmaking/obs
-observation/obmaking/MATISSE_create_OB_2.py
-observation/obmaking/query_CDS.py
+observation/phase1/make_asprox.py
+observation/phase2/CALIBRATOR_FIND_1.6
+observation/phase2/obs
+observation/phase2/MATISSE_create_OB_2.py
+observation/phase2/query_CDS.py
 
 # General stuff to ignore
 # Ignored folder
