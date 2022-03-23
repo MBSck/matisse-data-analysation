@@ -53,9 +53,9 @@ class OpticallyThinSphere(Model):
         try:
             diameter = mas2rad(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [diameter]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [diameter]")
 
         self._size, self._sampling = size, sampling
         self._radius, self._axis_mod = set_size(size, sampling, centre)
@@ -89,9 +89,9 @@ class OpticallyThinSphere(Model):
         try:
             diameter = mas2rad(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [diameter]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [diameter]")
 
         self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(sampling, wavelength)

@@ -50,12 +50,11 @@ class CompoundModel(Model):
             pos_angle_ellipsis, pos_angle_axis, inc_angle = theta[:3]
             param_lst = np.array(theta[3:])
             self.r_outer = mas2rad(theta[~0])
-        except Exception as e:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [pos_angle_ellipsis, pos_angle_axis, inc_angle,"
-                  " r_0, r_1, ...]")
-            print(e)
-            sys.exit()
+        except:
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [pos_angle_ellipsis, pos_angle_axis,"
+                               " inc_angle, r_0, r_1, ...]")
 
         if sampling is None:
             sampling = size

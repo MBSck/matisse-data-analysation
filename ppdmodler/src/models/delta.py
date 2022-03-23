@@ -44,9 +44,9 @@ class Delta(Model):
         try:
             flux = float(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must"
-                  " be of the form [flux]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must"
+                               " be of the form [flux]")
 
         self._size = size
 
@@ -73,9 +73,9 @@ class Delta(Model):
         try:
             flux = float(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must"
-                  " be of the form [flux]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                                " Check input arguments, theta must"
+                                " be of the form [flux]")
 
         self._sampling = sampling
 

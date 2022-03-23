@@ -73,12 +73,11 @@ class Ring(Model):
             else:
                 r_0 = mas2rad(theta[0])
                 pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[1:])
-        except Exception as e:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [r_0], or [r_0, pos_angle_ellipsis, pos_angle_axis,"
-                  " inc_angle]")
-            print(e)
-            sys.exit()
+        except:
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [r_0], or [r_0, pos_angle_ellipsis,"
+                               " pos_angle_axis, inc_angle]")
 
         self._size, self._sampling = size, sampling
 
@@ -135,10 +134,9 @@ class Ring(Model):
             r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
             q, T_0 = theta[2:]
         except Exception as e:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of the form [r_0,"
-                  " r_max, q, T_0]")
-            print(e)
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of the"
+                               " form [r_0, r_max, q, T_0]")
 
         self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)

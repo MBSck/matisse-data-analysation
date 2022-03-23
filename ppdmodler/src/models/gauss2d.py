@@ -59,9 +59,9 @@ class Gauss2D(Model):
         try:
             fwhm = mas2rad(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [fwhm]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [fwhm]")
 
         self._size, self._sampling = size, sampling
         self._radius, self._axis_mod  = set_size(size, sampling, centre)
@@ -96,9 +96,9 @@ class Gauss2D(Model):
         try:
             fwhm = mas2rad(theta[0])
         except:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                      " the form [fwhm]")
-            sys.exit()
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be"
+                               " of the form [fwhm]")
 
         self._sampling = sampling
         B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
@@ -107,9 +107,9 @@ class Gauss2D(Model):
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model([3.], 128, 300, wavelength=8e-06)
+    g_model = g.eval_model([5.], 128, 300)
     print(g._radius)
-    g_flux = g.get_flux(8e-6, 0.55, 1500, 19)
+    g_flux = g.get_flux(0.55, 1500, 19, 140, 8e-6)
     print(g_flux)
     plt.imshow(g_model*g_flux)
     plt.show()

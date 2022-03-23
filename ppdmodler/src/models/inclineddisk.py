@@ -72,12 +72,11 @@ class InclinedDisk(Model):
             else:
                 r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
                 pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[2:])
-        except Exception as e:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [r_0], or [r_0, pos_angle_ellipsis, pos_angle_axis,"
-                  " inc_angle]")
-            print(e)
-            sys.exit()
+        except:
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [r_0], or [r_0, pos_angle_ellipsis,"
+                               " pos_angle_axis, inc_angle]")
 
         self._size, self._sampling = size, sampling
 
@@ -103,7 +102,7 @@ class InclinedDisk(Model):
 #                    size: int, sampling: Optional[int] = None,
 #                    centre: Optional[int] = None) -> np.array:
 #         """Evaluates the Model
-# 
+#
 #         Parameters
 #         ----------
 #         r_0: int | float
@@ -128,11 +127,11 @@ class InclinedDisk(Model):
 #             The sampling of the object-plane
 #         centre: int, optional
 #             The centre of the model image
-# 
+#
 #         Returns
 #         --------
 #         model: np.array
-# 
+#
 #         See also
 #         --------
 #         set_size()
@@ -147,13 +146,13 @@ class InclinedDisk(Model):
 #                   " pos_angle_ellipsis, pos_angle_axis, inc_angle]")
 #             print(e)
 #             sys.exit()
-# 
+#
 #         self._size, self._sampling, self._wavelength = size, sampling, wavelength
 #         radius, self._axis_mod = set_size(size, sampling, angles=[pos_angle_ellipsis, pos_angle_axis, inc_angle])
-# 
+#
 #         output_lst = ((2*np.pi*radius*blackbody_spec(radius, q, r_0, T_0, wavelength))/distance**2)*np.cos(inc_angle)
 #         output_lst[radius < r_0], output_lst[radius > r_max] = 0., 0.
-# 
+#
 #         return output_lst
 
     @timeit
@@ -191,12 +190,11 @@ class InclinedDisk(Model):
             r_0, r_max, distance = map(lambda x: mas2rad(x), theta[:3])
             q, T_0 = theta[3:5]
             pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[~2:])
-        except Exception as e:
-            print(f"{self.name}.{inspect.stack()[0][3]}(): Check input arguments, theta must be of"
-                  " the form [r_0, r_max, q, T_0, pos_angle_ellipsis,"
-                  " pos_angle_axis, inc_angle]")
-            print(e)
-            sys.exit()
+        except:
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [r_0, r_max, q, T_0, pos_angle_ellipsis,"
+                               " pos_angle_axis, inc_angle]")
 
         self._sampling, self._wavelength = sampling, wavelength
 
