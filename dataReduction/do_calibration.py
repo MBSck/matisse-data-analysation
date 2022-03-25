@@ -25,11 +25,12 @@ from fluxcal import fluxcal
 #                            deafult: '' (= no figure made)
 
 if __name__ == "__main__":
-    inputfile_sci = ""
-    inputfile_cal = ""
+    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/"
+    inputfile_sci = "nband/mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/TARGET_RAW_INT_0001.fits"
+    inputfile_cal = "nband/mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/CALIB_RAW_INT_0001.fits"
 
-    output_dir = ""
-    outputfile = ""
+    output_dir = 
+    outputfile = "TARGET_CAL_INT_0001.fits"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
