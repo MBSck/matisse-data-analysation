@@ -35,7 +35,7 @@ CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FI
 def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     """For documentation see 'do_reduction()'"""
     print(f"Calibrating {os.path.basename(folder_dir_tar)} with "\
-          "{os.path.basename(folder_dir_cal)}")
+          f"{os.path.basename(folder_dir_cal)}")
     dir_start = "TAR"
 
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
@@ -62,7 +62,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
 
     for i, o in enumerate(targets):
         print("------------------------------------------------------------")
-        print(f"Calibrating {os.path.basename(o)} with "\
+        print(f"Processing {os.path.basename(o)} with "\
               f"{os.path.basename(calibrators[i])}")
         output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
         fluxcal(o, calibrators[i], output_file,\
