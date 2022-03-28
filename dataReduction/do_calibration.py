@@ -53,8 +53,6 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str,
     calibrators.sort(key=lambda x: x[-8:])
     dir_start += "-CAL"
 
-    # Debug
-    print(targets, calibrators)
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
     dir_name = dir_name.split('/')[-1].replace("raw", "cal")
@@ -64,6 +62,8 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str,
     output_dir = os.path.join(base_path, "calib", new_dir_name)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    print(len(targets), len(calibrators))
 
     for i, o in enumerate(targets):
         print("------------------------------------------------------------")
@@ -97,12 +97,14 @@ def do_reduction(base_path: str, folder_dir_tar: str = None,
         single_reduction(folder_dir_tar, folder_dir_cal, mode)
     else:
         subdirs = glob(os.path.join(base_path, "*.rb"))
+
+        # Rotates the list so it does not check itself
         subdirs_copy = deque(subdirs.copy())
         subdirs_copy.rotate(1)
 
         for i in subdirs:
             for j in subdirs_copy:
-                if not i == j:
+                if i != j:
                     single_reduction(i, j, mode)
 
 def do_full_reduction(folder: str) -> None:
