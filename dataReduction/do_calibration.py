@@ -61,7 +61,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
         os.makedirs(output_dir)
 
     for i, o in enumerate(targets):
-    print("------------------------------------------------------------")
+        print("------------------------------------------------------------")
         print(f"Calibrating {os.path.basename(o)} with "\
               f"{os.path.basename(calibrators[i])}")
         output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
