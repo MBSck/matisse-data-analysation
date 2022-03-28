@@ -45,6 +45,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
         print("No 'CALIB_RAW_INT'-files found! Skipping {folder_dir_cal}")
+        return -1
     calibrators.sort(key=lambda x: x[-8:])
     dir_start += "-CAL"
 
