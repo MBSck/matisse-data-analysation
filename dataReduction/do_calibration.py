@@ -2,6 +2,7 @@ import os
 
 from glob import glob
 from fluxcal import fluxcal
+from collections import deque
 
 # inputfile_sci = 'path/to/raw/science/fits/file.fits'
 # inputfile_cal = 'path/to/raw/calibrator/fits/file.fits'
@@ -87,6 +88,8 @@ def do_reduction(base_path: str, folder_dir_tar: str = None,
         single_reduction(folder_dir_tar, folder_dir_cal, mode)
     else:
         subdirs = glob(os.path.join(base_path, "*.rb"))
+        subdirs_copy = deque(subdirs.copy())
+        subdirs_copy.rotate(1)
         for i, o in enumerate(subdirs):
             if not o == subdirs[i]:
                 single_reduction(o, subdirs[i], mode)
