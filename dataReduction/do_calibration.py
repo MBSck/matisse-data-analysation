@@ -64,7 +64,7 @@ if __name__ == "__main__":
     folder_target = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/"
     folder_cal = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/"
     inputfile_sci = os.path.join(base_path, folder_target)
-    inputfile_cal = os.path.join(base_path, folder_dir_cal)
+    inputfile_cal = os.path.join(base_path, folder_cal)
 
     do_reduction(folder_target, folder_cal)
 
