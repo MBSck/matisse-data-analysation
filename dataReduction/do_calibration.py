@@ -61,11 +61,10 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
 if __name__ == "__main__":
     # Gets the base paths
     base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
-    folder_target = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/"
-    folder_cal = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/"
-    inputfile_sci = os.path.join(base_path, folder_target)
-    inputfile_cal = os.path.join(base_path, folder_cal)
+    folder_target = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/"
+    folder_cal = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/"
+    folder_target = os.path.join(base_path, folder_target)
+    folder_cal = os.path.join(base_path, folder_cal)
 
     do_reduction(folder_target, folder_cal)
-
 
