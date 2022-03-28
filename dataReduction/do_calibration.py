@@ -101,8 +101,17 @@ def do_reduction(base_path: str, folder_dir_tar: str = None,
                 if not i == j:
                     single_reduction(i, j, mode)
 
+def do_full_reduction(folder: str):
+    modes, bands = {"coherent": "corrflux", "incoherent": "flux"},\
+            ["lband", "nband"]
+
+    for i, o in modes.items():
+        path = os.path.join(folder, i)
+        for j in bands:
+            temp_path = os.path.join(path, j)
+            do_reduction(temp_path, mode=o)
 
 if __name__ == "__main__":
-    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
-    do_reduction(base_path)
+    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514"
+    do_full_reduction(base_path)
 
