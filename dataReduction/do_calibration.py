@@ -34,11 +34,9 @@ CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FI
 
 def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     """For documentation see 'do_reduction()'"""
-    dir_start = ""
+    dir_start = "TAR"
 
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
-    print(targets)
-    dir_start = "TAR"
     if not targets:
         targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
         dir_start = "CAL"
@@ -47,7 +45,6 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
         print("No 'CALIB_RAW_INT'-files found! Skipping {folder_dir_cal}")
-        return -1
     calibrators.sort(key=lambda x: x[-8:])
     dir_start += "-CAL"
 
@@ -91,9 +88,12 @@ def do_reduction(base_path: str, folder_dir_tar: str = None,
         subdirs = glob(os.path.join(base_path, "*.rb"))
         subdirs_copy = deque(subdirs.copy())
         subdirs_copy.rotate(1)
-        for i, o in enumerate(subdirs):
-            if not o == subdirs[i]:
-                single_reduction(o, subdirs[i], mode)
+
+        for i in subdirs:
+            for j in subdirs_copy:
+                if not i == j:
+                    print(i, j)
+                    single_reduction(i, j, mode)
 
 
 if __name__ == "__main__":
