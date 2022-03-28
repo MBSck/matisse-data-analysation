@@ -33,15 +33,15 @@ CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FI
 
 def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
     """Takes two folders and calibrates their contents together"""
-    targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*.fits"))
+    targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
     if not targets:
-        targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*.fits"))
-    targets.sort(key=lambda x: x[-6])
+        targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
+        targets.sort(key=lambda x: x[-6:])
 
-    calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*.fits"))
+    calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
         raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
-    calibrators.sort(key=lambda x: x[-6])
+    calibrators.sort(key=lambda x: x[-6:])
     print(targets, calibrators)
 
     # Formats the name of the new cal directory
