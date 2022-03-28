@@ -56,7 +56,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
     dir_name = dir_name.split('/')[-1].replace("raw", "cal")
     time_cal = os.path.dirname(calibrators[0]).split('.')[-3]
-    output_dir = os.path.join(base_path, "calib", '.'.join([dir_start, dir_name, time_cal, band, time_sci, "rb"]))
+    output_dir = os.path.join(base_path, "calib", '.'.join([dir_start, dir_name, time_sci, band, time_cal, "rb"]))
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
