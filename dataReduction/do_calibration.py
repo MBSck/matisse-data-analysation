@@ -109,6 +109,8 @@ def do_full_reduction(folder: str):
         path = os.path.join(folder, i)
         for j in bands:
             temp_path = os.path.join(path, j)
+            print(f"Calibration of {temp_path}")
+            print("------------------------------------------------------------")
             do_reduction(temp_path, mode=o)
 
 if __name__ == "__main__":
