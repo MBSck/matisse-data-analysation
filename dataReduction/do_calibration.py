@@ -63,7 +63,9 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str,
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    print(len(targets), len(calibrators))
+    if len(targets) != len(calibrators):
+        print("#'TARGET_RAW_INT'-files != #'CALIB_RAW_INT'-files, skipping!")
+        return -2
 
     for i, o in enumerate(targets):
         print("------------------------------------------------------------")
