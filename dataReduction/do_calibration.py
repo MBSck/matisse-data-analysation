@@ -31,23 +31,29 @@ CAL_DATABASE_FILES = ['vBoekelDatabase.fits', 'calib_spec_db_v10.fits',
                       'calib_spec_db_v10_supplement.fits']
 CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FILES]
 
-def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
-    """Takes two folders and calibrates their contents together"""
+def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
+    """For documentation see 'do_reduction()'"""
+    dir_start = ""
+
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
+    dir_start = "TAR"
     if not targets:
         targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
+        dir_start = "CAL"
     targets.sort(key=lambda x: x[-8:])
 
     calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
-        raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
+        print("No 'CALIB_RAW_INT'-files found! Skipping {folder_dir_cal}")
+        return -1
     calibrators.sort(key=lambda x: x[-8:])
+    dir_start += "-CAL"
 
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
     dir_name = dir_name.split('/')[-1].replace("raw", "cal")
     time_cal = os.path.dirname(calibrators[0]).split('.')[-3]
-    output_dir = os.path.join(base_path, "calib", '.'.join([dir_name, time_cal, band, time_sci, "rb"]))
+    output_dir = os.path.join(base_path, "calib", '.'.join([dir_start, dir_name, time_cal, band, time_sci, "rb"]))
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -59,13 +65,34 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
         fluxcal(o, calibrators[i], output_file,\
                 CAL_DATABASE_PATHS, mode=mode, output_fig_dir=output_dir)
 
-if __name__ == "__main__":
-    # Gets the base paths
-    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
-    folder_target = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/"
-    folder_cal = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/"
-    folder_target = os.path.join(base_path, folder_target)
-    folder_cal = os.path.join(base_path, folder_cal)
 
-    do_reduction(folder_target, folder_cal)
+def do_reduction(base_path: str, folder_dir_tar: str = None,
+                 folder_dir_cal: str = None, mode="corrflux"):
+    """Takes two folders and calibrates their contents together
+
+    Parameters
+    ----------
+    base_path: str
+        The path to multiple folders that need to be cross correlated. Will be
+        skipped if folders for targets and calibrators are specified
+    folder_dir_tar: str, optional
+        A specific folder to be the target for calibration
+    folder_dir_cal: str, optional
+        A specific folder to be the calibrator for calibration
+    mode: str, optional
+        The mode of calibration. Either 'corrflux', 'flux' or 'both' depending
+        if it is 'coherent' or 'incoherent'. Default mode is 'corrflux'
+    """
+    if folder_dir_tar is not None:
+        single_reduction(folder_dir_tar, folder_dir_cal, mode)
+    else:
+        subdirs = glob(os.path.join(base_path, "*.rb"))
+        for i, o in enumerate(subdirs):
+            if not o == subdirs[i]:
+                single_reduction(o, subdirs[i], mode)
+
+
+if __name__ == "__main__":
+    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
+    do_reduction(base_path)
 
