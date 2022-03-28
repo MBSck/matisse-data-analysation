@@ -67,7 +67,7 @@ def single_reduction(rawdir: str, calibdir: str, resdir: str,
            " {start_time-end_time} seconds")
 
 def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
-                       array: str, both: bool = True,
+                       array: str, both: bool = False,
                        lband: bool = False) -> int:
     """Runs the pipeline for coherent and incoherent reduction."""
     if not os.path.exists(resdir):
@@ -101,4 +101,4 @@ if __name__ == "__main__":
     calibdir = rawdir
     resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514"
 
-    reduction_pipeline(rawdir, calibdir, resdir, "UT")
+    reduction_pipeline(rawdir, calibdir, resdir, "UT", lband=True)
