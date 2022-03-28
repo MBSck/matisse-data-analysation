@@ -36,12 +36,12 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
     if not targets:
         targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
-        targets.sort(key=lambda x: x[-6:])
+        targets.sort(key=lambda x: x[-8:])
 
     calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
         raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
-    calibrators.sort(key=lambda x: x[-6:])
+    calibrators.sort(key=lambda x: x[-8:])
 
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
@@ -53,8 +53,8 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
         os.makedirs(output_dir)
 
     for i, o in enumerate(targets):
-        print(f"Calibrating {os.path.basename(o)} with \
-              {os.path.basename(calibrators[i])}")
+        print(f"Calibrating {os.path.basename(o)} with "
+              "{os.path.basename(calibrators[i])}")
         output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
         fluxcal(o, calibrators[i], output_file,\
                 CAL_DATABASE_PATHS, mode=mode, output_fig_dir=output_dir)
