@@ -32,7 +32,8 @@ CAL_DATABASE_FILES = ['vBoekelDatabase.fits', 'calib_spec_db_v10.fits',
                       'calib_spec_db_v10_supplement.fits']
 CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FILES]
 
-def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
+def single_reduction(folder_dir_tar: str, folder_dir_cal: str,
+                     mode: str) -> int:
     """For documentation see 'do_reduction()'"""
     print(f"Calibrating {os.path.basename(folder_dir_tar)} with "\
           f"{os.path.basename(folder_dir_cal)}")
@@ -52,12 +53,15 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     calibrators.sort(key=lambda x: x[-8:])
     dir_start += "-CAL"
 
+    # Debug
+    print(targets, calibrators)
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
     dir_name = dir_name.split('/')[-1].replace("raw", "cal")
     time_cal = os.path.dirname(calibrators[0]).split('.')[-3]
-    output_dir = os.path.join(base_path, "calib", '.'.join([dir_start, dir_name, time_sci, band, time_cal, "rb"]))
+    new_dir_name = '.'.join([dir_start, dir_name, time_sci, band, time_cal, "rb"])
 
+    output_dir = os.path.join(base_path, "calib", new_dir_name)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -73,7 +77,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
 
 
 def do_reduction(base_path: str, folder_dir_tar: str = None,
-                 folder_dir_cal: str = None, mode="corrflux"):
+                 folder_dir_cal: str = None, mode="corrflux") -> None:
     """Takes two folders and calibrates their contents together
 
     Parameters
@@ -101,7 +105,9 @@ def do_reduction(base_path: str, folder_dir_tar: str = None,
                 if not i == j:
                     single_reduction(i, j, mode)
 
-def do_full_reduction(folder: str):
+def do_full_reduction(folder: str) -> None:
+    """Does the full reduction for a full folder, being 'coherent',
+    'incoherent' and for these 'lband' and 'nband', respectively"""
     modes, bands = {"coherent": "corrflux", "incoherent": "flux"},\
             ["lband", "nband"]
 
@@ -109,7 +115,8 @@ def do_full_reduction(folder: str):
         path = os.path.join(folder, i)
         for j in bands:
             temp_path = os.path.join(path, j)
-            print(f"Calibration of {temp_path} with mode={o}")
+            print(f"Calibration of {temp_path}")
+            print(f"with mode={o}")
             print("------------------------------------------------------------")
             do_reduction(temp_path, mode=o)
 
