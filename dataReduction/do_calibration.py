@@ -36,7 +36,7 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
     if not targets:
         targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
-        targets.sort(key=lambda x: x[-8:])
+    targets.sort(key=lambda x: x[-8:])
 
     calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*"))
     if not calibrators:
