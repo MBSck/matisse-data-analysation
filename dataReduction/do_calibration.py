@@ -1,5 +1,6 @@
 import os
 
+from glob import glob
 from fluxcal import fluxcal
 
 # inputfile_sci = 'path/to/raw/science/fits/file.fits'
@@ -24,30 +25,46 @@ from fluxcal import fluxcal
 # output_fig_dir (optional): if it is a valid path, the script will make a plot of the calibrator model spectrum there,
 #                            deafult: '' (= no figure made)
 
-if __name__ == "__main__":
-    # Gets the base paths
-    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
-    inputfile_sci = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/TARGET_RAW_INT_0001.fits"
-    inputfile_cal = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/CALIB_RAW_INT_0001.fits"
-    inputfile_sci = os.path.join(base_path, inputfile_sci)
-    inputfile_cal = os.path.join(base_path, inputfile_cal)
+# Datapath of the calib directories
+CAL_DATABASE_DIR = "calib_spec"
+CAL_DATABASE_FILES = ['vBoekelDatabase.fits', 'calib_spec_db_v10.fits',
+                      'calib_spec_db_v10_supplement.fits']
+CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FILES]
 
-    # Formats the name of the directories for the new cal
-    dir_name, time_sci, band = os.path.dirname(inputfile_sci).split('.')[:-1]
+def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
+    """Takes two folders and calibrates their contents together"""
+    targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*.fits"))
+    if not targets:
+        targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*.fits"))
+    targets.sort(key=lambda x: x[-6])
+
+    calibrators = glob(os.path.join(folder_dir_cal, "CALIB_RAW_INT*.fits"))
+    if not calibrators:
+        raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
+    calibrators.sort(key=lambda x: x[-6])
+
+    # Formats the name of the new cal directory
+    dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
     dir_name = dir_name.split('/')[-1].replace("raw", "cal")
-    time_cal = os.path.dirname(inputfile_cal).split('.')[-3]
+    time_cal = os.path.dirname(calibrators[0]).split('.')[-3]
     output_dir = os.path.join(base_path, "calib", '.'.join([dir_name, time_cal, band, time_sci, "rb"]))
-    output_file = "TARGET_CAL_INT_0001.fits"
-    outputh_path = os.path.join(output_dir, output_file)
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Datapath of the calib directories
-    cal_database_dir = "calib_spec"
-    cal_database_files = ['vBoekelDatabase.fits', 'calib_spec_db_v10.fits',
-                          'calib_spec_db_v10_supplement.fits']
-    cal_database_paths = [os.path.join(cal_database_dir, i) for i in cal_database_files]
+    for i, o in enumerate(targets):
+        output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
+        fluxcal(o, calibrators[i], output_file,\
+                CAL_DATABASE_PATHS, mode=mode, output_fig_dir=output_dir)
 
-    fluxcal(inputfile_sci, inputfile_cal, outputh_path,\
-            cal_database_paths, mode='corrflux',output_fig_dir=output_dir)
+if __name__ == "__main__":
+    # Gets the base paths
+    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband"
+    folder_target = "mat_raw_estimates.2019-05-14T05_28_03.AQUARIUS.rb/"
+    folder_cal = "mat_raw_estimates.2019-05-14T04_52_11.AQUARIUS.rb/"
+    inputfile_sci = os.path.join(base_path, folder_target)
+    inputfile_cal = os.path.join(base_path, folder_dir_cal)
+
+    do_reduction(folder_target, folder_cal)
+
+
