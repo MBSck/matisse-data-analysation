@@ -42,6 +42,7 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
     if not calibrators:
         raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
     calibrators.sort(key=lambda x: x[-6])
+    print(targets, calibrators)
 
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
