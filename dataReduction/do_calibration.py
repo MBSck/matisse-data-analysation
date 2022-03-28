@@ -37,6 +37,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str, mode: str):
     dir_start = ""
 
     targets = glob(os.path.join(folder_dir_tar, "TARGET_RAW_INT*"))
+    print(targets)
     dir_start = "TAR"
     if not targets:
         targets = glob(os.path.join(folder_dir_tar, "CALIB_RAW_INT*"))
