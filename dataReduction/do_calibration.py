@@ -26,7 +26,7 @@ from fluxcal import fluxcal
 #                            deafult: '' (= no figure made)
 
 # Datapath of the calib directories
-CAL_DATABASE_DIR = "calib_spec"
+CAL_DATABASE_DIR = os.path.join(os.getcwd(), "calib_spec_databases")
 CAL_DATABASE_FILES = ['vBoekelDatabase.fits', 'calib_spec_db_v10.fits',
                       'calib_spec_db_v10_supplement.fits']
 CAL_DATABASE_PATHS = [os.path.join(CAL_DATABASE_DIR, i) for i in CAL_DATABASE_FILES]
@@ -42,7 +42,7 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
     if not calibrators:
         raise RuntimeError("No 'CALIB_RAW_INT'-files found!")
     calibrators.sort(key=lambda x: x[-6:])
-    print(targets, calibrators)
+    print(targets, '\n', calibrators)
 
     # Formats the name of the new cal directory
     dir_name, time_sci, band = os.path.dirname(targets[0]).split('.')[:-1]
