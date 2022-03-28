@@ -53,7 +53,7 @@ def do_reduction(folder_dir_tar, folder_dir_cal, mode="corrflux"):
         os.makedirs(output_dir)
 
     for i, o in enumerate(targets):
-        print(f"Calibrating {os.path.basename(o)} with "
+        print(f"Calibrating {os.path.basename(o)} with "\
               "{os.path.basename(calibrators[i])}")
         output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
         fluxcal(o, calibrators[i], output_file,\
