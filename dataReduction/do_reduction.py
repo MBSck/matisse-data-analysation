@@ -41,6 +41,7 @@ def single_reduction(rawdir: str, calibdir: str, resdir: str,
     try:
         os.system(f"rm {os.path.join(resdir, 'Iter1/*.sof*')}")
         os.system(f"rm -r {os.path.join(resdir, 'Iter1/*.rb')}")
+        os.system(f"rm -r {os.path.join(subdir, '*.rb')}")
         print("Old files deleted!")
     except Exception as e:
         print("Removing of '.sof'- and '.rb'-files to {subdir} failed!")
@@ -64,7 +65,7 @@ def single_reduction(rawdir: str, calibdir: str, resdir: str,
     # Takes the time at end of execution
     end_time = time.time()
     print(f"Executed the {path_lst[0]} {path_lst[1]} reduction in"
-           " {start_time-end_time} seconds")
+          f" {start_time-end_time} seconds")
 
 def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
                        array: str, both: bool = False,
@@ -89,11 +90,9 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
                 single_reduction(rawdir, calibdir, resdir, array,\
                                  mode=i, band=False)
 
-
     overall_end_time = time.time()
-    print(f"Executed the overall reduction in {overall_start_time-overall_end_time}"
+    print(f"Executed the overall reduction in {overall_end_time-overall_start_time}"
           " seconds")
-
     return 0
 
 if __name__ == "__main__":
