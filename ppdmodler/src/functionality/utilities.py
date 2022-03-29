@@ -12,6 +12,9 @@ from functools import wraps
 
 from src.functionality.constant import *
 
+# TODO: Check sr2mas conversion for pixel scaling
+# TODO: Check linspace in set_size for accuracy? -> Don't use sampling
+
 # Functions
 
 def trunc(values, decs=0):
@@ -46,7 +49,6 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
-
 def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
     """Zooms in on an image by cutting of the zero-padding
 
@@ -70,6 +72,42 @@ def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray 
             array_center+set_size
 
     return array[ind_low:ind_high, ind_low:ind_high]
+
+def sr2mas(obj_size: float):
+    """Converts the dimensions of an object from 'sr' to 'mas'
+
+    Parameters
+    ----------
+    obj_size: float
+        The size of the object without dimensions
+    """
+    return (obj_size**2*np.pi)/(3600e3*180/np.pi)**2
+
+def m2au(length: Union[int, float]):
+    """Converts units of [m] to [au]"""
+    return length/AU_M
+
+def orbit_au2arc(orbit_radius: Union[int, float],
+                 distance: Union[int, float]):
+    """Converts the orbital radius from [au] to [arc]
+
+    Parameters
+    ----------
+    orbit_radius: int | float
+        The radius of the star or its orbit
+    distance: int | float
+        The distance to the star
+
+    Returns
+    -------
+    orbit: float
+        The orbit in arcseconds
+    """
+    return orbit_radius/distance
+
+def arc2rad(length_in_arc: Union[int, float]):
+    """Converts the orbital radius from [arcsec] to [rad]"""
+    return length_in_arc*ARCSEC2RADIANS
 
 def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     """Returns a given angle in mas/rad or the pertaining scaling factor
@@ -296,7 +334,7 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     T_sub: int
         The sublimation temperature of the disk. Usually fixed to 1500 K
     L_star: int
-        The star's luminosity
+        The star's luminosity in units of nominal solar luminosity
     distance: int
         Distance in parsec
 
@@ -306,10 +344,14 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
         The sublimation_radius in radians
     """
     L_star *= SOLAR_LUMINOSITY
-    sub_radius_au = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))/AU_M
-    return (sub_radius_au/distance)*ARCSEC2RADIANS
+    sub_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))
+    sub_radius_au = m2au(sub_radius_m)
+    sub_radius_arc = orbit_au2arc(sub_radius_au, distance)
+    return arc2rad(sub_radius_arc)
 
-def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: int):
+def temperature_gradient(radius: float, q: float,
+                         r_0: Union[int, float],
+                         T_0: int) -> Union[float, np.ndarray]:
     """Temperature gradient model determined by power-law distribution.
 
     Parameters
@@ -325,13 +367,15 @@ def temperature_gradient(radius: float, q: float, r_0: Union[int, float], T_0: i
 
     Returns
     -------
-    temperature: float
+    temperature: float | np.ndarray
         The temperature at a certain radius
     """
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
     return T_0*(radius/r_0)**(-q)
 
-def plancks_law_nu(radius: float, q: float, r_0: Union[int, float], T_0: int, wavelength: float):
+def plancks_law_nu(radius: float, q: float,
+                   r_0: Union[int, float], T_0: int,
+                   wavelength: float) -> [float, np.ndarray]:
     """Gets the blackbody spectrum at a certain T(r). Wavelength and
     temperature dependent. The wavelength will be converted to frequency
 
@@ -350,17 +394,17 @@ def plancks_law_nu(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 
     Returns
     -------
-    Planck's law/B_nu(nu, T): float
+    planck's law/B_nu(nu, T): float | np.ndarray
         The spectral radiance (the power per unit solid angle) of a black-body
+        in terms of frequency
     """
     T = temperature_gradient(radius, q, r_0, T_0)
 
     nu = SPEED_OF_LIGHT/wavelength
     factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
     exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)
-    divisor = np.exp(exponent)-1
 
-    return factor/divisor
+    return factor*(1/(np.exp(exponent)-1))
 
     def do_fit():
         """Does automatic gauss fits"""
@@ -388,11 +432,11 @@ def plancks_law_nu(radius: float, q: float, r_0: Union[int, float], T_0: int, wa
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
 
-    radius, axis = set_size(300, 300)
-    print(radius)
-    print(r_0  := sublimation_radius(1500, 19, 140))
-    flux = plancks_law_nu(radius, 0.55, r_0, 150, 8e-06)
-    plt.imshow(flux*1e26)
+    print(sub_r := sublimation_radius(1500, 19, 140))
+    radius, axis = set_size(size:=128)
+    print(spectral_rad := plancks_law_nu(radius, 0.55, sub_r, 1500, 8e-6))
+    print(flux_jy := sr2mas(1.3)*spectral_rad*1e26)
+    print(flux_jy[size//2][size//2])
+    plt.imshow(flux_jy)
     plt.show()
-    print((300/140)*ARCSEC2RADIANS)
-    print(flux)
+

@@ -4,8 +4,8 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.utilities import plancks_law_nu, sublimation_radius
-
+from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
+        sr2mas
 
 # Classes
 
@@ -43,19 +43,25 @@ class Model(metaclass=ABCMeta):
     def axis_mod(self):
         return self._axis_mod
 
-    def get_flux(self, q: float, T_sub: int, L_star: float, distance: float, wavelength: float) -> np.array:
+    def get_flux(self, obj_dim: float,
+                 q: float, T_sub: int, L_star: float,
+                 distance: float, wavelength: float) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
         ----------
-        wavelength: float, optional
-            The measurement wavelength
+        obj_dim: float
+            The size of the object
         q: float
             The power law index
         T_sub: int
             The sublimation temperature
         L_star: float
             The Luminosity of the star
+        distance: float
+            The distance to the object
+        wavelength: float, optional
+            The measurement wavelength
 
         Returns
         -------
@@ -67,7 +73,7 @@ class Model(metaclass=ABCMeta):
         if self._radius_range:
             flux[self._radius_range] = 0.
 
-        return flux
+        return flux*sr2mas(obj_dim)*1e26
 
     @abstractmethod
     def eval_model() -> np.array:

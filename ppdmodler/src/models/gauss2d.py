@@ -107,11 +107,8 @@ class Gauss2D(Model):
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model([5.], 128, 300)
+    g_model = g.eval_model([1.3], size:=128)
     print(g._radius)
-    g_flux = g.get_flux(0.55, 1500, 19, 140, 8e-6)
-    print(g_flux)
-    plt.imshow(g_model*g_flux)
-    plt.show()
+    g_flux = g.get_flux(1.3, 0.55, 1500, 50, 233, 8e-6)
+    print(g_flux[size//2, size//2])
 
-    plt.show()

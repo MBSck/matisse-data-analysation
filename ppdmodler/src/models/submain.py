@@ -13,25 +13,30 @@ from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk
 def main():
     file = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
     readout = ReadoutFits(file)
-    wavelength = readout.get_wl()[80]
+    for i in range(0, 100):
+        for j in range(0, 5000, 100):
+            j /= 1000
+            print(j)
+            wavelength = readout.get_wl()[i]
+            print(wavelength)
 
-    # How to use corr_flux with vis in model
-    # g = Gauss2D()
-    # model = g.eval_model([1.], 128, 256)
-    # flux = g.get_flux(0.55, 1500, 19, wavelength)
+            # How to use corr_flux with vis in model
+            g = Gauss2D()
+            model = g.eval_model([j], size:=128)
+            flux = g.get_flux(j, 0.55, 1500, 19, 140, wavelength)
+            print(flux[size//2, size//2], np.sum(flux))
 
-    cp = CompoundModel()
-    model = cp.eval_model([45, 45, 45, 1., 3., 4., 6., 7., 10.], 128, 256)
-    flux = cp.get_flux(0.55, 1500, 19, 140, wavelength)
+            ft, amp, phase = FFT(model, wavelength).pipeline(vis2=False)
+            print(amp[size//2, size//2])
 
-    ft, amp, phase = FFT(model, wavelength).pipeline(vis2=True)
+            amp *= np.sum(flux)
+            print(amp[size//2, size//2])
+            print("---------------------------------")
+        print("---------------------------------")
+        print("---------------------------------")
 
-    amp *= np.sum(flux)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.imshow(amp)
-    ax2.imshow(np.log(amp))
-    plt.show()
+    # plt.imshow(amp)
+    # plt.show()
 
 if __name__ == "__main__":
     # print(comparefft2modvis(Gauss2D(), 8e-06))
