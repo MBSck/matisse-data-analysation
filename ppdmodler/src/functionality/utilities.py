@@ -81,7 +81,7 @@ def sr2mas(obj_size: float):
     obj_size: float
         The size of the object without dimensions
     """
-    return (obj_size**2*np.pi)/(3600e3*180/np.pi)**2
+    return ((obj_size)/(3600e3*180/np.pi))**2
 
 def m2au(length: Union[int, float]):
     """Converts units of [m] to [au]"""
@@ -108,6 +108,20 @@ def orbit_au2arc(orbit_radius: Union[int, float],
 def arc2rad(length_in_arc: Union[int, float]):
     """Converts the orbital radius from [arcsec] to [rad]"""
     return length_in_arc*ARCSEC2RADIANS
+
+def scale2mas(angle: Optional[Union[int, float, np.ndarray]] = None):
+    """Returns a given angle in mas
+    Parameters
+    ----------
+    angle: int | float | np.ndarray, optional
+        The input angle(s) in px, degree or another unitless scale
+
+    Returns
+    -------
+    float
+        The angle in mas
+    """
+    return angle/3.6e9
 
 def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     """Returns a given angle in mas/rad or the pertaining scaling factor
@@ -220,8 +234,8 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
-             None, angles: List[float] = None) -> np.array:
+def set_size(size: int, sampling: Optional[int] = None,
+             angles: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -234,8 +248,8 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
         The sampling of the object-plane
     centre: bool, optional
         A set centre of the object. Will be set automatically if default 'None' is kept
-    angles: int | None, optional
-        This sets the positional angles of the ellipsis if not None
+    angles: List[float]
+        A list of the three angles [ellipsis_angle, pos_angle inc_angle]
 
     Returns
     -------
@@ -247,32 +261,24 @@ def set_size(size: int, sampling: Optional[int] = None, centre: Optional[int] =
     if (sampling is None):
         sampling = size
 
-    x = np.linspace(0, size, sampling)
+    x = mas2rad(np.linspace(-size//2, size//2, sampling))
     y = x[:, np.newaxis]
-
-    if centre is None:
-        x0 = y0 = size//2
-    else:
-        x0, y0 = centre
-
-    xc, yc = x-x0, y-y0
 
     if angles is not None:
         try:
-            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
-        except Exception as e:
-            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
-                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
-            print(e)
-            sys.exit()
+            ellipsis_angle, pos_angle, inc_angle = angles
+        except:
+            raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
+                               " arguments, ellipsis_angles must be of the"
+                               " form [ellipsis_angle, pos_angle, inc_angle]")
 
-        a, b = xc*np.sin(pos_angle_ellipsis), yc*np.cos(pos_angle_ellipsis)
-        ar, br = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
-                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        a, b = x*np.sin(ellipsis_angle), y*np.cos(ellipsis_angle)
+        ar, br = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
+                a*np.cos(pos_angle)-b*np.sin(pos_angle)
 
-        return mas2rad(np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)), [ar, br]
+        return np.sqrt(ar**2+br**2*np.cos(inc_angle)**2), [ar, br]
     else:
-        return mas2rad(np.sqrt(xc**2+yc**2)), xc
+        return np.sqrt(x**2+y**2), x
 
 def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
                  uvcoords: np.ndarray = None) -> np.array:
@@ -284,6 +290,8 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
         The sampling of the (u,v)-plane
     wavelength: float
         The wavelength the (u,v)-plane is sampled at
+    angles: List[float]
+        A list of the three angles [ellipsis_angle, pos_angle inc_angle]
     uvcoords: List[float], optional
         If uv-coords are given, then the visibilities are calculated for
 
@@ -307,19 +315,18 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
     if angles is not None:
         try:
-            pos_angle_ellipsis, pos_angle_axis, inc_angle = angles
-        except Exception as e:
-            print(f"{inspect.stack()[0][3]}(): Check input arguments, ellipsis_angles must be of the form ["
-                  "pos_angle_ellipsis, pos_angle_axis, inc_angle]")
-            print(e)
-            sys.exit()
+            ellipsis_angle, pos_angle, inc_angle = angles
+        except:
+            raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
+                               " arguments, ellipsis_angles must be of the form"
+                               " [ellipsis_angle, pos_angle, inc_angle]")
 
         # The ellipsis of the projected baselines
-        a, b = u*np.sin(pos_angle_ellipsis), v*np.cos(pos_angle_ellipsis)
+        a, b = u*np.sin(ellipsis_angle), v*np.cos(ellipsis_angle)
 
         # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
-        ath, bth = a*np.sin(pos_angle_axis)+b*np.cos(pos_angle_axis), \
-                a*np.cos(pos_angle_axis)-b*np.sin(pos_angle_axis)
+        ath, bth = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
+                a*np.cos(pos_angle)-b*np.sin(pos_angle)
         B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
     else:
         B = np.sqrt(u**2+v**2)/wavelength
@@ -431,12 +438,14 @@ def plancks_law_nu(radius: float, q: float,
 
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
+    # print(sub_r := sublimation_radius(1500, 19, 140))
+    # radius, axis = set_size(size:=128)
+    # print(radius)
+    # print(spectral_rad := plancks_law_nu(radius, 0.55, sub_r, 1500, 8e-6))
+    # print(flux_jy := sr2mas(1.3)*spectral_rad*1e26)
+    # print(flux_jy[size//2][size//2])
+    # plt.imshow(flux_jy)
+    # plt.show()
 
-    print(sub_r := sublimation_radius(1500, 19, 140))
-    radius, axis = set_size(size:=128)
-    print(spectral_rad := plancks_law_nu(radius, 0.55, sub_r, 1500, 8e-6))
-    print(flux_jy := sr2mas(1.3)*spectral_rad*1e26)
-    print(flux_jy[size//2][size//2])
-    plt.imshow(flux_jy)
-    plt.show()
+    print(orbit_au2arc(100, 460)*1e3)
 
