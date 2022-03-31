@@ -47,7 +47,7 @@ class Plotter:
             # Initializes the fits-readout
             self.readout = ReadoutFits(f)
 
-            # NOTE: Debug only remove later
+            # NOTE: Debug only remove later and check function
             self.vis = self.readout.get_data("oi_vis", "visamp", "visamperr", "visphi", "visphierr", "sta_index")
 
             # Fetches all the relevant data from the '.fits'-file
@@ -57,6 +57,7 @@ class Plotter:
             self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
             self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
             self.vissta = self.vis[~0]
+            self.flux = self.readout.get_data("oi_flux", "fluxdata")
             self.ucoords, self.vcoords = map(lambda x: x[:6], self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()[11:-17]
 
@@ -122,12 +123,21 @@ class Plotter:
         ax, bx, cx = axarr[0].flatten()
         ax2, bx2, cx2 = axarr[1].flatten()
 
-        self.uv_plot(cx)
+        self.flux_plot(ax)
         self.vis_plot_all(bx)
+        self.uv_plot(cx)
         self.vis2_plot_all(ax2)
         self.t3phi_plot_all(bx2)
         self.vis24baseline_plot(cx2)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
+
+    def flux_plot(self, ax) -> None:
+        plot_dim = [np.min(self.flux), np.max(self.flux)]
+
+        ax.plot(self.wl*1e6, self.flux[11:-17], linewidth=2)
+        ax.set_ylim([*plot_dim])
+        ax.set_ylabel("total flux [ADU]")
+        ax.set_xlabel("wl [$\mu$ m]")
 
     def vis_plot_all(self, ax) -> None:
         plot_dim = [np.min(self.visdata), np.max(self.visdata)]
@@ -141,7 +151,7 @@ class Plotter:
             ax.set_ylabel("corr. flux [Jy]")
             ax.set_xlabel("wl [$\mu$ m]")
 
-        ax.legend(loc=2, prop={'size': 6})
+        ax.legend(loc=3, prop={'size': 6})
 
     def vis2_plot_all(self, ax) -> None:
         plot_dim = [np.min(self.vis2data), np.max(self.vis2data)]
@@ -155,7 +165,7 @@ class Plotter:
             ax.set_ylabel("vis2")
             ax.set_xlabel(r"wl [$\mu$ m]")
 
-        ax.legend(loc=2, prop={'size': 6})
+        ax.legend(loc=3, prop={'size': 6})
 
     def t3phi_plot_all(self, ax) -> None:
         for i, o in enumerate(self.t3phidata):
