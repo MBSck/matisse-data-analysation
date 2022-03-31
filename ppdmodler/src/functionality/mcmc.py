@@ -320,7 +320,7 @@ if __name__ == "__main__":
     priors = [[0., 360.], [0., 360.], [0., 360.],
               [.1, 3.], [3., 5.], [5., 7.], [7., 9.]]
     labels = ["ELL_ANGLE", "AX_ANGLE", "INC_ANGLE","R_1", "R_2", "R_3" ,"R_4"]
-    bb_params = [0.55, 1500, 19]
+    bb_params = [0.55, 1500, 19, 140]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
