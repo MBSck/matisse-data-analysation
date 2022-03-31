@@ -3,6 +3,8 @@
 # TODO: Make either model or fourier transform carry more info like the name of
 # the plot or similar -> Work more with classes
 # TODO: Remove error bars from plots
+# TODO: Make plot save mechanic with automatic generated names specific to input file
+# TODO: Rework dump function into pickle dump
 
 import sys
 import os
@@ -19,6 +21,7 @@ from scipy.special import j0, j1
 from skimage.restoration import unwrap_phase
 
 from src.functionality.readout import ReadoutFits
+from src.functionality.utilities import trunc
 
 def shell_main() -> None:
     """
@@ -37,11 +40,9 @@ def shell_main() -> None:
 
 class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
-    def __init__(self, dirname: Path, vis_dim: Optional[List[float]] = None,
-                 mosaic: bool = False) -> None:
+    def __init__(self, dirname: Path, mosaic: bool = False) -> None:
         self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
         self.dirname = dirname
-        self.vis_dim = vis_dim
         self.mosaic = mosaic
         self.outname = ""
         print(f'Reading files from "{self.dirname}"')
@@ -56,7 +57,7 @@ class Plotter:
             # Initializes the fits-readout
             self.readout = ReadoutFits(f)
 
-            # Debug only remove later
+            # NOTE: Debug only remove later
             self.vis = self.readout.get_data("oi_vis", "visamp", "visamperr", "visphi", "visphierr", "sta_index")
 
             # Fetches all the relevant data from the '.fits'-file
@@ -94,12 +95,12 @@ class Plotter:
             self.tel_t3phi = np.array([("-".join([self.all_tels[t] for t in trio])) for trio in self.t3phista])
 
             # The mean of the wavelength. The mean of all the visibilities and their standard deviation
-            self.wl_slice= [j for j in self.wl if (j >= np.mean(self.wl)-0.5e-06 and j <= np.mean(self.wl)+0.5e-06)]
+            self.mean_wl = np.mean(self.wl)
+            self.wl_slice= [j for j in self.wl if (j >= self.mean_wl-0.5e-06 and j <= self.mean_wl+0.5e-06)]
             self.si, self.ei = (int(np.where(self.wl == self.wl_slice[0])[0])-5,
                                     int(np.where(self.wl == self.wl_slice[~0])[0])+5)
 
             self.mean_bin_vis2 = [np.nanmean(i[self.si:self.ei]) for i in self.vis2data]
-            self.std_bin_vis2 = [np.nanmean(j[self.si:self.ei]) for j in self.vis2data]
             self.baseline_distances = [np.sqrt(x**2+y**2) for x, y in zip(self.ucoords, self.vcoords)]
 
             # Executes the plotting and cleans everything up
@@ -107,40 +108,30 @@ class Plotter:
                 self.do_mosaic_plot()
             else:
                 self.do_plot()
-            self.write_values()
             self.close()
 
-    def do_plot(self):
+    def do_plot(self) -> None:
         """This is the main pipline of the class. It brings all the plots together into one consistent one"""
         print(f"Plotting {os.path.basename(Path(self.fits_file))}")
 
         fig, axarr = plt.subplots(2, 6, figsize=(20, 8))
-
-        # Flattens the multidimensional arrays into 1D
         ax, bx, cx, dx, ex, fx, = axarr[0].flatten()
         ax2, bx2, cx2, dx2, ex2, fx2 = axarr[1].flatten()
-        # ax3, bx3, cx3, dx3, ex3, fx3 = axarr[2].flatten()
 
         self.vis2_plot(axarr)
         self.t3phi_plot(axarr)
         self.vis24baseline_plot(ex2)
-        # self.waterfall_plot(fx2)
         self.uv_plot(fx2)
-        # self.model_plot(bx3, cx3, gauss)
-        # self.model_plot(dx3, ex3, ring)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
 
-    def do_mosaic_plot(self):
+    def do_mosaic_plot(self) -> None:
         """Does a mosaic plot"""
         print(f"Plotting {os.path.basename(Path(self.fits_file))}")
 
         fig, axarr = plt.subplots(2, 3, figsize=(15, 10))
-
-        # Flattens the multidimensional arrays into 1D
         ax, bx, cx = axarr[0].flatten()
         ax2, bx2, cx2 = axarr[1].flatten()
 
-        # Do the plotting
         self.uv_plot(cx)
         self.vis_plot_all(bx)
         self.vis2_plot_all(ax2)
@@ -148,78 +139,89 @@ class Plotter:
         self.vis24baseline_plot(cx2)
         print(f"Done plotting {os.path.basename(Path(self.fits_file))}")
 
-    def vis_plot_all(self, ax, err: bool = False) -> None:
-        # Sets the range for the squared visibility plots
-        all_obs = [[],[],[],[],[],[]]
+    def vis_plot_all(self, ax) -> None:
+        plot_dim = [np.min(self.visdata), np.max(self.visdata)]
 
-        # plots the squared visibility for different degrees and meters
         for i, o in enumerate(self.visdata):
-            # Sets the vis_dim if it is None
-            # TODO: Rework this so it accounts for errors and really works as well
-            # if self.vis_dim is None:
-                # self.vis_dim = [0., np.mean(np.linalg.norm(o)*0.5]
             baseline = np.around(np.sqrt(self.ucoords[i]**2+self.vcoords[i]**2), 2)
             pas = np.around((np.degrees(np.arctan2(self.vcoords[i], self.ucoords[i]))-90)*-1, 2)
-            ax.plot(self.wl*1e6, o[11:-17], marker='s',
-                          label=fr"{self.tel_vis[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
-                          capsize=0., alpha=0.5)
-            ax.set_ylim([self.vis_dim[0], self.vis_dim[1]])
-            ax.set_ylabel("flux [Jy]")
-            ax.set_xlabel("wl [µm]")
-            all_obs[i%6].append(o[11:-17])
+            ax.plot(self.wl*1e6, o[11:-17], label=fr"{self.tel_vis[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
+                    linewidth=2)
+            ax.set_ylim([*plot_dim])
+            ax.set_ylabel("corr. flux [Jy]")
+            ax.set_xlabel("wl [$\mu$ m]")
 
-        # Plots the squared visibility errors
-        if err:
-            for j in range(6):
-                    ax.errorbar(self.wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
-                                  marker='s', capsize=0., alpha=0.9, color='k',
-                                  label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
         ax.legend(loc=2, prop={'size': 6})
 
-    def vis2_plot_all(self, ax, err: bool = False) -> None:
-        # Sets the range for the squared visibility plots
-        all_obs = [[],[],[],[],[],[]]
+    def vis2_plot_all(self, ax) -> None:
+        plot_dim = [np.min(self.vis2data), np.max(self.vis2data)]
 
-        # plots the squared visibility for different degrees and meters
         for i, o in enumerate(self.vis2data):
-            # Sets the vis_dim if it is None
-            # TODO: Rework this so it accounts for errors and really works as well
-            # if self.vis_dim is None:
-                # self.vis_dim = [0., np.mean(np.linalg.norm(o)*0.5]
             baseline = np.around(np.sqrt(self.ucoords[i]**2+self.vcoords[i]**2), 2)
             pas = np.around((np.degrees(np.arctan2(self.vcoords[i], self.ucoords[i]))-90)*-1, 2)
-            ax.errorbar(self.wl*1e6, o[11:-17], yerr=self.vis2err[i][11:-17], marker='s',
-                          label=fr"{self.tel_vis2[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
-                          capsize=0., alpha=0.5)
-            ax.set_ylim([self.vis_dim[0], self.vis_dim[1]])
+            ax.plot(self.wl*1e6, o[11:-17], label=fr"{self.tel_vis2[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
+                    linewidth=2)
+            ax.set_ylim([*plot_dim])
             ax.set_ylabel("vis2")
-            ax.set_xlabel("wl [µm]")
-            all_obs[i%6].append(o[11:-17])
+            ax.set_xlabel(r"wl [$\mu$ m]")
 
-        # Plots the squared visibility errors
-        if err:
-            for j in range(6):
-                    ax.errorbar(self.wl*1e6, np.nanmean(all_obs[j], 0), yerr=np.nanstd(all_obs[j], 0),
-                                  marker='s', capsize=0., alpha=0.9, color='k',
-                                  label='%.1f m %.1f deg'%(np.sqrt(self.ucoords[j]**2+self.vcoords[j]**2), pas))
         ax.legend(loc=2, prop={'size': 6})
 
-    def t3phi_plot_all(self, ax, err: bool = False) -> None:
-        all_obs = [[],[],[],[]]
+    def t3phi_plot_all(self, ax) -> None:
         for i, o in enumerate(self.t3phidata):
-            ax.errorbar(self.wl*1e6, unwrap_phase(o[11:-17]),
-                        yerr=self.t3phierr[i][11:-17]
-                        ,marker='s',capsize=0.,alpha=0.25, label=self.tel_t3phi[i])
-            ax.set_ylim([-180,180])
+            ax.plot(self.wl*1e6, unwrap_phase(o[11:-17]), label=self.tel_t3phi[i], linewidth=2)
+            ax.set_ylim([-180, 180])
             ax.set_ylabel("cphase [deg]")
-            ax.set_xlabel("wl [µm]")
-            all_obs[i%4].append(list(o[11:-17]))
+            ax.set_xlabel(r"wl [$\mu$ m]")
 
-        if err:
-            for j in range(4):
-                    ax.errorbar(self.wl*1e6, all_obs[j][0], yerr=np.std(all_obs[j], 0),\
-                                  marker='s', capsize=0., alpha=0.9, color='k')
         ax.legend(loc=2)
+
+    def vis24baseline_plot(self, ax, do_fit: bool = True) -> None:
+        """ Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk"""
+        ax.plot(self.baseline_distances, self.mean_bin_vis2, ls='None', marker='o')
+
+        # TODO: Implement fit here
+        if do_fit:
+            ...
+
+        ax.set_xlabel(fr'uv-distance [m] at $\lambda_0$={trunc(self.mean_wl)} $\mu m$')
+        ax.set_ylabel(r'$\bar{V}$')
+
+    def uv_plot(self, ax) -> None:
+        """Plots the uv-coordinates with an orientational compass
+
+        Parameters
+        ----------
+        ax
+            The axis anchor of matplotlib.pyplot
+
+        Returns
+        -------
+        None
+        """
+        ax.scatter(self.ucoords, self.vcoords)
+        ax.scatter(-self.ucoords, -self.vcoords)
+        ax.set_xlim([150, -150])
+        ax.set_ylim([-150, 150])
+        ax.set_ylabel('v [m]')
+        ax.set_xlabel('u [m]')
+
+        # Compass for the directions
+        cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]
+        cardinal_colors  = ['black', 'green', 'blue', 'red']
+        cardinal_directions = ['N', 'S', 'W', 'E']
+        arrow_size, head_size = 40, 10
+        x, y = (-85, 85)
+
+        for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
+            dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
+            if vector[0] == 0:
+                ax.text(x-dx-5, y+dy, direction)
+            if vector[1] == 0:
+                ax.text(x-dx, y+dy+5, direction)
+            arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
+                                  "width": 1, "fc": color, "ec": color}
+            ax.arrow(x, y, dx, dy, **arrow_args)
 
     def vis2_plot(self, axarr, err: bool = False) -> None:
         """Plots the squared visibilities"""
@@ -281,49 +283,6 @@ class Plotter:
             ax.set_ylabel('vis2')
             ax.legend(loc='best')
 
-    def vis24baseline_plot(self, ax, do_fit: bool = True) -> None:
-        # Plot the mean visibility for one certain wavelength and fit it with a gaussian and airy disk
-        ax.errorbar(self.baseline_distances, self.mean_bin_vis2, yerr=self.std_bin_vis2, ls='None', fmt='o')
-
-        ax.set_xlabel(fr'uv-distance [m] at $\lambda_0$={10.72} $\mu m$')
-        ax.set_ylabel(r'$\bar{V}$')
-
-    def uv_plot(self, ax) -> None:
-        """Plots the uv-coordinates with an orientational compass
-
-        Parameters
-        ----------
-        ax
-            The axis anchor of matplotlib.pyplot
-
-        Returns
-        -------
-        None
-        """
-        ax.scatter(self.ucoords, self.vcoords)
-        ax.scatter(-self.ucoords, -self.vcoords)
-        ax.set_xlim([150, -150])
-        ax.set_ylim([-150, 150])
-        ax.set_ylabel('v [m]')
-        ax.set_xlabel('u [m]')
-
-        # Compasss for the directions
-        cardinal_vectors = [(0,1), (0,-1), (1,0), (-1,0)]
-        cardinal_colors  = ['black', 'green', 'blue', 'red']
-        cardinal_directions = ['N', 'S', 'W', 'E']
-        arrow_size, head_size = 40, 10
-        x, y = (-85, 85)
-
-        for vector, color, direction in zip(cardinal_vectors, cardinal_colors, cardinal_directions):
-            dx, dy = vector[0]*arrow_size, vector[1]*arrow_size
-            if vector[0] == 0:
-                ax.text(x-dx-5, y+dy, direction)
-            if vector[1] == 0:
-                ax.text(x-dx, y+dy+5, direction)
-            arrow_args = {"length_includes_head": True, "head_width": head_size, "head_length": head_size, \
-                                  "width": 1, "fc": color, "ec": color}
-            ax.arrow(x, y, dx, dy, **arrow_args)
-
     def model_plot(self, ax1, ax2, model) -> None:
         """"""
         # Plots the model fits and their fft of the uv-coords
@@ -373,12 +332,12 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband/calib"
+    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/lband/calib"
     # data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
 
     for i in subfolders:
-        Plotter(i, [0., 10], True)
+        Plotter(i, True)
 
     # folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
     # Plotter(os.path.join(data_path, folder), [0., 0.15])
