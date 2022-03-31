@@ -97,12 +97,13 @@ def rad2mas(angle: Optional[float] = None):
     return 1/mas2rad(angle)
 
 def sr2mas(pixel_size: float):
-    """Converts the dimensions of an object from 'sr' to 'mas'
+    """Converts the dimensions of an object from 'sr' to 'mas'. the result is
+    in per pixel
 
     Parameters
     ----------
     pixel_size: float
-        The size of one pixel in rad
+        The size of one pixel in mas
     """
     return (pixel_size/(3600e3*180/np.pi))**2
 
