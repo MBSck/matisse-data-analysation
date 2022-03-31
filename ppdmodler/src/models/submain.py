@@ -11,23 +11,21 @@ from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk
 
 
 def main():
-    file = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
-    readout = ReadoutFits(file)
-    wavelength = readout.get_wl()[15]
+    wavelength = 9.5e-6
     print(wavelength)
 
     # How to use corr_flux with vis in model
     g = Gauss2D()
-    model = g.eval_model([3], size:=128)
-    flux = g.get_flux(3, 0.55, 1500, 19, 140, wavelength)
+    model = g.eval_model([7], size:=512)
+    print(model.pixel_scale_rad)
+    flux = g.get_flux(1, 0.55, 1500, 19, 140, wavelength)
 
     ft, amp, phase = FFT(model, wavelength).pipeline(vis2=False)
+    print(flux)
     print(amp[size//2, size//2])
 
-    amp *= np.sum(flux)
+    amp *= flux
     print(amp[size//2, size//2])
-    plt.imshow(amp)
-    plt.show()
 
     # plt.imshow(amp)
     # plt.show()

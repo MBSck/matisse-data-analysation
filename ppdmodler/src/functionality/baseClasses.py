@@ -26,6 +26,7 @@ class Model(metaclass=ABCMeta):
         self._radius, self._radius_range = [], []
         self._size, self._sampling = 0, 0
         self._axis_mod, self._axis_vis = [], []
+        self._pixel_scale_rad = 0.
 
     @property
     def size(self):
@@ -43,15 +44,27 @@ class Model(metaclass=ABCMeta):
     def axis_mod(self):
         return self._axis_mod
 
-    def get_flux(self, obj_dim: float,
+    @property
+    def pixel_scale_rad(self):
+        return self._pixel_scale_rad
+
+    @pixel_scale_rad.setter
+    def pixel_scale_rad(self, obj_dimensions: float):
+        if self._sampling != 0.:
+            self._pixel_scale_rad = obj_dimensions/self._sampling
+        else:
+            self._pixel_scale_rad = obj_dimensions/self._size
+
+    def get_flux(self, optical_thickness: float,
                  q: float, T_sub: int, L_star: float,
                  distance: float, wavelength: float) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
         ----------
-        obj_dim: float
-            The size of the object
+        optical_thickness: float
+            The optical thickness of the disk, value between 0-1, which 1 being
+            a perfect black body
         q: float
             The power law index
         T_sub: int
@@ -73,7 +86,9 @@ class Model(metaclass=ABCMeta):
         if self._radius_range:
             flux[self._radius_range] = 0.
 
-        return flux*sr2mas(obj_dim)*1e26
+        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._pixel_scale_rad)*1e26
+        flux[self._radius < r_sub] = 0.
+        return np.sum(flux)
 
     @abstractmethod
     def eval_model() -> np.array:

@@ -49,40 +49,6 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
-def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
-    """Zooms in on an image by cutting of the zero-padding
-
-    Parameters
-    ----------
-    array: np.ndarray
-        The image to be zoomed in on
-    set_size: int, optional
-        The size for the image cut-off
-
-    Returns
-    -------
-    np.ndarray
-        The zoomed in array, with the zero-padding cut-off
-    """
-    array_center = len(array)//2
-    if set_size is None:
-        set_size = int(len(array)*0.15)
-
-    ind_low, ind_high = array_center-set_size,\
-            array_center+set_size
-
-    return array[ind_low:ind_high, ind_low:ind_high]
-
-def sr2mas(obj_size: float):
-    """Converts the dimensions of an object from 'sr' to 'mas'
-
-    Parameters
-    ----------
-    obj_size: float
-        The size of the object without dimensions
-    """
-    return ((obj_size)/(3600e3*180/np.pi))**2
-
 def m2au(length: Union[int, float]):
     """Converts units of [m] to [au]"""
     return length/AU_M
@@ -109,20 +75,6 @@ def arc2rad(length_in_arc: Union[int, float]):
     """Converts the orbital radius from [arcsec] to [rad]"""
     return length_in_arc*ARCSEC2RADIANS
 
-def scale2mas(angle: Optional[Union[int, float, np.ndarray]] = None):
-    """Returns a given angle in mas
-    Parameters
-    ----------
-    angle: int | float | np.ndarray, optional
-        The input angle(s) in px, degree or another unitless scale
-
-    Returns
-    -------
-    float
-        The angle in mas
-    """
-    return angle/3.6e9
-
 def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     """Returns a given angle in mas/rad or the pertaining scaling factor
 
@@ -139,6 +91,20 @@ def mas2rad(angle: Optional[Union[int, float, np.ndarray]] = None):
     if angle is None:
         return np.radians(1/3.6e6)
     return np.radians(angle/3.6e6)
+
+def rad2mas(angle: Optional[float] = None):
+    """Converts from radians to milliarcseconds"""
+    return 1/mas2rad(angle)
+
+def sr2mas(pixel_size: float):
+    """Converts the dimensions of an object from 'sr' to 'mas'
+
+    Parameters
+    ----------
+    pixel_size: float
+        The size of one pixel in rad
+    """
+    return (pixel_size/(3600e3*180/np.pi))**2
 
 def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
     """Gets the model's scaling from its sampling rate/size the wavelength and
@@ -280,6 +246,30 @@ def set_size(size: int, sampling: Optional[int] = None,
     else:
         return np.sqrt(x**2+y**2), x
 
+def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
+    """Zooms in on an image by cutting of the zero-padding
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The image to be zoomed in on
+    set_size: int, optional
+        The size for the image cut-off
+
+    Returns
+    -------
+    np.ndarray
+        The zoomed in array, with the zero-padding cut-off
+    """
+    array_center = len(array)//2
+    if set_size is None:
+        set_size = int(len(array)*0.15)
+
+    ind_low, ind_high = array_center-set_size,\
+            array_center+set_size
+
+    return array[ind_low:ind_high, ind_low:ind_high]
+
 def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
                  uvcoords: np.ndarray = None) -> np.array:
     """Sets the uv coords for visibility modelling
@@ -356,19 +346,18 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     sub_radius_arc = orbit_au2arc(sub_radius_au, distance)
     return arc2rad(sub_radius_arc)
 
-def temperature_gradient(radius: float, q: float,
-                         r_0: Union[int, float],
-                         T_0: int) -> Union[float, np.ndarray]:
+def temperature_gradient(radius: float, r_0: Union[int, float],
+                         q: float, T_0: int) -> Union[float, np.ndarray]:
     """Temperature gradient model determined by power-law distribution.
 
     Parameters
     ----------
     radius: float
         The specified radius
-    q: float
-        The power-law index
     r_0: float
         The initial radius
+    q: float
+        The power-law index
     T_0: float
         The temperature at r_0
 
@@ -390,10 +379,10 @@ def plancks_law_nu(radius: float, q: float,
     ----------
     radius: float
         The predetermined radius
-    q: float
-        The power-law index
     r_0: float
         The initial radius
+    q: float
+        The power-law index
     T_0: float
         The temperature at r_0
     wavelength: float
@@ -405,7 +394,7 @@ def plancks_law_nu(radius: float, q: float,
         The spectral radiance (the power per unit solid angle) of a black-body
         in terms of frequency
     """
-    T = temperature_gradient(radius, q, r_0, T_0)
+    T = temperature_gradient(radius, r_0, q, T_0)
 
     nu = SPEED_OF_LIGHT/wavelength
     factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
@@ -438,14 +427,21 @@ def plancks_law_nu(radius: float, q: float,
 
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
-    # print(sub_r := sublimation_radius(1500, 19, 140))
-    # radius, axis = set_size(size:=128)
+    print(sub_r := sublimation_radius(1500, 19, 140))
+    radius, axis = set_size(size:=512)
+    radius[radius < sub_r] = 0.
+    print(temp:=temperature_gradient(radius, sub_r, 0.55, 1500))
+    plt.imshow(temp)
+    plt.show()
+    print(temp[size//2, size//2])
+    # plt.imshow(temp)
+    # plt.show()
+
     # print(radius)
     # print(spectral_rad := plancks_law_nu(radius, 0.55, sub_r, 1500, 8e-6))
     # print(flux_jy := sr2mas(1.3)*spectral_rad*1e26)
     # print(flux_jy[size//2][size//2])
     # plt.imshow(flux_jy)
     # plt.show()
-
-    print(orbit_au2arc(100, 460)*1e3)
+    ...
 

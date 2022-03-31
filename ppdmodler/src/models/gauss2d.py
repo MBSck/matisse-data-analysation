@@ -64,6 +64,7 @@ class Gauss2D(Model):
                                " the form [fwhm]")
 
         self._size, self._sampling = size, sampling
+        self.pixel_scale_rad = fwhm/2
         self._radius, self._axis_mod  = set_size(size, sampling, centre)
 
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
@@ -108,8 +109,7 @@ class Gauss2D(Model):
 if __name__ == "__main__":
     g = Gauss2D()
     g_model = g.eval_model([5.3], size:=256)
-    print(g._radius)
-    g_flux = g.get_flux(1.3, 0.55, 1500, 50, 233, 8e-6)
+    g_flux = g.get_flux(1, 0.55, 1500, 19, 140, 9e-6)
     print(g_flux[size//2, size//2])
     plt.imshow(g_model)
     plt.show()

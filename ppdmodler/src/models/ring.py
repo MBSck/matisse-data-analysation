@@ -82,10 +82,10 @@ class Ring(Model):
         self._size, self._sampling = size, sampling
 
         if len(theta) > 2:
-            radius, self._axis_mod = set_size(size, sampling, centre,
+            radius, self._axis_mod = set_size(size, sampling,
                                                   [pos_angle_ellipsis, pos_angle_axis, inc_angle])
         else:
-            radius, self._axis_mod = set_size(size, sampling, centre)
+            radius, self._axis_mod = set_size(size, sampling)
 
         self._radius = radius.copy()
 
