@@ -57,7 +57,7 @@ class Plotter:
             self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
             self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
             self.vissta = self.vis[~0]
-            self.flux = self.readout.get_data("oi_flux", "fluxdata")
+            self.flux = self.readout.get_data("oi_flux", "fluxdata")[0]
             self.ucoords, self.vcoords = map(lambda x: x[:6], self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()[11:-17]
 
@@ -154,7 +154,7 @@ class Plotter:
         ax.legend(loc=3, prop={'size': 6})
 
     def vis2_plot_all(self, ax) -> None:
-        plot_dim = [np.min(self.vis2data), np.max(self.vis2data)]
+        plot_dim = [0., 1.]
 
         for i, o in enumerate(self.vis2data):
             baseline = np.around(np.sqrt(self.ucoords[i]**2+self.vcoords[i]**2), 2)
@@ -168,9 +168,10 @@ class Plotter:
         ax.legend(loc=3, prop={'size': 6})
 
     def t3phi_plot_all(self, ax) -> None:
+        plot_dim = [-180, 180]
         for i, o in enumerate(self.t3phidata):
             ax.plot(self.wl*1e6, unwrap_phase(o[11:-17]), label=self.tel_t3phi[i], linewidth=2)
-            ax.set_ylim([-180, 180])
+            ax.set_ylim([*plot_dim])
             ax.set_ylabel("cphase [deg]")
             ax.set_xlabel(r"wl [$\mu$ m]")
 
@@ -332,7 +333,7 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/lband/calib"
+    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/combined/lband"
     # data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
 
