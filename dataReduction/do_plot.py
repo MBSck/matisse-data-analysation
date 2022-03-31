@@ -20,21 +20,11 @@ from astropy.io import fits
 from scipy.special import j0, j1
 from skimage.restoration import unwrap_phase
 
-from src.functionality.readout import ReadoutFits
-from src.functionality.utilities import trunc
+from readout import ReadoutFits
 
-def shell_main() -> None:
-    """
-    This function's sole purpose is to enable the plotter to work in the shell
-    """
-    try:
-        script, dirname, vis_dim0, vis_dim1 = sys.argv
-    except:
-        print("Usage: python3 plotter.py /path/to/target/data/dir/ vis_dim[0] vis_dim[1]")
-        sys.exit(1)
-
-    vis_dim = [float(vis_dim0), float(vis_dim1)]
-    Plotter(dirname=dirname, vis_dim=vis_dim)
+def trunc(values, decs=0):
+    """Truncates the floating point decimals"""
+    return np.trunc(values*10**decs)/(10**decs)
 
 # Classes
 
