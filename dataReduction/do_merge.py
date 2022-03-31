@@ -1,11 +1,12 @@
 import os
 
+from glob import glob
 from shutil import copyfile
 from astropy.io import fits
 
 """Slight rewrite of Jozsef's code and folder wide application"""
 
-def oifits_patchwork(incoherent_file_path: str, coherent_file: str,
+def oifits_patchwork(incoherent_file: str, coherent_file: str,
                      outfile_path: str,
                      oi_types_list=[['vis2','visamp','visphi','t3','flux']],
                      headerval=[]) -> None:
@@ -90,33 +91,33 @@ def merge_files(product_folder: str, both: bool = False,
                 lband: bool = False) -> None:
         for i in ["lband", "nband"]:
             incoherent_folders = glob(os.path.join(product_folder, f"incoherent/{i}/calib", "*.rb"))
-            coherent_folders = glob(os.path.join(product_folder, f"coherent_folders/{i}/calib", "*.rb"))
-            print(incoherent_folders, coherent_folders)
+            coherent_folders = [os.path.join(product_folder, f"coherent/{i}/calib", os.path.basename(x)) for x in incoherent_folders]
             outfile_dir = os.path.join(product_folder, "combined", i)
-            print(outfile_dir)
 
             for j, k in enumerate(incoherent_folders):
                 print(f"Merging {os.path.basename(k)} with "\
                       f"{os.path.basename(coherent_folders[j])}")
+                print("------------------------------------------------------------")
                 outfile_dir = os.path.join(base_folder, "combined",\
                                            i, os.path.basename(k))
-                print(outfile_dir)
+
                 if not os.path.exists(outfile_dir):
                     os.makedirs(outfile_dir)
 
                 incoherent_fits_files = glob(os.path.join(k, "*.fits"))
+                incoherent_fits_files.sort(key=lambda x: x[-8:])
                 coherent_fits_files = glob(os.path.join(coherent_folders[j], "*.fits"))
+                coherent_fits_files.sort(key=lambda x: x[-8:])
 
                 for l, m in enumerate(incoherent_fits_files):
-                    print("------------------------------------------------------------")
                     print(f"Processing {os.path.basename(m)} with "\
                           f"{os.path.basename(coherent_fits_files[l])}")
                     outfile_path = os.path.join(outfile_dir, os.path.basename(m))
                     oifits_patchwork(m, coherent_fits_files[l], outfile_path)
 
+                print("------------------------------------------------------------")
                 print(f"Done merging {os.path.basename(k)} with "\
                       f"{os.path.basename(coherent_folders[j])}")
-
 
 if __name__ == "__main__":
     base_folder = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/"
