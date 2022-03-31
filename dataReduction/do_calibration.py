@@ -77,6 +77,7 @@ def single_reduction(folder_dir_tar: str, folder_dir_cal: str,
         print(f"Processing {os.path.basename(o)} with "\
               f"{os.path.basename(calibrators[i])}")
         output_file = os.path.join(output_dir, f"TARGET_CAL_INT_000{i}.fits")
+
         fluxcal(o, calibrators[i], output_file,\
                 CAL_DATABASE_PATHS, mode=mode, output_fig_dir=output_dir)
     print(f"Done calibrating {os.path.basename(folder_dir_tar)} with "\

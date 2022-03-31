@@ -2,6 +2,7 @@
 
 # TODO: Make either model or fourier transform carry more info like the name of
 # the plot or similar -> Work more with classes
+# TODO: Remove error bars from plots
 
 import sys
 import os
@@ -49,19 +50,22 @@ class Plotter:
             print("No files found! Check input path")
             sys.exit(1)
 
-        for file in self.files[:]:
-            self.fits_file = file
+        for f in self.files[:]:
+            self.fits_file = f
 
             # Initializes the fits-readout
-            self.readout = ReadoutFits(file)
+            self.readout = ReadoutFits(f)
+
+            # Debug only remove later
+            self.vis = self.readout.get_data("oi_vis", "visamp", "visamperr", "visphi", "visphierr", "sta_index")
 
             # Fetches all the relevant data from the '.fits'-file
-            self.visdata, self.viserr = map(lambda x: x[:6], self.readout.get_vis()[:2])
-            self.visphase, self.visphaseerr = map(lambda x: x[:6], self.readout.get_vis()[2:4])
             self.vis2data, self.vis2err = map(lambda x: x[:6], self.readout.get_vis2()[:2])
+            self.visdata, self.viserr = map(lambda x: x[:6], self.vis[:2])
+            self.visphase, self.visphaseerr = map(lambda x: x[:6], self.vis[2:4])
             self.t3phidata, self.t3phierr = map(lambda x: x[:4], self.readout.get_t3phi()[:2])
             self.vis2sta, self.t3phista = self.readout.get_vis2()[2], self.readout.get_t3phi()[2]
-            self.vissta = self.readout.get_vis()[~0]
+            self.vissta = self.vis[~0]
             self.ucoords, self.vcoords = map(lambda x: x[:6], self.readout.get_split_uvcoords())
             self.wl = self.readout.get_wl()[11:-17]
 
@@ -156,12 +160,12 @@ class Plotter:
                 # self.vis_dim = [0., np.mean(np.linalg.norm(o)*0.5]
             baseline = np.around(np.sqrt(self.ucoords[i]**2+self.vcoords[i]**2), 2)
             pas = np.around((np.degrees(np.arctan2(self.vcoords[i], self.ucoords[i]))-90)*-1, 2)
-            ax.errorbar(self.wl*1e6, o[11:-17], yerr=self.vis2err[i][11:-17], marker='s',
+            ax.plot(self.wl*1e6, o[11:-17], marker='s',
                           label=fr"{self.tel_vis[i]}, $B_p$={baseline} m $\phi={pas}^\circ$",
                           capsize=0., alpha=0.5)
             ax.set_ylim([self.vis_dim[0], self.vis_dim[1]])
-            ax.set_ylabel("vis")
-            ax.set_xlabel("wl [micron]")
+            ax.set_ylabel("flux [Jy]")
+            ax.set_xlabel("wl [µm]")
             all_obs[i%6].append(o[11:-17])
 
         # Plots the squared visibility errors
@@ -189,7 +193,7 @@ class Plotter:
                           capsize=0., alpha=0.5)
             ax.set_ylim([self.vis_dim[0], self.vis_dim[1]])
             ax.set_ylabel("vis2")
-            ax.set_xlabel("wl [micron]")
+            ax.set_xlabel("wl [µm]")
             all_obs[i%6].append(o[11:-17])
 
         # Plots the squared visibility errors
@@ -208,7 +212,7 @@ class Plotter:
                         ,marker='s',capsize=0.,alpha=0.25, label=self.tel_t3phi[i])
             ax.set_ylim([-180,180])
             ax.set_ylabel("cphase [deg]")
-            ax.set_xlabel("wl [micron]")
+            ax.set_xlabel("wl [µm]")
             all_obs[i%4].append(list(o[11:-17]))
 
         if err:
@@ -369,12 +373,12 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/openTime/hd104327/calib"
+    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/coherent/nband/calib"
     # data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
 
     for i in subfolders:
-        Plotter(i, [0., .4], True)
+        Plotter(i, [0., 10], True)
 
     # folder = "2021-10-15T07_20_19.AQUARIUS.rb_with_2021-10-15T06_50_56.AQUARIUS.rb_CALIBRATED"
     # Plotter(os.path.join(data_path, folder), [0., 0.15])

@@ -57,8 +57,7 @@ class ReadoutFits:
 
     def get_vis(self) -> np.ndarray:
         """Fetches the visibility data/correlated fluxes, its errors and sta-indices"""
-        return self.get_data("oi_vis", "visamp", "visamperr", "visphi",
-                             "visphierr", "sta_index")
+        return self.get_data("oi_vis", "visamp", "visamperr", "visphi", "visphierr", "sta_index")
 
     def get_vis2(self) -> np.ndarray:
         """Fetches the squared visibility data, its error and sta_indicies"""

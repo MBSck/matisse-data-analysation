@@ -96,8 +96,8 @@ def reduction_pipeline(rawdir: str, calibdir: str, resdir: str,
     return 0
 
 if __name__ == "__main__":
-    rawdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/RAW/20190514"
+    rawdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/hd104327/RAW"
     calibdir = rawdir
-    resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514"
+    resdir = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/openTime/hd104327/PRODUCTS"
 
-    reduction_pipeline(rawdir, calibdir, resdir, "UT", lband=True)
+    reduction_pipeline(rawdir, calibdir, resdir, "UT", both=True)
