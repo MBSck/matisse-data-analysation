@@ -83,24 +83,39 @@ def oifits_patchwork(incoherent_file_path: str, coherent_file: str,
     inhdul.close()
     inhdul2.close()
 
-def do_single_merge(
+def do_single_merge():
+    ...
 
 def merge_files(product_folder: str, both: bool = False,
                 lband: bool = False) -> None:
-    if both:
-    for i in ["lband", "nband"]:
-        incoherent_folders = glob(os.path.join(product_folder, f"incoherent/{i}/calib", "*.rb"))
-        coherent_folders = glob(os.path.join(product_folder, f"coherent_folders/{i}/calib", "*.rb"))
-        print(incoherent_folders, coherent_folders)
-        outfile_dir = os.path.join(base_folder, "combined", i)
+        for i in ["lband", "nband"]:
+            incoherent_folders = glob(os.path.join(product_folder, f"incoherent/{i}/calib", "*.rb"))
+            coherent_folders = glob(os.path.join(product_folder, f"coherent_folders/{i}/calib", "*.rb"))
+            print(incoherent_folders, coherent_folders)
+            outfile_dir = os.path.join(product_folder, "combined", i)
+            print(outfile_dir)
 
-        if not os.path.exists(outfile_dir):
-            os.makedirs(outfile_dir)
+            for j, k in enumerate(incoherent_folders):
+                print(f"Merging {os.path.basename(k)} with "\
+                      f"{os.path.basename(coherent_folders[j])}")
+                outfile_dir = os.path.join(base_folder, "combined",\
+                                           i, os.path.basename(k))
+                print(outfile_dir)
+                if not os.path.exists(outfile_dir):
+                    os.makedirs(outfile_dir)
 
-        outfile_path = os.path.join(outfile_dir, os.path.basename(coherent_file))
-        oifits_patchwork(incoherent_file, coherent_file, outfile_path)
-    else:
-        band = "lband" if lband else "nband"
+                incoherent_fits_files = glob(os.path.join(k, "*.fits"))
+                coherent_fits_files = glob(os.path.join(coherent_folders[j], "*.fits"))
+
+                for l, m in enumerate(incoherent_fits_files):
+                    print("------------------------------------------------------------")
+                    print(f"Processing {os.path.basename(m)} with "\
+                          f"{os.path.basename(coherent_fits_files[l])}")
+                    outfile_path = os.path.join(outfile_dir, os.path.basename(m))
+                    oifits_patchwork(m, coherent_fits_files[l], outfile_path)
+
+                print(f"Done merging {os.path.basename(k)} with "\
+                      f"{os.path.basename(coherent_folders[j])}")
 
 
 if __name__ == "__main__":
