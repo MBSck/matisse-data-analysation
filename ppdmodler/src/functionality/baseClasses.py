@@ -43,8 +43,8 @@ class Model(metaclass=ABCMeta):
     def axis_mod(self):
         return self._axis_mod
 
-    def get_flux(self, pixel_scale: Union[int, float], optical_thickness: float,
-                 q: float, T_sub: int, L_star: float,
+    def get_flux(self, optical_thickness: float,
+                 q: float, pixel_scale: Union[int, float], T_sub: int, L_star: float,
                  distance: float, wavelength: float) -> np.array:
         """Calculates the total flux of the model
 
@@ -55,6 +55,8 @@ class Model(metaclass=ABCMeta):
             a perfect black body
         q: float
             The power law index
+        pixel_scale: float
+            The pixel scale of the FOV
         T_sub: int
             The sublimation temperature
         L_star: float

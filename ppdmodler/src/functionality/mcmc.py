@@ -44,6 +44,11 @@ class MCMC:
         self.numerical, self.vis = numerical, vis
         self.vis2 = not self.vis
 
+        if self.vis:
+            self.realdata, self.datamod = data[0][0], None
+        else:
+            self.realdata, self.datamod = data[0], None
+
         self.realdata, self.datamod = data[0], None
         self.wavelength, self.uvcoords = data[3], data[~0]
         self.theta_max = None
@@ -68,7 +73,7 @@ class MCMC:
         model"""
         # The EnsambleSampler gets the parameters. The args are the args put into the
         # lob_prob function. Additional parameter a can be used for the stepsize. None is
-        # the default 
+        # the default
         sampler = emcee.EnsembleSampler(self.nw, self.nd, self.lnprob, args=self.data)
 
         # Burn-in of the sampler. Explores the parameter space. The walkers get settled
@@ -112,22 +117,21 @@ class MCMC:
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
+        tau, q = theta[-2:]
         if self.numerical:
-            datamod, phase, ft = self.model4fit_numerical(theta, sampling, wavelength, uvcoords)
+            datamod, phase, ft = self.model4fit_numerical(theta[:-2], sampling, wavelength, uvcoords)
         else:
-            datamod = self.model4fit_analytical(theta, sampling, wavelength, uvcoords)
+            datamod = self.model4fit_analytical(theta[:-2] sampling, wavelength, uvcoords)
 
         if self.vis:
             realdata, realphase = realdata
             realdataerr, realphaseerr = realerr
-
-            # Multiplies the total_flux onto the vis to get corr_flux
-            model_tot_flux = np.sum(self.model.get_flux(wavelength, *self.bb_params))
+            model_tot_flux = np.sum(self.model.get_flux(tau, q, *self.bb_params, wavelength))
             datamod *= model_tot_flux
         else:
             datamod = datamod*np.conj(datamod)
 
-        return -0.5*np.sum((realdata-datamod/realerr)**2)
+        return -0.5*np.sum((realdata-datamod)**2)
 
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
@@ -170,8 +174,7 @@ class MCMC:
                             uvcoords) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
         if self.vis:
-            model_img = self.model.eval_model(theta, sampling,
-                                              wavelength=wavelength)
+            model_img = self.model.eval_model(theta, sampling,)
         else:
             model_img = self.model.eval_model(theta, sampling)
 
@@ -180,7 +183,7 @@ class MCMC:
 
         # rescaling of the uv-coords to the corresponding image size
         self.xcoord, self.ycoord = correspond_uv2scale(fr.fftscale, fr.model_size//2, uvcoords)
-        amp = [amp[j, i] for i, j in zip(self.xcoord, self.ycoord)]
+        amp = np.array([amp[j, i] for i, j in zip(self.xcoord, self.ycoord)])
         return amp, phase, ft
 
     def get_best_fit(self, sampler) -> np.ndarray:
@@ -197,26 +200,30 @@ class MCMC:
         # Gets the best value and calculates a full model
         self.theta_max = self.get_best_fit(sampler)
         print(self.theta_max, "Theta max")
+        tau, q = self.theta_max[-2:]
 
         if self.numerical:
             # For debugging only
-            datamod, phase, ft = self.model4fit_numerical(self.theta_max, sampling, wavelength, uvcoords)
+            datamod, phase, ft = self.model4fit_numerical(self.theta_max[:-2], sampling, wavelength, uvcoords)
             if self.vis:
-                self.model.get_flux(wavelength, *self.bb_params)
+                flux = self.model.get_flux(tau, q, *self.bb_params, wavelength)
+                datamod *= flux
             else:
                 datamod = datamod*np.conj(datamod)
 
             self.datamod = datamod
             # TODO: fix this!
-            best_fit_model = self.model.eval_model(self.theta_max, sampling)
-            best_fit_model = abs(FFT(best_fit_model, wavelength).pipeline(vis2=True)[1])
+            best_fit_model = self.model.eval_model(self.theta_max[:-2], sampling)
+            flux = self.model.get_flux(tau, q, *self.bb_params, wavelength)
+            best_fit_model = abs(FFT(best_fit_model, wavelength).pipeline(vis2=self.vis2)[1])
+            best_fit_model *= flux
         else:
             best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
 
         # Correspond the best fit to the uv coords
-        print(datamod, "best fit data", self.realdata, "real data")
+        print("best fit data", datamod, "real data", self.realdata)
 
-        # Takes a slice of the model and shows vis2-baselines 
+        # Takes a slice of the model and shows vis2-baselines
         size_model = len(best_fit_model)
         u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
         wavelength = trunc(wavelength*1e06, 2)
@@ -316,11 +323,10 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([45., 45., 45., 0.5, 3.5, 5.2, 7.6])
-    priors = [[0., 360.], [0., 360.], [0., 360.],
-              [.1, 3.], [3., 5.], [5., 7.], [7., 9.]]
-    labels = ["ELL_ANGLE", "AX_ANGLE", "INC_ANGLE","R_1", "R_2", "R_3" ,"R_4"]
-    bb_params = [0.55, 1500, 19, 140]
+    initial = np.array([5., 0.5, 0.5])
+    priors = [[0., 10.], [0., 1.], [0., 1.]]
+    labels = ["FWHM", "TAU", "Q"]
+    bb_params = [10, 1500, 19, 140]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
