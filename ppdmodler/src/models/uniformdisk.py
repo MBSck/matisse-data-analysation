@@ -59,13 +59,13 @@ class UniformDisk(Model):
 
         self._size, self._sampling = size, sampling
         radius, self._axis_mod = set_size(size, sampling, centre)
-        print(diameter, radius)
+        print(diameter/2, radius[size//2, size//2])
 
         self._radius = radius.copy()
-        self._radius_range = np.where(radius > diameter/2)
 
-        radius[radius <= diameter/2] = 4/(np.pi*diameter**2)
         radius[radius > diameter/2] = 0.
+        radius[radius != 0.] = 4/(np.pi*diameter**2)
+        self._radius_range = np.where(radius != 0)
 
         return radius
 
@@ -109,9 +109,9 @@ class UniformDisk(Model):
 if __name__ == "__main__":
     u = UniformDisk()
 
-    u_model = u.eval_model([2.], 128, 512)
-    u_flux = u.get_flux(0.55, 1500, 19, 8e-6)
-    print(u._radius_range)
+    u_model = u.eval_model([4], 256)
+    u_flux = u.get_flux(0.5, 0.5, 5, 1500, 19, 140, 8e-6)
+    print(u_flux)
     plt.imshow(u_model)
     plt.show()
 

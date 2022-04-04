@@ -45,7 +45,8 @@ class Model(metaclass=ABCMeta):
 
     def get_flux(self, optical_thickness: float,
                  q: float, pixel_scale: Union[int, float], T_sub: int, L_star: float,
-                 distance: float, wavelength: float) -> np.array:
+                 distance: float, wavelength: float,
+                 inner_radius: Optional[float] = None) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
@@ -65,19 +66,26 @@ class Model(metaclass=ABCMeta):
             The distance to the object
         wavelength: float, optional
             The measurement wavelength
+        inner_radius: float, optional
+            This sets an inner radius, different from the sublimation radius in
+            [mas]
 
         Returns
         -------
         flux: np.ndarray
         """
-        r_sub = sublimation_radius(T_sub, L_star, distance)
-        flux = plancks_law_nu(self._radius, q, r_sub, T_sub, wavelength)
+        if inner_radius:
+            r_sub = inner_radius
+        else:
+            r_sub = sublimation_radius(T_sub, L_star, distance)
 
         if self._radius_range:
-            flux[self._radius_range] = 0.
+            self._radius[self._radius_range] = 0.
+        self._radius[self._radius <= r_sub] = 0.
 
+        flux = plancks_law_nu(self._radius, q, r_sub, T_sub, wavelength)
         flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale)*1e26
-        flux[self._radius < r_sub] = 0.
+
         return np.sum(flux)
 
     @abstractmethod
@@ -122,5 +130,4 @@ class Parameter:
 @dataclass
 class Parameters:
     """A vector that gets all of the models parameters"""
-
 
