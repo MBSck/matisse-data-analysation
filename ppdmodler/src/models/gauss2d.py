@@ -28,9 +28,8 @@ class Gauss2D(Model):
         self.name = "2D-Gaussian"
 
     @timeit
-    def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None,
-                   centre: Optional[int] = None) -> np.array:
+    def eval_model(self, theta: List, mas_size: int, px_size: int,
+                   sampling: Optional[int] = None) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -63,8 +62,8 @@ class Gauss2D(Model):
                                " Check input arguments, theta must be of"
                                " the form [fwhm]")
 
-        self._size, self._sampling = size, sampling
-        self._radius, self._axis_mod  = set_size(size, sampling, centre)
+        self._size, self._sampling = px_size, sampling
+        self._radius, self._axis_mod, self._phi  = set_size(mas_size, px_size, sampling)
 
         return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
@@ -107,11 +106,11 @@ class Gauss2D(Model):
 
 if __name__ == "__main__":
     g = Gauss2D()
-    g_model = g.eval_model([5.3], size:=256)
+    g_model = g.eval_model([5], 10, 256)
     g_flux = g.get_flux(0.5, 0.55, 1000, 1500, 19, 140, 9e-6)
     print(g_flux)
-    plt.imshow(g._radius)
+    # plt.imshow(g._radius)
+    plt.imshow(g_model*g_flux)
     # plt.plot(np.linspace(0, 256, 256), g_flux[128])
     plt.show()
-    print(len(np.linspace(0, 256, 256)))
 

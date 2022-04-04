@@ -26,6 +26,7 @@ class Model(metaclass=ABCMeta):
         self._radius, self._radius_range = [], []
         self._size, self._sampling = 0, 0
         self._axis_mod, self._axis_vis = [], []
+        self._phi = []
 
     @property
     def size(self):
@@ -88,7 +89,7 @@ class Model(metaclass=ABCMeta):
         flux = plancks_law_nu(T, wavelength)
         flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale)*1e26
 
-        return np.sum(flux)
+        return np.ma.masked_invalid(flux).sum()
 
     @abstractmethod
     def eval_model() -> np.array:

@@ -201,15 +201,17 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(px_size: int, sampling: Optional[int] = None,
+def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
              angles: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
     Parameters
     ----------
-    size: int
-        Sets the size of the model image and implicitly the x-, y-axis.
+    mas_size: int
+        Sets the size of the image [mas]
+    px_size: int
+        Sets the size [px] of the model image and implicitly the x-, y-axis.
         Size change for simple models functions like zero-padding
     sampling: int, optional
         The sampling of the object-plane
@@ -228,7 +230,9 @@ def set_size(px_size: int, sampling: Optional[int] = None,
     if (sampling is None):
         sampling = px_size
 
-    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling))
+    fov_scale = mas_size/sampling
+
+    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling))*fov_scale
     y = x[:, np.newaxis]
 
     if angles is not None:
@@ -374,7 +378,7 @@ def temperature_gradient(radius: float, r_0: Union[int, float],
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
     return T_0*(radius/r_0)**(-q)
 
-def plancks_law_nu(T: Union[float, n.ndarray],
+def plancks_law_nu(T: Union[float, np.ndarray],
                    wavelength: float) -> [float, np.ndarray]:
     """Gets the blackbody spectrum at a certain T(r). Wavelength and
     temperature dependent. The wavelength will be converted to frequency
