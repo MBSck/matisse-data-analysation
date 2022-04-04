@@ -87,7 +87,7 @@ class Model(metaclass=ABCMeta):
         T = temperature_gradient(self._radius, r_sub, q, T_sub)
 
         flux = plancks_law_nu(T, wavelength)
-        flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale)*1e26
+        flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale, self.sampling)*1e26
 
         return np.ma.masked_invalid(flux).sum()
 

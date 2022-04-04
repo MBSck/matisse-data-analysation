@@ -96,16 +96,18 @@ def rad2mas(angle: Optional[float] = None):
     """Converts from radians to milliarcseconds"""
     return 1/mas2rad(angle)
 
-def sr2mas(pixel_size: float):
+def sr2mas(mas_size: float, sampling: int):
     """Converts the dimensions of an object from 'sr' to 'mas'. the result is
     in per pixel
 
     Parameters
     ----------
-    pixel_size: float
-        The size of one pixel in mas
+    mas_size: float
+        The size of the image [mas]
+    sampling: int
+        The pixel sampling of the image
     """
-    return (pixel_size/(3600e3*180/np.pi))**2
+    return (mas_size/(sampling*3600e3*180/np.pi))**2
 
 def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
     """Gets the model's scaling from its sampling rate/size the wavelength and
@@ -227,12 +229,9 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     xc: np.ndarray
         The x-axis used to calculate the radius
     """
-    if (sampling is None):
-        sampling = px_size
-
     fov_scale = mas_size/sampling
 
-    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling))*fov_scale
+    x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
     y = x[:, np.newaxis]
 
     if angles is not None:
@@ -347,13 +346,13 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     Returns
     -------
     R_sub: int
-        The sublimation_radius in radians
+        The sublimation_radius [mas]
     """
     L_star *= SOLAR_LUMINOSITY
     sub_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))
     sub_radius_au = m2au(sub_radius_m)
     sub_radius_arc = orbit_au2arc(sub_radius_au, distance)
-    return arc2rad(sub_radius_arc)
+    return sub_radius_arc*1000
 
 def temperature_gradient(radius: float, r_0: Union[int, float],
                          q: float, T_0: int) -> Union[float, np.ndarray]:
@@ -428,12 +427,11 @@ def plancks_law_nu(T: Union[float, np.ndarray],
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
     print(sub_r := sublimation_radius(1500, 19, 140))
-    radius, axis = set_size(size:=512)
+    radius, axis, phi = set_size(100, size:=512)
     radius[radius < sub_r] = 0.
     print(temp:=temperature_gradient(radius, sub_r, 0.55, 1500))
     plt.imshow(temp)
     plt.show()
-    print(temp[size//2, size//2])
     # plt.imshow(temp)
     # plt.show()
 
