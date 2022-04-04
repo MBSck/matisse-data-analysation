@@ -201,7 +201,7 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
-def set_size(size: int, sampling: Optional[int] = None,
+def set_size(px_size: int, sampling: Optional[int] = None,
              angles: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
@@ -226,9 +226,9 @@ def set_size(size: int, sampling: Optional[int] = None,
         The x-axis used to calculate the radius
     """
     if (sampling is None):
-        sampling = size
+        sampling = px_size
 
-    x = mas2rad(np.linspace(-size//2, size//2, sampling))
+    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling))
     y = x[:, np.newaxis]
 
     if angles is not None:
@@ -243,9 +243,13 @@ def set_size(size: int, sampling: Optional[int] = None,
         ar, br = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
                 a*np.cos(pos_angle)-b*np.sin(pos_angle)
 
-        return np.sqrt(ar**2+br**2*np.cos(inc_angle)**2), [ar, br]
+        radius = np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)
+        axis, phi = [ar, br], np.arctan2(ar, br)
     else:
-        return np.sqrt(x**2+y**2), x
+        radius = np.sqrt(x**2+y**2)
+        axis, phi = [x, y], np.arctan2(x, y)
+
+    return radius, axis, phi
 
 def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
     """Zooms in on an image by cutting of the zero-padding
