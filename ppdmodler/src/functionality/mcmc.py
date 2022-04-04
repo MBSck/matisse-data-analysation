@@ -44,13 +44,12 @@ class MCMC:
         self.numerical, self.vis = numerical, vis
         self.vis2 = not self.vis
 
-        if self.vis:
-            self.realdata, self.datamod = data[0][0], None
-        else:
-            self.realdata, self.datamod = data[0], None
+        self.realdata, self.realerr, self.pixel_size,\
+                self.uvcoords, self.wavelength = data
 
-        self.realdata, self.datamod = data[0], None
-        self.wavelength, self.uvcoords = data[3], data[~0]
+        if self.vis:
+            self.realdata, self.datamod = realdata[0], None
+
         self.theta_max = None
         self.x, self.y = 0, 0
 
@@ -294,7 +293,7 @@ class MCMC:
             with open(f"{self.model.name}_data.txt", "w+") as f:
                 f.write(self.write_data())
 
-def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = False):
+def set_data(fits_file: Path, pixel_size: int, sampling: int, wl_ind: int, vis: bool = False):
     """Fetches the required info and then gets the uvcoords and makes the
     data"""
     readout = ReadoutFits(fits_file)
@@ -307,9 +306,8 @@ def set_data(fits_file: Path, sampling: int, wl_ind: int, vis: bool = False):
 
     uvcoords = readout.get_uvcoords()
     wavelength = readout.get_wl()[wl_ind]
-    print(data)
 
-    return (data, dataerr, sampling, wavelength, uvcoords)
+    return (data, dataerr, pixel_size, sampling, wavelength, uvcoords)
 
 def set_mc_params(initial, nwalkers, ndim, niter_burn, niter):
     """Sets the mcmc parameters"""
@@ -326,7 +324,7 @@ if __name__ == "__main__":
     initial = np.array([5., 0.5, 0.5])
     priors = [[0., 10.], [0., 1.], [0., 1.]]
     labels = ["FWHM", "TAU", "Q"]
-    bb_params = [10, 1500, 19, 140]
+    bb_params = [1500, 19, 140]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_CAL_INT_0001bcd_calibratedTEST.fits"
@@ -336,7 +334,7 @@ if __name__ == "__main__":
     vis = False
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f, sampling=512, wl_ind=101, vis=vis)
+    data = set_data(fits_file=f, pixel_size=10, sampling=128, wl_ind=101, vis=vis)
 
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=100, ndim=len(initial), niter_burn=100, niter=1000)

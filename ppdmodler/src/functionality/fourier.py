@@ -63,9 +63,8 @@ class FFT:
 
         amp, phase = np.abs(ft), np.angle(ft, deg=True)
 
-        if vis2:
-            # Norms the vis
-            amp /= np.abs(ft_raw[0, 0])
+        # Norms the vis
+        amp /= np.abs(ft_raw[0, 0])
 
         return ft, amp, phase
 

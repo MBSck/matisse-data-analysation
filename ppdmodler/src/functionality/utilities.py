@@ -220,7 +220,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     centre: bool, optional
         A set centre of the object. Will be set automatically if default 'None' is kept
     angles: List[float]
-        A list of the three angles [ellipsis_angle, pos_angle inc_angle]
+        A list of the three angles [ellipsis_angle, pos_angle inc_angle] [rad]
 
     Returns
     -------
@@ -231,7 +231,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     """
     fov_scale = mas_size/sampling
 
-    x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
+    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling)*fov_scale)
     y = x[:, np.newaxis]
 
     if angles is not None:
@@ -352,7 +352,7 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     sub_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))
     sub_radius_au = m2au(sub_radius_m)
     sub_radius_arc = orbit_au2arc(sub_radius_au, distance)
-    return sub_radius_arc*1000
+    return arc2rad(sub_radius_arc)
 
 def temperature_gradient(radius: float, r_0: Union[int, float],
                          q: float, T_0: int) -> Union[float, np.ndarray]:
@@ -380,7 +380,7 @@ def temperature_gradient(radius: float, r_0: Union[int, float],
 def plancks_law_nu(T: Union[float, np.ndarray],
                    wavelength: float) -> [float, np.ndarray]:
     """Gets the blackbody spectrum at a certain T(r). Wavelength and
-    temperature dependent. The wavelength will be converted to frequency
+    dependent. The wavelength will be converted to frequency
 
     Parameters
     ----------

@@ -56,7 +56,7 @@ class Gauss2D(Model):
         set_size()
         """
         try:
-            fwhm = theta[0]
+            fwhm = mas2rad(theta[0])
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
@@ -64,10 +64,10 @@ class Gauss2D(Model):
         if sampling is None:
             sampling = px_size
 
-        self._size, self._sampling = px_size, sampling
+        self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
         self._radius, self._axis_mod, self._phi  = set_size(mas_size, px_size, sampling)
 
-        return (1/np.sqrt(np.pi/(4*np.log(2)*fwhm)))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
+        return (1/(np.sqrt(np.pi/(4*np.log(2)))*fwhm))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
     @timeit
     def eval_vis(self, theta: np.ndarray, sampling: int,
@@ -109,7 +109,7 @@ class Gauss2D(Model):
 if __name__ == "__main__":
     g = Gauss2D()
     g_model = g.eval_model([2], 10, 256)
-    g_flux = g.get_flux(0.5, 0.55, 1000, 1500, 19, 140, 9e-6)
+    print(g_flux := g.get_flux(0.5, 0.55, 1500, 19, 140, 9e-6))
     # plt.imshow(g._radius)
     plt.imshow(g_model)
     # plt.plot(np.linspace(0, 256, 256), g_flux[128])

@@ -24,7 +24,7 @@ class Model(metaclass=ABCMeta):
     def __init__(self):
         self.name = ""
         self._radius, self._radius_range = [], []
-        self._size, self._sampling = 0, 0
+        self._size, self._sampling, self._mas_size = 0, 0, 0
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
 
@@ -45,7 +45,7 @@ class Model(metaclass=ABCMeta):
         return self._axis_mod
 
     def get_flux(self, optical_thickness: float,
-                 q: float, pixel_scale: Union[int, float], T_sub: int, L_star: float,
+                 q: float, T_sub: int, L_star: float,
                  distance: float, wavelength: float,
                  inner_radius: Optional[float] = None) -> np.array:
         """Calculates the total flux of the model
@@ -57,8 +57,6 @@ class Model(metaclass=ABCMeta):
             a perfect black body
         q: float
             The power law index
-        pixel_scale: float
-            The pixel scale of the FOV
         T_sub: int
             The sublimation temperature
         L_star: float
@@ -87,7 +85,7 @@ class Model(metaclass=ABCMeta):
         T = temperature_gradient(self._radius, r_sub, q, T_sub)
 
         flux = plancks_law_nu(T, wavelength)
-        flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale, self.sampling)*1e26
+        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self.sampling)*1e26
 
         return np.ma.masked_invalid(flux).sum()
 
