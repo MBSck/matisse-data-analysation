@@ -370,22 +370,15 @@ def temperature_gradient(radius: float, r_0: Union[int, float],
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
     return T_0*(radius/r_0)**(-q)
 
-def plancks_law_nu(radius: float, q: float,
-                   r_0: Union[int, float], T_0: int,
+def plancks_law_nu(T: Union[float, n.ndarray],
                    wavelength: float) -> [float, np.ndarray]:
     """Gets the blackbody spectrum at a certain T(r). Wavelength and
     temperature dependent. The wavelength will be converted to frequency
 
     Parameters
     ----------
-    radius: float
-        The predetermined radius
-    r_0: float
-        The initial radius
-    q: float
-        The power-law index
-    T_0: float
-        The temperature at r_0
+    T: float
+        The temperature of the blackbody
     wavelength: float
         The wavelength to be converted to frequency
 
@@ -395,8 +388,6 @@ def plancks_law_nu(radius: float, q: float,
         The spectral radiance (the power per unit solid angle) of a black-body
         in terms of frequency
     """
-    T = temperature_gradient(radius, r_0, q, T_0)
-
     nu = SPEED_OF_LIGHT/wavelength
     factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
     exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)

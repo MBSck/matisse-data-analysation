@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
-        sr2mas
+        sr2mas, temperature_gradient
 
 # Classes
 
@@ -83,7 +83,9 @@ class Model(metaclass=ABCMeta):
             self._radius[self._radius_range] = 0.
         self._radius[self._radius <= r_sub] = 0.
 
-        flux = plancks_law_nu(self._radius, q, r_sub, T_sub, wavelength)
+        T = temperature_gradient(self._radius, r_sub, q, T_sub)
+
+        flux = plancks_law_nu(T, wavelength)
         flux *= (1-np.exp(-optical_thickness))*sr2mas(pixel_scale)*1e26
 
         return np.sum(flux)
