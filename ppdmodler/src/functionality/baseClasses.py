@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
         sr2mas, temperature_gradient
 
+
 # Classes
 
 class Model(metaclass=ABCMeta):
@@ -27,22 +28,6 @@ class Model(metaclass=ABCMeta):
         self._size, self._sampling, self._mas_size = 0, 0, 0
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
-
-    @property
-    def size(self):
-        return self._size
-
-    @property
-    def sampling(self):
-        return self._sampling
-
-    @property
-    def wavelength(self):
-        return self._wavelength
-
-    @property
-    def axis_mod(self):
-        return self._axis_mod
 
     def get_flux(self, optical_thickness: float,
                  q: float, T_sub: int, L_star: float,
@@ -78,14 +63,10 @@ class Model(metaclass=ABCMeta):
         else:
             r_sub = sublimation_radius(T_sub, L_star, distance)
 
-        if self._radius_range:
-            self._radius[self._radius_range] = 0.
-        self._radius[self._radius <= r_sub] = 0.
-
         T = temperature_gradient(self._radius, r_sub, q, T_sub)
 
         flux = plancks_law_nu(T, wavelength)
-        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self.sampling)*1e26
+        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)*1e26
 
         return np.ma.masked_invalid(flux).sum()
 
@@ -117,17 +98,24 @@ class Model(metaclass=ABCMeta):
 class Parameter:
     """Class for keeping the parameters information"""
     name: str
-    value: Union[int, float]
+    init_value: Union[int, float]
+    value: Union[Any, int, float]
+    error: Union[Any, int, float]
+    priors: List[float]
+    label: str
+    unit: str
 
-    def __call__(self):
+    def __call__(self) -> Union[int, float]:
+        """Returns the parameter value"""
         return self.value
 
-    def __str__(self):
-        return f"Param: {self.name} = {self.value}"
+    def __str__(self) -> str:
+        return f"Param='{self.name}': {self.value}+-{self.error}"\
+                f" range=[{', '.join([str(i) for i in self.priors])}]"
 
-    def __repr__(self):
-        return f"Param: {self.name} = {self.value}"
-
+if __name__ == "__main__":
+    p = Parameter("x", 1.6, None, None, [0, 1], "x", "mas")
+    print(p)
 @dataclass
 class Parameters:
     """A vector that gets all of the models parameters"""

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from src.functionality.readout import ReadoutFits
 from src.functionality.fourier import FFT
-from src.functionality.utilities import trunc
+from src.functionality.utilities import trunc, azimuthal_modulation
 from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk
 
 # Shows the full np.arrays, takes ages to print the arrays
@@ -42,8 +42,17 @@ def main():
     wavelength = 9.5e-6
 
     # How to use corr_flux with vis in model
-    g = Gauss2D()
-    check_flux_behaviour(g, wavelength)
+    r = Ring()
+    r_eval = r.eval_model([1.5, 45, 40, 30], mas_size:=10, 512)
+    r_eval *= azimuthal_modulation(r._phi, [[1, 1]])
+    plt.imshow(r_eval, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
+    plt.show()
+    r_flux = r.get_flux(0.5, 0.5, 1500, 19, 140, wavelength)
+    fourier = FFT(r_eval, wavelength)
+    ft, amp, phi = fourier.pipeline()
+
+    plt.imshow(amp*r_flux, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
+    plt.show()
 
 
 if __name__ == "__main__":

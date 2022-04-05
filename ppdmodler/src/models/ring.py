@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.functionality.baseClasses import Model
 from src.functionality.constant import I
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        delta_fct, mas2rad, trunc
+        delta_fct, mas2rad, trunc, azimuthal_modulation
 
 # TODO: Make the addition of the visibilities work properly, think of OOP
 # abilities
@@ -37,9 +37,10 @@ class Ring(Model):
         self.name = "Ring"
 
     @timeit
-    def eval_model(self, theta: List, size: int,
+    def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
-                   centre: Optional[bool] = None) -> np.array:
+                   centre: Optional[bool] = None,
+                   outer_radius: Optional[int] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
@@ -79,19 +80,24 @@ class Ring(Model):
                                " the form [r_0], or [r_0, pos_angle_ellipsis,"
                                " pos_angle_axis, inc_angle]")
 
-        self._size, self._sampling = size, sampling
+        if sampling is None:
+            sampling = px_size
+
+        self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
 
         if len(theta) > 2:
-            radius, self._axis_mod = set_size(size, sampling,
+            radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
                                                   [pos_angle_ellipsis, pos_angle_axis, inc_angle])
         else:
-            radius, self._axis_mod = set_size(size, sampling)
+            radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
+
+        if outer_radius:
+            radius[radius > (r_0+outer_radius)], radius[radius < r_0] = 0., 0.
+        else:
+            radius[radius < r_0] = 0.
 
         self._radius = radius.copy()
-
-        radius[radius > r_0+mas2rad(1.)], radius[radius < r_0] = 0., 0.
-        self._radius_range = np.where(radius == 0)
-        radius[self._radius_range] = 1/(2*np.pi*r_0)
+        radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
 
         return radius
 
@@ -158,9 +164,9 @@ class Ring(Model):
 
 if __name__ == "__main__":
     r = Ring()
-
-    r_model = r.eval_model([1.], 128, 256)
-    print(r_flux := r.get_flux(8e-6, 0.55, 1500, 19))
-    plt.imshow(r_model)
+    r_model = r.eval_model([1.25856455e+00, 4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 10, 2048)
+    print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-03, 1500, 19, 140, 8e-6))
+    r_model *= azimuthal_modulation(r._phi, [[1, 1]])
+    plt.imshow(r_flux)
     plt.show()
 

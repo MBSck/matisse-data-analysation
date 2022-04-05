@@ -203,6 +203,18 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
+def azimuthal_modulation(polar_angle: float,
+                         amps: List[List], order: int = 1):
+    """Azimuthal modulation of an object"""
+    total_mod = 0
+    for i in range(0, order):
+        c, s = amps[i]
+        total_mod += (c*np.cos((i+1)*polar_angle)+s*np.abs((i+1)*polar_angle))
+
+    modulation = np.array(1+total_mod)
+    modulation[modulation < 0] = 0.
+    return modulation
+
 def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
              angles: List[float] = None) -> np.array:
     """

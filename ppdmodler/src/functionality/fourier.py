@@ -35,7 +35,7 @@ class FFT:
         self.pixel_unit_mas = np.diff(self.fftfreq)[0]*1e3
         self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
-    def pipeline(self, zoom: bool = False, vis2: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
+    def pipeline(self, zoom: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
         """Combines various functions and executes them
 
         Parameters
