@@ -165,8 +165,10 @@ class Ring(Model):
 if __name__ == "__main__":
     r = Ring()
     r_model = r.eval_model([1.25856455e+00, 4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 10, 2048)
-    print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-03, 1500, 19, 140, 8e-6))
-    r_model *= azimuthal_modulation(r._phi, [[1, 1]])
-    plt.imshow(r_flux)
-    plt.show()
+    # print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-03, 1500, 19, 140, 8e-6))
+    # r_model *= azimuthal_modulation(r._phi, [[1, 1]])
+    # plt.imshow(r_flux)
+    # plt.show()
+    r_stellar_flux = r.get_stellar_flux(140, 19, 7900, 8e-6)
+    print(r_stellar_flux)
 

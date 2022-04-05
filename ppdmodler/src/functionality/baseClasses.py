@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
-        sr2mas, temperature_gradient
+        sr2mas, temperature_gradient, stellar_radius_pc
 
 
 # Classes
@@ -29,10 +29,15 @@ class Model(metaclass=ABCMeta):
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
 
+    def get_total_flux(self, *args) -> np.ndarray:
+        """Sums up the flux from [Jy/px] to [Jy]"""
+        return np.ma.masked_invalid(self.get_flux(*args)).sum()
+
     def get_flux(self, optical_thickness: float,
                  q: float, T_sub: int, L_star: float,
                  distance: float, wavelength: float,
-                 inner_radius: Optional[float] = None) -> np.array:
+                 inner_radius: Optional[float] = None,
+                 T_eff: Optional[int] = None) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
@@ -51,8 +56,9 @@ class Model(metaclass=ABCMeta):
         wavelength: float, optional
             The measurement wavelength
         inner_radius: float, optional
-            This sets an inner radius, different from the sublimation radius in
-            [mas]
+            This sets an inner radius, different from the sublimation radius in [mas]
+        T: int, optional
+            The effective temperature
 
         Returns
         -------
@@ -63,12 +69,15 @@ class Model(metaclass=ABCMeta):
         else:
             r_sub = sublimation_radius(T_sub, L_star, distance)
 
-        T = temperature_gradient(self._radius, r_sub, q, T_sub)
+        if T_eff:
+            spectral_rad = plancks_law_nu(T_eff, wavelength)
+            flux = np.pi*(stellar_radius_pc(T_eff, L_star)/distance)**2*spectral_rad
+        else:
+            T = temperature_gradient(self._radius, r_sub, q, T_sub)
+            flux = plancks_law_nu(T, wavelength)
+            flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)*1e26
 
-        flux = plancks_law_nu(T, wavelength)
-        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)*1e26
-
-        return np.ma.masked_invalid(flux).sum()
+        return flux
 
     @abstractmethod
     def eval_model() -> np.array:
@@ -116,7 +125,4 @@ class Parameter:
 if __name__ == "__main__":
     p = Parameter("x", 1.6, None, None, [0, 1], "x", "mas")
     print(p)
-@dataclass
-class Parameters:
-    """A vector that gets all of the models parameters"""
 

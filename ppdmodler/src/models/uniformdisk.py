@@ -58,8 +58,7 @@ class UniformDisk(Model):
                                " the form [diameter]")
 
         self._size, self._sampling = size, sampling
-        radius, self._axis_mod = set_size(size, sampling, centre)
-        print(diameter/2, radius[size//2, size//2])
+        radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
 
         self._radius = radius.copy()
 
@@ -110,7 +109,7 @@ if __name__ == "__main__":
     u = UniformDisk()
 
     u_model = u.eval_model([4], 256)
-    u_flux = u.get_flux(0.5, 0.5, 5, 1500, 19, 140, 8e-6)
+    u_flux = u.get_flux(0.5, 0.5, 1500, 19, 140, 8e-6)
     print(u_flux)
     plt.imshow(u_model)
     plt.show()

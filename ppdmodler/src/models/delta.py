@@ -6,7 +6,7 @@ import inspect
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
-from src.functionality.utilities import timeit, sublimation_radius
+from src.functionality.utilities import timeit, sublimation_radius, set_size
 
 
 # TODO: Implement flux for centre of picture
@@ -27,7 +27,7 @@ class Delta(Model):
         self.name = "Delta"
 
     @timeit
-    def eval_model(self, theta: List, size: int) -> np.array:
+    def eval_model(self, px_size: int) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -41,19 +41,11 @@ class Delta(Model):
         --------
         model: np.array
         """
-        try:
-            flux = float(theta[0])
-        except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must"
-                               " be of the form [flux]")
+        self._size = px_size
+        self._radius = np.zeros((px_size, px_size))
+        self._radius[px_size//2, px_size//2] = 1
 
-        self._size = size
-
-        output_array = np.zeros((size, size))
-        output_array[size//2, size//2] = flux
-
-        return output_array
+        return self._radius
 
     @timeit
     def eval_vis(self, theta: List, sampling: int) -> np.array:

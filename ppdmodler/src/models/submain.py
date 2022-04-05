@@ -42,16 +42,15 @@ def main():
     wavelength = 9.5e-6
 
     # How to use corr_flux with vis in model
-    r = Ring()
-    r_eval = r.eval_model([1.5, 45, 40, 30], mas_size:=10, 512)
-    r_eval *= azimuthal_modulation(r._phi, [[1, 1]])
-    plt.imshow(r_eval, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
+    c = CompoundModel()
+    c_eval = c.eval_model([1.5, 45, 40, 30], mas_size:=10, 128)
+    plt.imshow(c_eval, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
     plt.show()
-    r_flux = r.get_flux(0.5, 0.5, 1500, 19, 140, wavelength)
-    fourier = FFT(r_eval, wavelength)
+    c_flux = c.get_total_flux(0.5, 0.5, 1500, 19, 140, wavelength)
+    fourier = FFT(c_eval, wavelength)
     ft, amp, phi = fourier.pipeline()
 
-    plt.imshow(amp*r_flux, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
+    plt.imshow(amp*c_flux, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
     plt.show()
 
 

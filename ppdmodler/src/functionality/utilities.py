@@ -262,7 +262,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
         axis, phi = [ar, br], np.arctan2(ar, br)
     else:
         radius = np.sqrt(x**2+y**2)
-        axis, phi = [x, y], np.arctan2(x, y)
+        axis, phi = [x, y], np.arctan(x/y)
 
     return radius, axis, phi
 
@@ -343,6 +343,38 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
     return B, uvcoords
 
+def m2rad(radius: float, distance: int):
+    """Converts [m] to [rad]"""
+    return arc2rad(m2arc(radius, distance))
+
+def m2arc(radius: float, distance: int):
+    """Converts [m] to [arcsec]"""
+    return orbit_au2arc(m2au(radius), distance)
+
+def m2mas(radius: float, distance: int):
+    """Converts [m] to [mas]"""
+    return m2arc(radius, distance)*1000
+
+def stellar_radius_pc(T_eff: int, L_star: int):
+    """Calculates the stellar radius from its attributes and converts it from
+    m to parsec
+
+    Parameters
+    ----------
+    T_eff: int
+        The star's effective temperature [K]
+    L_star: int
+        The star's luminosity [L_sun]
+
+    Returns
+    -------
+    stellar_radius: float
+        The star's radius [pc]
+    """
+    L_star *= SOLAR_LUMINOSITY
+    stellar_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_eff**4))
+    return stellar_radius_m/PARSEC2M
+
 def sublimation_radius(T_sub: int, L_star: int, distance: float):
     """Calculates the sublimation radius of the disk
 
@@ -362,9 +394,7 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     """
     L_star *= SOLAR_LUMINOSITY
     sub_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))
-    sub_radius_au = m2au(sub_radius_m)
-    sub_radius_arc = orbit_au2arc(sub_radius_au, distance)
-    return arc2rad(sub_radius_arc)
+    return m2rad(sub_radius_m, distance)
 
 def temperature_gradient(radius: float, r_0: Union[int, float],
                          q: float, T_0: int) -> Union[float, np.ndarray]:
@@ -438,12 +468,7 @@ def plancks_law_nu(T: Union[float, np.ndarray],
 
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
-    print(sub_r := sublimation_radius(1500, 19, 140))
-    radius, axis, phi = set_size(100, size:=512)
-    radius[radius < sub_r] = 0.
-    print(temp:=temperature_gradient(radius, sub_r, 0.55, 1500))
-    plt.imshow(temp)
-    plt.show()
+    print(stellar_radius_pc(7900, 19))
     # plt.imshow(temp)
     # plt.show()
 
