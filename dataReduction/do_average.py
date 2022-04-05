@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 from glob import glob
 from astropy.io import fits
@@ -339,7 +340,7 @@ def average_files(product_folder: str, both: bool = False,
                 print("------------------------------------------------------------")
 
 if __name__ == "__main__":
-    folder = ""
+    folder = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/"
     average_files(folder)
 
 
