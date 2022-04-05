@@ -31,7 +31,11 @@ def trunc(values, decs=0):
 class Plotter:
     """Class that plots models as well as vis-, t3phi- and uv-data"""
     def __init__(self, dirname: Path, mosaic: bool = False) -> None:
-        self.files = np.sort(glob(dirname + "/*CAL_INT*.fits"))
+        self.files = np.sort(glob(os.path.join(dirname, "/*CAL_INT*.fits")))
+
+        if self.files.size == 0:
+            self.files = glob(os.path.join(dirname, "Final_CAL.fits"))
+
         self.dirname = dirname
         self.mosaic = mosaic
         self.outname = ""
@@ -333,7 +337,7 @@ if __name__ == ('__main__'):
     ...
     # Tests
     # ------
-    data_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/combined/lband"
+    data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/"
     # data_path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs"
     subfolders = [f.path for f in os.scandir(data_path) if f.is_dir()]
 

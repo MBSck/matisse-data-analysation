@@ -332,7 +332,7 @@ if __name__ == "__main__":
     bb_params = [1500, 19, 140]
 
     # File to read data from
-    f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/TARGET_CAL_INT_0000.fits"
+    f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
 
     # Set the data, the wavlength has to be the fourth argument [3]
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     mc_params = set_mc_params(initial=initial, nwalkers=20, ndim=len(initial), niter_burn=100, niter=1000)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(Ring, data, mc_params, priors, labels, numerical=True,
+    mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
                 vis=True, modulation=True, bb_params=bb_params, out_path=out_path)
     mcmc.pipeline()
 
