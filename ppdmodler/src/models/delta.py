@@ -23,7 +23,8 @@ class Delta(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self):
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
+        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "Delta"
 
     @timeit

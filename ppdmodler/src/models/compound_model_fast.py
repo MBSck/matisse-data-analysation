@@ -26,14 +26,14 @@ class CompoundModel(Model):
     set_size()
     set_uvcoords()
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
+        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "CompoundModel"
-        self.d, self.r = Delta(), Ring()
+        self.d, self.r = Delta(*args), Ring(*args)
 
     def get_flux(self, *args) -> np.array:
         flux = self.r.get_flux(*args)
-        flux[self._size//2, self._size//2] = self.d.get_flux(*args, T_eff=7900)
+        flux[self._size//2, self._size//2] = self.d.get_flux(*args, T_eff=7900)*1e26
         return flux
 
     @timeit
@@ -71,7 +71,7 @@ class CompoundModel(Model):
 
 
 if __name__ == "__main__":
-    c = CompoundModel()
+    c = CompoundModel(1500, 7900, 19, 140, 8e-6)
     c_mod = c.eval_model([1.5, 45, 45, 45], 10, 128)
     c_flux = c.get_flux(0.5, 0.5, 1500, 19, 140, 8e-6)
     # print(c_flux)

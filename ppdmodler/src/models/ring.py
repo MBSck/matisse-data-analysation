@@ -32,8 +32,8 @@ class Ring(Model):
     set_size()
     set_uvcoords()
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
+        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "Ring"
 
     @timeit
@@ -91,12 +91,13 @@ class Ring(Model):
         else:
             radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
 
+        self._radius = radius.copy()
+
         if outer_radius:
             radius[radius > (r_0+outer_radius)], radius[radius < r_0] = 0., 0.
         else:
             radius[radius < r_0] = 0.
 
-        self._radius = radius.copy()
         radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
 
         return radius

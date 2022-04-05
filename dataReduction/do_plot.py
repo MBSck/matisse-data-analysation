@@ -18,7 +18,6 @@ from glob import glob
 from scipy.optimize import curve_fit
 from astropy.io import fits
 from scipy.special import j0, j1
-from skimage.restoration import unwrap_phase
 
 from readout import ReadoutFits
 
@@ -174,7 +173,7 @@ class Plotter:
     def t3phi_plot_all(self, ax) -> None:
         plot_dim = [-180, 180]
         for i, o in enumerate(self.t3phidata):
-            ax.plot(self.wl*1e6, unwrap_phase(o[11:-17]), label=self.tel_t3phi[i], linewidth=2)
+            ax.plot(self.wl*1e6, o[11:-17], label=self.tel_t3phi[i], linewidth=2)
             ax.set_ylim([*plot_dim])
             ax.set_ylabel("cphase [deg]")
             ax.set_xlabel(r"wl [$\mu$ m]")

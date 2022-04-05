@@ -22,12 +22,20 @@ class Model(metaclass=ABCMeta):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self):
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
         self.name = ""
         self._radius, self._radius_range = [], []
         self._size, self._sampling, self._mas_size = 0, 0, 0
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
+
+        self.T_sub, self.T_eff, self.L_star, self.d, self.wl = T_sub, T_eff, \
+                L_star, distance, wavelength
+
+        self._r_sub = sublimation_radius(self.T_sub, self.L_star, self.self.d)
+        self._stellar_radius = stellar_radius_pc(self.T_eff, self.L_star)
+        self._stellar_radians = plancks_law_nu(self.T_eff, self.wl)
+        self._stellar_flux = np.pi*(self._stellar_radius/self.d)**2*self._stellar_radians
 
     def get_total_flux(self, *args) -> np.ndarray:
         """Sums up the flux from [Jy/px] to [Jy]"""
@@ -67,11 +75,10 @@ class Model(metaclass=ABCMeta):
         if inner_radius:
             r_sub = inner_radius
         else:
-            r_sub = sublimation_radius(T_sub, L_star, distance)
+            r_sub = self._r_sub
 
         if T_eff:
-            spectral_rad = plancks_law_nu(T_eff, wavelength)
-            flux = np.pi*(stellar_radius_pc(T_eff, L_star)/distance)**2*spectral_rad
+            flux = self._stellar_flux
         else:
             T = temperature_gradient(self._radius, r_sub, q, T_sub)
             flux = plancks_law_nu(T, wavelength)
