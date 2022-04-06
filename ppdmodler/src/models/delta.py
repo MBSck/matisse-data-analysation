@@ -28,7 +28,7 @@ class Delta(Model):
         self.name = "Delta"
 
     @timeit
-    def eval_model(self, px_size: int) -> np.array:
+    def eval_model(self, mas_size: int, px_size: int) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -42,7 +42,8 @@ class Delta(Model):
         --------
         model: np.array
         """
-        self._size = px_size
+        self._size = self._sampling = px_size
+        self._mas_size = mas_size
         self._radius = np.zeros((px_size, px_size))
         self._radius[px_size//2, px_size//2] = 1
 
@@ -70,17 +71,18 @@ class Delta(Model):
                                 " Check input arguments, theta must"
                                 " be of the form [flux]")
 
-        self._sampling = sampling
+        self._sampling = self._size = sampling
 
         return flux*np.ones((sampling, sampling))
 
 if __name__ == "__main__":
-    d = Delta()
+    d = Delta(1500, 7900, 19, 140, 8e-6)
     # d_model = d.eval_model([1, 10], 128)
     # plt.imshow(d_model)
     # plt.show()
 
-    d_model = d.eval_model([1.], 128)
+    d_model = d.eval_model(10, 128)
+    print(d.stellar_flux)
     plt.imshow(d_model)
     plt.show()
 

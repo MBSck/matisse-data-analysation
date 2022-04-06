@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
         sr2mas, temperature_gradient, stellar_radius_pc
 
+# TODO: Implement FFT as a part of the model class
 
 # Classes
 
@@ -32,20 +33,22 @@ class Model(metaclass=ABCMeta):
         self.T_sub, self.T_eff, self.L_star, self.d, self.wl = T_sub, T_eff, \
                 L_star, distance, wavelength
 
-        self._r_sub = sublimation_radius(self.T_sub, self.L_star, self.self.d)
+        self._r_sub = sublimation_radius(self.T_sub, self.L_star, self.d)
         self._stellar_radius = stellar_radius_pc(self.T_eff, self.L_star)
         self._stellar_radians = plancks_law_nu(self.T_eff, self.wl)
-        self._stellar_flux = np.pi*(self._stellar_radius/self.d)**2*self._stellar_radians
+        self._stellar_flux = np.pi*(self._stellar_radius/self.d)**2*\
+                self._stellar_radians*1e26
+
+    @property
+    def stellar_flux(self):
+        """Get the stellar flux scaled for the pixels"""
+        return self._stellar_flux*(self._mas_size/self._sampling)
 
     def get_total_flux(self, *args) -> np.ndarray:
         """Sums up the flux from [Jy/px] to [Jy]"""
-        return np.ma.masked_invalid(self.get_flux(*args)).sum()
+        return np.sum(self.get_flux(*args))
 
-    def get_flux(self, optical_thickness: float,
-                 q: float, T_sub: int, L_star: float,
-                 distance: float, wavelength: float,
-                 inner_radius: Optional[float] = None,
-                 T_eff: Optional[int] = None) -> np.array:
+    def get_flux(self, optical_thickness: float, q: float) -> np.array:
         """Calculates the total flux of the model
 
         Parameters
@@ -55,36 +58,16 @@ class Model(metaclass=ABCMeta):
             a perfect black body
         q: float
             The power law index
-        T_sub: int
-            The sublimation temperature
-        L_star: float
-            The Luminosity of the star
-        distance: float
-            The distance to the object
-        wavelength: float, optional
-            The measurement wavelength
-        inner_radius: float, optional
-            This sets an inner radius, different from the sublimation radius in [mas]
-        T: int, optional
-            The effective temperature
 
         Returns
         -------
         flux: np.ndarray
         """
-        if inner_radius:
-            r_sub = inner_radius
-        else:
-            r_sub = self._r_sub
-
-        if T_eff:
-            flux = self._stellar_flux
-        else:
-            T = temperature_gradient(self._radius, r_sub, q, T_sub)
-            flux = plancks_law_nu(T, wavelength)
-            flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)*1e26
-
-        return flux
+        T = temperature_gradient(self._radius, self._r_sub, q, self.T_sub)
+        flux = plancks_law_nu(T, self.wl)
+        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)
+        flux[np.where(np.isnan(flux))], flux[np.where(np.isinf(flux))] = 0., 0.
+        return flux*1e26
 
     @abstractmethod
     def eval_model() -> np.array:

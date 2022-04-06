@@ -39,8 +39,7 @@ class Ring(Model):
     @timeit
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
-                   centre: Optional[bool] = None,
-                   outer_radius: Optional[int] = None) -> np.array:
+                   inner_radius: Optional[int] = None) -> np.array:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Parameters
@@ -57,8 +56,6 @@ class Ring(Model):
             The size of the model image
         sampling: int, optional
             The sampling of the object-plane
-        centre: int, optional
-            The centre of the model image
 
         Returns
         --------
@@ -69,15 +66,11 @@ class Ring(Model):
         set_size()
         """
         try:
-            if len(theta) == 1:
-                r_0 = mas2rad(theta[0])
-            else:
-                r_0 = mas2rad(theta[0])
-                pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[1:])
+            pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta)
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
-                               " the form [r_0], or [r_0, pos_angle_ellipsis,"
+                               " the form [pos_angle_ellipsis,"
                                " pos_angle_axis, inc_angle]")
 
         if sampling is None:
@@ -91,14 +84,13 @@ class Ring(Model):
         else:
             radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
 
-        self._radius = radius.copy()
-
-        if outer_radius:
-            radius[radius > (r_0+outer_radius)], radius[radius < r_0] = 0., 0.
+        if inner_radius:
+            radius[radius < inner_radius] = 0.
         else:
-            radius[radius < r_0] = 0.
+            radius[radius < self._r_sub] = 0.
 
-        radius[np.where(radius != 0)] = 1/(2*np.pi*r_0)
+        self._radius = radius.copy()
+        radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
 
         return radius
 
@@ -164,12 +156,10 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
-    r = Ring()
-    r_model = r.eval_model([1.25856455e+00, 4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 10, 2048)
-    # print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-03, 1500, 19, 140, 8e-6))
-    # r_model *= azimuthal_modulation(r._phi, [[1, 1]])
-    # plt.imshow(r_flux)
-    # plt.show()
-    r_stellar_flux = r.get_stellar_flux(140, 19, 7900, 8e-6)
-    print(r_stellar_flux)
+    r = Ring(1500, 7900, 19, 140, 8e-6)
+    r_model = r.eval_model([4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 100, 2048)
+    print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-01))
+    print(r.get_total_flux(0.5, 0.5))
+    plt.imshow(r_flux)
+    plt.show()
 

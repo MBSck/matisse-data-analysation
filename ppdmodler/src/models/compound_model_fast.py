@@ -26,14 +26,15 @@ class CompoundModel(Model):
     set_size()
     set_uvcoords()
     """
-    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
-        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.name = "CompoundModel"
         self.d, self.r = Delta(*args), Ring(*args)
 
     def get_flux(self, *args) -> np.array:
         flux = self.r.get_flux(*args)
-        flux[self._size//2, self._size//2] = self.d.get_flux(*args, T_eff=7900)*1e26
+        flux *= azimuthal_modulation(self.r._phi)
+        flux[self.d._size//2, self.d._size//2] = self.d.stellar_flux
         return flux
 
     @timeit
@@ -50,8 +51,7 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            r_0 = theta[0]
-            ea, pa, inca = theta[1:]
+            ea, pa, inca = theta
         except:
             raise RuntimeError("Input of theta in wrong format")
 
@@ -60,9 +60,8 @@ class CompoundModel(Model):
 
         self._size = px_size
 
-        image = self.r.eval_model([r_0, ea, pa, inca], mas_size, px_size, sampling)
-        image *= azimuthal_modulation(self.r._phi, [[1, 1]])
-        image += self.d.eval_model(px_size)
+        image = self.r.eval_model([ea, pa, inca], mas_size, px_size, sampling)
+        image += self.d.eval_model(mas_size, px_size)
 
         return image
 
@@ -72,8 +71,9 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod = c.eval_model([1.5, 45, 45, 45], 10, 128)
-    c_flux = c.get_flux(0.5, 0.5, 1500, 19, 140, 8e-6)
-    # print(c_flux)
+    c_mod = c.eval_model([45, 45, 45], 30, 1024)
+    c_flux = c.get_flux(0.2, 0.7)
+    print(c.get_total_flux(0.2, 0.7))
     plt.imshow(c_flux)
     plt.show()
+

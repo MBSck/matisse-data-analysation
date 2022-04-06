@@ -36,11 +36,11 @@ class MCMC:
                  priors: List[List[float]], labels: List[str],
                  numerical: bool = True, vis: bool = False,
                  modulation: bool = False, bb_params: List = None,
-                 out_path: Path = None) -> None:
-        self.model = model()
+                 fractional_value: float = 0.2, out_path: Path = None) -> None:
         self.data = data
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
+        self.fractional_value = fractional_value
 
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical, self.vis = numerical, vis
@@ -49,6 +49,8 @@ class MCMC:
 
         self.realdata, self.realerr, self.pixel_size,\
                 self.sampling, self.wavelength, self.uvcoords = data
+
+        self.model = model(*self.bb_params, self.wavelength)
 
         if self.vis:
             self.realdata, self.datamod = self.realdata[0], None
@@ -127,13 +129,16 @@ class MCMC:
 
         if self.vis:
             realdata, realphase = realdata
-            datamod *= self.model.get_flux(tau, q, *self.bb_params, wavelength)
+            realdataerr, realphaseerr = realerr
+            datamod *= self.model.get_total_flux(tau, q)
         else:
             datamod = datamod*np.conj(datamod)
 
-        print(datamod, "mod data", '\n', realdata, "real data")
+        sigma2 = realdataerr**2 + realdata**2*self.fractional_value
+        print("theta", theta)
+        print("real data", realdata, '\n', "real err", realdataerr, '\n', "data mod", datamod)
 
-        return -0.5*np.sum(((realdata-datamod)/(realdata*0.1))**2)
+        return -0.5*np.sum((realdata-datamod)**2/sigma2)
 
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
@@ -179,9 +184,6 @@ class MCMC:
         else:
             model_img = self.model.eval_model(theta, self.pixel_size, sampling)
 
-        if self.modulation:
-            model_img *= azimuthal_modulation(self.model._phi, [[1, 1]])
-
         fr = FFT(model_img, wavelength)
         ft, amp, phase = fr.pipeline()
 
@@ -207,20 +209,18 @@ class MCMC:
         tau, q = self.theta_max[-2:]
 
         if self.numerical:
-            # For debugging only
             datamod, phase, ft = self.model4fit_numerical(self.theta_max[:-2], sampling, wavelength, uvcoords)
+            best_fit_model = self.model.eval_model(self.theta_max[:-2], self.pixel_size, sampling)
+            best_fit_model = FFT(best_fit_model, wavelength).pipeline()[1]
+
             if self.vis:
-                flux = self.model.get_flux(tau, q, *self.bb_params, wavelength)
+                flux  = self.model.get_total_flux(tau, q)
                 datamod *= flux
+                best_fit_model *= flux
             else:
                 datamod = datamod*np.conj(datamod)
 
             self.datamod = datamod
-            best_fit_model = self.model.eval_model(self.theta_max[:-2],
-                                                   self.pixel_size, sampling)
-            flux = self.model.get_flux(tau, q, *self.bb_params, wavelength)
-            best_fit_model = abs(FFT(best_fit_model, wavelength).pipeline()[1])
-            best_fit_model *= flux
         else:
             best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
 
@@ -230,7 +230,7 @@ class MCMC:
         # Takes a slice of the model and shows vis2-baselines
         size_model = len(best_fit_model)
         u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
-        wavelength = trunc(wavelength*1e06, 2)
+        wavelength = trunc(self.wavelength*1e06, 2)
         xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
         yvis_curve = best_fit_model[centre]
 
@@ -298,6 +298,8 @@ class MCMC:
             with open(f"{self.model.name}_data.txt", "w+") as f:
                 f.write(self.write_data())
 
+# Functions
+
 def set_data(fits_file: Path, pixel_size: int, sampling: int, wl_ind: int, vis: bool = False):
     """Fetches the required info and then gets the uvcoords and makes the
     data"""
@@ -326,23 +328,24 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([1.5, 45, 45, 45, 0.5, 0.5])
-    priors = [[0., 10.], [0, 360], [0, 360], [0, 360], [0., 1.], [0., 1.]]
-    labels = ["FWHM", "E_A", "P_A", "INC_A","TAU", "Q"]
-    bb_params = [1500, 19, 140]
+    initial = np.array([45, 45, 45, 0.5, 0.5])
+    priors = [[0, 360], [0, 360], [0, 360], [0., 1.], [0., 1.]]
+    labels = ["E_A", "P_A", "INC_A","TAU", "Q"]
+    bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f, pixel_size=10, sampling=128, wl_ind=101, vis=True)
+    data = set_data(fits_file=f, pixel_size=50, sampling=128, wl_ind=30, vis=True)
 
     # Set the mcmc parameters and the the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=20, ndim=len(initial), niter_burn=100, niter=1000)
+    mc_params = set_mc_params(initial=initial, nwalkers=20, ndim=len(initial), niter_burn=10, niter=100)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
-                vis=True, modulation=True, bb_params=bb_params, out_path=out_path)
+                vis=True, modulation=True, bb_params=bb_params,
+                fractional_value=0.2, out_path=out_path)
     mcmc.pipeline()
 
