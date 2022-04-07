@@ -51,7 +51,7 @@ class UniformDisk(Model):
         set_size()
         """
         try:
-            diameter = mas2rad(theta[0])
+            diameter = theta[0]
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
@@ -94,7 +94,7 @@ class UniformDisk(Model):
         set_uvcoords()
         """
         try:
-            diameter = mas2rad(theta)
+            diameter = theta
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"

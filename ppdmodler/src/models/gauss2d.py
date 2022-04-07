@@ -56,7 +56,7 @@ class Gauss2D(Model):
         set_size()
         """
         try:
-            fwhm = mas2rad(theta[0])
+            fwhm = theta[0]
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
@@ -95,7 +95,7 @@ class Gauss2D(Model):
         set_uvcoords()
         """
         try:
-            fwhm = mas2rad(theta[0])
+            fwhm = theta[0]
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be"

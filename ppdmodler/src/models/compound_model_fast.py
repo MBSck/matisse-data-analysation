@@ -34,6 +34,7 @@ class CompoundModel(Model):
     def get_flux(self, *args) -> np.array:
         flux = self.r.get_flux(*args)
         flux *= azimuthal_modulation(self.r._phi)
+        self._max_sub_flux = np.max(flux)
         flux[self.d._size//2, self.d._size//2] = self.d.stellar_flux
         return flux
 
@@ -56,9 +57,10 @@ class CompoundModel(Model):
             raise RuntimeError("Input of theta in wrong format")
 
         if sampling is None:
-            sampling = px_size
+            self._sampling = sampling = px_size
 
         self._size = px_size
+        self._mas_size = mas_size
 
         image = self.r.eval_model([ea, pa, inca], mas_size, px_size, sampling)
         image += self.d.eval_model(mas_size, px_size)
@@ -71,9 +73,9 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod = c.eval_model([45, 45, 45], 30, 1024)
-    c_flux = c.get_flux(0.2, 0.7)
-    print(c.get_total_flux(0.2, 0.7))
-    plt.imshow(c_flux)
+    c_mod = c.eval_model([45, 45, 45], 55, 2048)
+    c_flux = c.get_flux(np.inf, 0.7)
+    max_flux = np.max(c_flux)
+    plt.imshow(c_flux, vmax=c._max_sub_flux)
     plt.show()
 

@@ -157,9 +157,9 @@ class Ring(Model):
 
 if __name__ == "__main__":
     r = Ring(1500, 7900, 19, 140, 8e-6)
-    r_model = r.eval_model([4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 100, 2048)
-    print(r_flux := r.get_flux(2.64104748e-01, 3.70475743e-01))
-    print(r.get_total_flux(0.5, 0.5))
+    r_model = r.eval_model([4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 30, 2048)
+    print(r_flux := r.get_flux(0.2, 0.7))
+    print(r.get_total_flux(0.2, 0.7))
     plt.imshow(r_flux)
     plt.show()
 

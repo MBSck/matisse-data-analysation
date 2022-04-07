@@ -42,7 +42,7 @@ class Model(metaclass=ABCMeta):
     @property
     def stellar_flux(self):
         """Get the stellar flux scaled for the pixels"""
-        return self._stellar_flux*(self._mas_size/self._sampling)
+        return self._stellar_flux
 
     def get_total_flux(self, *args) -> np.ndarray:
         """Sums up the flux from [Jy/px] to [Jy]"""

@@ -49,10 +49,6 @@ def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
     """
     return 1 if x == y else 0
 
-def m2au(length: Union[int, float]):
-    """Converts units of [m] to [au]"""
-    return length/AU_M
-
 def orbit_au2arc(orbit_radius: Union[int, float],
                  distance: Union[int, float]):
     """Converts the orbital radius from [au] to [arc]
@@ -70,6 +66,22 @@ def orbit_au2arc(orbit_radius: Union[int, float],
         The orbit in arcseconds
     """
     return orbit_radius/distance
+
+def m2au(radius: Union[int, float]):
+    """Converts units of [m] to [au]"""
+    return radius/AU_M
+
+def m2arc(radius: float, distance: int):
+    """Converts [m] to [arcsec]"""
+    return orbit_au2arc(m2au(radius), distance)
+
+def m2mas(radius: float, distance: int):
+    """Converts [m] to [mas]"""
+    return m2arc(radius, distance)*1000
+
+def m2rad(radius: float, distance: int):
+    """Converts [m] to [rad]"""
+    return arc2rad(m2arc(radius, distance))
 
 def arc2rad(length_in_arc: Union[int, float]):
     """Converts the orbital radius from [arcsec] to [rad]"""
@@ -217,7 +229,7 @@ def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
     return modulation
 
 def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
-             angles: List[float] = None) -> np.array:
+             incline_params: List[float] = None) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -230,10 +242,8 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
         Size change for simple models functions like zero-padding
     sampling: int, optional
         The sampling of the object-plane
-    centre: bool, optional
-        A set centre of the object. Will be set automatically if default 'None' is kept
-    angles: List[float]
-        A list of the three angles [ellipsis_angle, pos_angle inc_angle] [rad]
+    incline_params: List[float], optional
+        A list of the inclination parameters [axis_ratio, pos_angle]
 
     Returns
     -------
@@ -244,18 +254,17 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     """
     fov_scale = mas_size/sampling
 
-    x = mas2rad(np.linspace(-px_size//2, px_size//2, sampling)*fov_scale)
+    x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
     y = x[:, np.newaxis]
 
     if angles is not None:
         try:
-            ellipsis_angle, pos_angle, inc_angle = angles
+            axis_ratio, pos_angle = incline_params
         except:
             raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
                                " arguments, ellipsis_angles must be of the"
-                               " form [ellipsis_angle, pos_angle, inc_angle]")
+                               " form [axis_ratio, pos_angle]")
 
-        a, b = x*np.sin(ellipsis_angle), y*np.cos(ellipsis_angle)
         ar, br = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
                 a*np.cos(pos_angle)-b*np.sin(pos_angle)
 
@@ -344,18 +353,6 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
     return B, uvcoords
 
-def m2rad(radius: float, distance: int):
-    """Converts [m] to [rad]"""
-    return arc2rad(m2arc(radius, distance))
-
-def m2arc(radius: float, distance: int):
-    """Converts [m] to [arcsec]"""
-    return orbit_au2arc(m2au(radius), distance)
-
-def m2mas(radius: float, distance: int):
-    """Converts [m] to [mas]"""
-    return m2arc(radius, distance)*1000
-
 def stellar_radius_pc(T_eff: int, L_star: int):
     """Calculates the stellar radius from its attributes and converts it from
     m to parsec
@@ -395,7 +392,7 @@ def sublimation_radius(T_sub: int, L_star: int, distance: float):
     """
     L_star *= SOLAR_LUMINOSITY
     sub_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_sub**4))
-    return m2rad(sub_radius_m, distance)
+    return m2mas(sub_radius_m, distance)
 
 def temperature_gradient(radius: float, r_0: Union[int, float],
                          q: float, T_0: int) -> Union[float, np.ndarray]:
@@ -469,7 +466,7 @@ def plancks_law_nu(T: Union[float, np.ndarray],
 
 if __name__ == "__main__":
     # get_px_scaling([i for i in range(0, 10)], 1e-5)
-    print(stellar_radius_pc(7900, 19))
+    print(sublimation_radius(1500, 19, 140))
     # plt.imshow(temp)
     # plt.show()
 
