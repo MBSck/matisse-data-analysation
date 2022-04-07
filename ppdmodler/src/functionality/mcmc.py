@@ -238,9 +238,12 @@ class MCMC:
         yvis_curve = best_fit_model[centre]
 
         # Combines the plots and gives descriptions to the axes
-        ax.imshow(self.model.get_flux(tau, q), vmax=self.model._max_sub_flux)
-        ax.set_title(fr"{self.model.name}: Temperature gradient")
-        ax.set_xlabel(f"Resolution of {sampling} [px]")
+        ax.imshow(self.model.get_flux(tau, q), vmax=self.model._max_sub_flux,\
+                  extent=[self.pixel_size//2, -self.pixel_size//2,\
+                         -self.pixel_size//2, self.pixel_size//2])
+        ax.set_title(fr"{self.model.name}: Temperature gradient, at {wavelength}$\mu$m")
+        ax.set_xlabel(f"[mas]")
+        ax.set_ylabel(f"[mas]")
         bx.plot(xvis_curve, yvis_curve)
         bx.set_xlabel(r"$B_p$ [m]")
 
@@ -249,9 +252,14 @@ class MCMC:
         else:
             bx.set_ylabel("vis2")
 
-        cx.imshow(best_fit_model)
-        cx.set_title(fr"{self.model.name} at {wavelength}$\mu$m")
-        cx.set_xlabel(f"Correlated fluxes [Jy]")
+        third_max = len(best_fit_model)//2 - 3
+
+        cx.imshow(best_fit_model, vmax=best_fit_model[third_max, third_max],\
+                  extent=[self.pixel_size//2, -self.pixel_size//2,\
+                          -self.pixel_size//2, self.pixel_size//2])
+        cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
+        cx.set_xlabel(f"[mas]")
+        cx.set_ylabel(f"[mas]")
 
         if self.out_path is None:
             plt.savefig(f"{self.model.name}_model_after_fit.png")
@@ -337,7 +345,7 @@ if __name__ == "__main__":
     # Initial sets the theta
     initial = np.array([1.6, 45, 0.01, 0.5])
     priors = [[0., 10.], [0, 360], [0.0, 0.1], [0.5, 1.]]
-    labels = ["E_A", "P_A", "INC_A","TAU", "Q"]
+    labels = ["AXIS_RATIO", "P_A", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
@@ -349,7 +357,7 @@ if __name__ == "__main__":
 
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=10, ndim=len(initial),
-                              niter_burn=500, niter=10000)
+                              niter_burn=100, niter=1000)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,

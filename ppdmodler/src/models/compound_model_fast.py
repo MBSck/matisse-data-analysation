@@ -28,7 +28,7 @@ class CompoundModel(Model):
     """
     def __init__(self, *args):
         super().__init__(*args)
-        self.name = "CompoundModel"
+        self.name = "Compound Model - Test"
         self.d, self.r = Delta(*args), Ring(*args)
 
     def get_flux(self, *args) -> np.array:

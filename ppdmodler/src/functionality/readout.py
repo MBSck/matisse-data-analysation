@@ -7,6 +7,13 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.utilities import get_distance
 
+def readout_txt2np(file):
+    """Reads x, y '.txt'-file intwo 2 numpy arrays"""
+    file_data = np.loadtxt(file)
+    wavelength_axis = [i[0] for i in file_data]
+    flux_axis = [i[1] for i in file_data]
+    return  np.array(wavelength_axis)*1e-6, np.array(flux_axis)
+
 class ReadoutFits:
     """All functionality to work with '.oifits/.fits'-files"""
     def __init__(self, fits_file) -> None:
@@ -112,7 +119,10 @@ class ReadoutFits:
 
 
 if __name__ == "__main__":
-    file = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets/TARGET_RAW_INT_0001.fits"
-    readout = ReadoutFits(file)
-    print(readout.get_vis4wl(101))
+    readout = ReadoutFits("/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits")
+    r_wl = readout.get_wl()
+    print(r_wl.shape)
+    wl, flux = readout_txt2np("/Users/scheuck/Documents/HD_142666_timmi2.txt")
+    print(wl.shape)
+    print(r_wl, '\n', wl)
 
