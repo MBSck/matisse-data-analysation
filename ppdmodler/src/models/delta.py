@@ -33,9 +33,9 @@ class Delta(Model):
 
         Parameters
         ----------
-        flux: float | None
-            The flux of the object
-        size: int
+        mas_size: int
+            The size of the FOV
+        px_size: int
             The size of the model image
 
         Returns
@@ -46,7 +46,6 @@ class Delta(Model):
         self._mas_size = mas_size
         self._radius = np.zeros((px_size, px_size))
         self._radius[px_size//2, px_size//2] = 1
-
         return self._radius
 
     @timeit

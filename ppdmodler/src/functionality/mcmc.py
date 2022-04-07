@@ -139,6 +139,7 @@ class MCMC:
             datamod = datamod*np.conj(datamod)
 
         sigma2 = realdataerr**2 + realdata**2*self.fractional_value
+        print(datamod, "datamod", '\n', realdata, "realdata")
 
         return -0.5*np.sum((realdata-datamod)**2/sigma2)
 
@@ -334,8 +335,8 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([45, 45, 45, 0.01, 0.5])
-    priors = [[0, 360], [0, 360], [0, 360], [0.0, 0.1], [0.5, 1.]]
+    initial = np.array([1.6, 45, 0.01, 0.5])
+    priors = [[0., 10.], [0, 360], [0.0, 0.1], [0.5, 1.]]
     labels = ["E_A", "P_A", "INC_A","TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 

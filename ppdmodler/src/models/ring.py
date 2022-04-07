@@ -40,7 +40,7 @@ class Ring(Model):
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
                    inner_radius: Optional[int] = None) -> np.array:
-        """Evaluates the model. In case of zero divison error, the major will be replaced by 1
+        """Evaluates the model
 
         Parameters
         ----------
@@ -48,14 +48,14 @@ class Ring(Model):
             The radius of the ring
         r_max: int | float, optional
             The radius if the disk if it is not None in theta
-        pos_angle_ellipsis: int | float, optional
-        pos_angle_axis: int | float, optional
-        inc_angle: int | float, optional
-            The inclination angle of the disk
-        size: int
+        axis_ratio: float, optional
+        pos_angle: int | float, optional
+        px_size: int
             The size of the model image
         sampling: int, optional
             The sampling of the object-plane
+        inner_radius: int, optional
+            A set inner radius overwriting the sublimation radius
 
         Returns
         --------
@@ -66,23 +66,21 @@ class Ring(Model):
         set_size()
         """
         try:
-            pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta)
+            axis_ratio, pos_angle = theta
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
-                               " the form [pos_angle_ellipsis,"
-                               " pos_angle_axis, inc_angle]")
+                               " the form [axis_ratio, pos_angle]")
 
         if sampling is None:
-            sampling = px_size
-
-        self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
-
-        if len(theta) > 2:
-            radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
-                                                  [pos_angle_ellipsis, pos_angle_axis, inc_angle])
+            self._sampling = sampling = px_size
         else:
-            radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
+            self._sampling = sampling
+
+        self._size, self._mas_size = px_size, mas_size
+        radius, self._axis_mod, self._phi = set_size(mas_size, px_size,\
+                                                     sampling,\
+                                                     [axis_ratio, pos_angle])
 
         if inner_radius:
             radius[radius < inner_radius] = 0.
@@ -91,7 +89,6 @@ class Ring(Model):
 
         self._radius = radius.copy()
         radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
-
         return radius
 
     @timeit
@@ -157,7 +154,7 @@ class Ring(Model):
 
 if __name__ == "__main__":
     r = Ring(1500, 7900, 19, 140, 8e-6)
-    r_model = r.eval_model([4.53848935e+01, 4.47494126e+01, 4.57823954e+01], 30, 2048)
+    r_model = r.eval_model([5.2, 3.47494126e+02], 30, 2048)
     print(r_flux := r.get_flux(0.2, 0.7))
     print(r.get_total_flux(0.2, 0.7))
     plt.imshow(r_flux)

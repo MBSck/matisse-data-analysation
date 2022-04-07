@@ -52,19 +52,19 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            ea, pa, inca = theta
+            axis_ratio, pa = theta
         except:
-            raise RuntimeError("Input of theta in wrong format")
+            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
+                               " Check input arguments, theta must be of"
+                               " the form [axis_ratio, pos_angle]")
 
         if sampling is None:
             self._sampling = sampling = px_size
 
-        self._size = px_size
-        self._mas_size = mas_size
+        self._size, self._mas_size = px_size, mas_size
 
-        image = self.r.eval_model([ea, pa, inca], mas_size, px_size, sampling)
+        image = self.r.eval_model([axis_ratio, pa], mas_size, px_size, sampling)
         image += self.d.eval_model(mas_size, px_size)
-
         return image
 
     def eval_vis():
@@ -73,7 +73,7 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod = c.eval_model([45, 45, 45], 55, 2048)
+    c_mod = c.eval_model([1.6, 45], 30, 2048)
     c_flux = c.get_flux(np.inf, 0.7)
     max_flux = np.max(c_flux)
     plt.imshow(c_flux, vmax=c._max_sub_flux)

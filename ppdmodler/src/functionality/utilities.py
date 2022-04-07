@@ -228,8 +228,8 @@ def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
     modulation[modulation < 0] = 0.
     return modulation
 
-def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
-             incline_params: List[float] = None) -> np.array:
+def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
+             incline_params: List[float] = []) -> np.array:
     """
     Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -243,7 +243,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     sampling: int, optional
         The sampling of the object-plane
     incline_params: List[float], optional
-        A list of the inclination parameters [axis_ratio, pos_angle]
+        A list of the inclination parameters [axis_ratio, pos_angle] [mas, rad]
 
     Returns
     -------
@@ -252,24 +252,27 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     xc: np.ndarray
         The x-axis used to calculate the radius
     """
+    if sampling == 0:
+        sampling = px_size
+
     fov_scale = mas_size/sampling
 
     x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
     y = x[:, np.newaxis]
 
-    if angles is not None:
+    if len(incline_params) > 0:
         try:
-            axis_ratio, pos_angle = incline_params
+            axis_ratio, pos_angle = incline_params[0],\
+                    np.radians(incline_params[1])
         except:
             raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
                                " arguments, ellipsis_angles must be of the"
                                " form [axis_ratio, pos_angle]")
 
-        ar, br = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
-                a*np.cos(pos_angle)-b*np.sin(pos_angle)
-
-        radius = np.sqrt(ar**2+br**2*np.cos(inc_angle)**2)
-        axis, phi = [ar, br], np.arctan2(ar, br)
+        xr, yr = x*np.sin(pos_angle)+y*np.cos(pos_angle), \
+                (x*np.cos(pos_angle)-y*np.sin(pos_angle))/axis_ratio
+        radius = np.sqrt(xr**2+yr**2)
+        axis, phi = [xr, yr], np.arctan2(xr, yr)
     else:
         radius = np.sqrt(x**2+y**2)
         axis, phi = [x, y], np.arctan(x/y)
