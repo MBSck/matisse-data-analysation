@@ -32,8 +32,6 @@ class FFT:
         self.set_size = set_size
 
         self.fftfreq = fft.fftfreq(self.model_size, d=pixelscale)
-        self.pixel_unit_mas = np.diff(self.fftfreq)[0]*1e3
-        self.fftscale = get_px_scaling(self.fftfreq, wavelength)
 
     def pipeline(self, zoom: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
         """Combines various functions and executes them
@@ -91,12 +89,7 @@ class FFT:
         """
         return fft.fftshift(fft.ifft2(fft.fftshift(self.model))).real
 
+
 if __name__ == "__main__":
-    g= Gauss2D()
-    fourier = FFT(model := g.eval_model([9.], size:=2048),
-                  wavelength:=1.25e-05)
-    ft, amp, phase = fourier.pipeline()
-    flux = g.get_flux(scale:=fourier.pixel_unit_mas, 1, 0.55, 1500, 19, 140, wavelength)
-    plt.imshow(amp*flux)
-    plt.show()
+    ...
 

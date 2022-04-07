@@ -15,9 +15,9 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
 from src.functionality.fourier import FFT
-from src.functionality.readout import ReadoutFits
+from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.utilities import trunc, correspond_uv2scale, \
-        azimuthal_modulation
+        azimuthal_modulation, get_px_scaling
 
 # NOTE, TODO: The code has some difficulties rescaling for higher pixel numbers
 # and does in that case not approximate the right values for the corr_fluxes,
@@ -41,7 +41,7 @@ class MCMC:
                  numerical: bool = True, vis: bool = False,
                  modulation: bool = False, bb_params: List = None,
                  fractional_value: float = 0.2, out_path: Path = None) -> None:
-        self.data = data
+        self.data = data[:-3]
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
         self.fractional_value = fractional_value
@@ -50,9 +50,11 @@ class MCMC:
         self.numerical, self.vis = numerical, vis
         self.vis2 = not self.vis
         self.modulation = modulation
+        self.fr_scaling = 0
 
         self.realdata, self.realerr, self.pixel_size,\
-                self.sampling, self.wavelength, self.uvcoords = data
+                self.sampling, self.wavelength, self.uvcoords,\
+                self.realflux, self.u, self.v = data
 
         self.model = model(*self.bb_params, self.wavelength)
 
@@ -63,6 +65,10 @@ class MCMC:
         self.x, self.y = 0, 0
 
         self.out_path = out_path
+
+    @property
+    def xycoords(self):
+        return [i for i in zip(self.xcoord, self.ycoord)]
 
     def pipeline(self) -> None:
         sampler, pos, prob, state = self.do_fit()
@@ -134,14 +140,18 @@ class MCMC:
         if self.vis:
             realdata, realphase = realdata
             realdataerr, realphaseerr = realerr
-            datamod *= self.model.get_total_flux(tau, q)
+            tot_flux = self.model.get_total_flux(tau, q)
+            datamod *= tot_flux
         else:
             datamod = datamod*np.conj(datamod)
 
-        sigma2 = realdataerr**2 + realdata**2*self.fractional_value
+        sigma2corrflux = realdataerr**2 + realdata**2*self.fractional_value
+        sigma2totflux = self.realflux**2*self.fractional_value
         print(datamod, "datamod", '\n', realdata, "realdata")
+        print(self.realflux, "real flux", tot_flux, "calculated flux")
 
-        return -0.5*np.sum((realdata-datamod)**2/sigma2)
+        return -0.5*np.sum((realdata-datamod)**2/sigma2corrflux+\
+                           (self.realflux-tot_flux)**2/sigma2totflux)
 
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
@@ -188,7 +198,9 @@ class MCMC:
         ft, amp, phase = fr.pipeline()
 
         # rescaling of the uv-coords to the corresponding image size
-        self.xcoord, self.ycoord = correspond_uv2scale(fr.fftscale, fr.model_size//2, uvcoords)
+        self.fr_scaling = get_px_scaling(fr.fftfreq, wavelength,
+                                    self.model._mas_size, self.model._sampling)
+        self.xcoord, self.ycoord = correspond_uv2scale(self.fr_scaling, fr.model_size//2, uvcoords)
         amp = np.array([amp[j, i] for i, j in zip(self.xcoord, self.ycoord)])
         return amp, phase, ft
 
@@ -214,7 +226,8 @@ class MCMC:
                                                           self.uvcoords)
             model_img = self.model.eval_model(self.theta_max[:-2],
                                                    self.pixel_size, sampling)
-            best_fit_model = FFT(model_img, wavelength).pipeline()[1]
+            fourier= FFT(model_img, wavelength)
+            best_fit_model = fourier.pipeline()[1]
 
             if self.vis:
                 flux  = self.model.get_total_flux(tau, q)
@@ -257,6 +270,9 @@ class MCMC:
         cx.imshow(best_fit_model, vmax=best_fit_model[third_max, third_max],\
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                           -self.pixel_size//2, self.pixel_size//2])
+
+
+        cx.scatter(self.u/self.fr_scaling, self.v/self.fr_scaling)
         cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
         cx.set_xlabel(f"[mas]")
         cx.set_ylabel(f"[mas]")
@@ -315,7 +331,9 @@ class MCMC:
 
 # Functions
 
-def set_data(fits_file: Path, pixel_size: int, sampling: int, wl_ind: int, vis: bool = False):
+def set_data(fits_file: Path, flux_file: Path,
+             pixel_size: int, sampling: int,
+             wl_ind: int, vis: bool = False) -> List:
     """Fetches the required info and then gets the uvcoords and makes the
     data"""
     readout = ReadoutFits(fits_file)
@@ -327,9 +345,14 @@ def set_data(fits_file: Path, pixel_size: int, sampling: int, wl_ind: int, vis: 
         data, dataerr = readout.get_vis24wl(wl_ind)
 
     uvcoords = readout.get_uvcoords()
-    wavelength = readout.get_wl()[wl_ind]
+    wavelength_axis = readout.get_wl()
+    wavelength = wavelength_axis[wl_ind]
 
-    return (data, dataerr, pixel_size, sampling, wavelength, uvcoords)
+    flux = read_single_dish_txt2np(flux_file, wavelength_axis)[wavelength]
+    u, v = readout.get_split_uvcoords()
+
+    return (data, dataerr, pixel_size, sampling,
+            wavelength, uvcoords, flux, u, v)
 
 def set_mc_params(initial, nwalkers, ndim, niter_burn, niter):
     """Sets the mcmc parameters"""
@@ -351,17 +374,19 @@ if __name__ == "__main__":
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
+    flux_file = "/Users/scheuck/Documents/HD_142666_timmi2.txt"
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f, pixel_size=30, sampling=128, wl_ind=30, vis=True)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=30,
+                    sampling=256, wl_ind=30, vis=True)
 
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=10, ndim=len(initial),
-                              niter_burn=100, niter=1000)
+                              niter_burn=50, niter=500)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
                 vis=True, modulation=True, bb_params=bb_params,
-                fractional_value=0.2, out_path=out_path)
+                fractional_value=0.4, out_path=out_path)
     mcmc.pipeline()
 

@@ -2,17 +2,26 @@
 
 import numpy as np
 
+from scipy.interpolate import CubicSpline
 from astropy.io import fits
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.utilities import get_distance
 
-def readout_txt2np(file):
+def read_single_dish_txt2np(file, wl_axis):
     """Reads x, y '.txt'-file intwo 2 numpy arrays"""
     file_data = np.loadtxt(file)
     wavelength_axis = [i[0] for i in file_data]
     flux_axis = [i[1] for i in file_data]
-    return  np.array(wavelength_axis)*1e-6, np.array(flux_axis)
+    wavelength_axis, flux_axis = np.array(wavelength_axis)*1e-6,\
+            np.array(flux_axis)
+
+    wl2flux_dict = {}
+    cs = CubicSpline(wavelength_axis, flux_axis)
+    for i, o in enumerate(cs(wl_axis)):
+        wl2flux_dict[wl_axis[i]] = o
+
+    return wl2flux_dict
 
 class ReadoutFits:
     """All functionality to work with '.oifits/.fits'-files"""
@@ -121,8 +130,5 @@ class ReadoutFits:
 if __name__ == "__main__":
     readout = ReadoutFits("/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits")
     r_wl = readout.get_wl()
-    print(r_wl.shape)
-    wl, flux = readout_txt2np("/Users/scheuck/Documents/HD_142666_timmi2.txt")
-    print(wl.shape)
-    print(r_wl, '\n', wl)
+    print(read_single_dish_txt2np("/Users/scheuck/Documents/HD_142666_timmi2.txt", r_wl))
 
