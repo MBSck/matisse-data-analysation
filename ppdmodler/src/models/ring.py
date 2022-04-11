@@ -8,8 +8,9 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.constant import I
+from src.functionality.fourier import FFT
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        delta_fct, mas2rad, trunc, azimuthal_modulation
+        delta_fct, mas2rad, trunc, azimuthal_modulation, get_px_scaling
 
 # TODO: Make the addition of the visibilities work properly, think of OOP
 # abilities
@@ -39,7 +40,8 @@ class Ring(Model):
     @timeit
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
-                   inner_radius: Optional[int] = None) -> np.array:
+                   inner_radius: Optional[int] = 0,
+                   outer_radius: Optional[int] = 0) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -72,6 +74,7 @@ class Ring(Model):
                                " Check input arguments, theta must be of"
                                " the form [axis_ratio, pos_angle]")
 
+        self._inner_r = inner_radius
         if sampling is None:
             self._sampling = sampling = px_size
         else:
@@ -86,6 +89,9 @@ class Ring(Model):
             radius[radius < inner_radius] = 0.
         else:
             radius[radius < self._r_sub] = 0.
+
+        if outer_radius:
+            radius[radius > outer_radius] = 0.
 
         self._radius = radius.copy()
         radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
@@ -153,10 +159,38 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
-    r = Ring(1500, 7900, 19, 140, 8e-6)
-    r_model = r.eval_model([5.2, 3.47494126e+02], 30, 2048)
-    print(r_flux := r.get_flux(0.2, 0.7))
-    print(r.get_total_flux(0.2, 0.7))
-    plt.imshow(r_flux)
+    wavelength = 8e-6
+    r = Ring(1500, 7900, 19, 140, 10e-6)
+    r_model = r.eval_model([1, 140], mas_fov:=30, sampling:=129,\
+                           outer_radius=1.10*r._r_sub)
+    r_flux = r.get_flux(np.inf, 0.7)
+    r_tot_flux = r.get_total_flux(np.inf, 0.7)
+    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
+    fft = FFT(r_model, wavelength)
+    ft, amp2, phase = fft.pipeline()
+    ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
+    print(r._r_sub)
+    print(fft.fftfreq)
+    print(ft_scaling)
+    print(ft_ax := ft_scaling//2*sampling)
+    ft_lambda = ft_ax/(wavelength*1e6)
+    ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
+    bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
+    cx.imshow(amp2, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
+    dx.imshow(amp2, extent=[ft_lambda, -ft_lambda, -ft_lambda, ft_lambda])
+
+    ax.set_title("Model image, Object plane")
+    bx.set_title("Temperature gradient")
+    cx.set_title("Fourier transform of object plane (normed). vis")
+    dx.set_title("Fourier transform of object plane (normed, zoomed). vis")
+
+    ax.set_xlabel("RA [mas]")
+    ax.set_ylabel("DEC [mas]")
+    bx.set_xlabel("RA [mas]")
+    bx.set_ylabel("DEC [mas]")
+    cx.set_xlabel("u [m]")
+    cx.set_ylabel("v [m]")
+    dx.set_xlabel("u [m]")
+    dx.set_ylabel("v [m]")
     plt.show()
 

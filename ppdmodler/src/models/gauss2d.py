@@ -7,7 +7,9 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        mas2rad
+        mas2rad, get_px_scaling
+
+from src.functionality.fourier import FFT
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -23,8 +25,8 @@ class Gauss2D(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
+        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "2D-Gaussian"
 
     @timeit
@@ -95,23 +97,47 @@ class Gauss2D(Model):
         set_uvcoords()
         """
         try:
-            fwhm = theta[0]
+            fwhm = mas2rad(theta[0])
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be"
                                " of the form [fwhm]")
 
         self._sampling = sampling
-        B, self._axis_vis  = set_uvcoords(sampling, wavelength, uvcoords=uvcoords)
+        B, self._axis_vis  = set_uvcoords(sampling, wavelength=wavelength, uvcoords=uvcoords)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
 if __name__ == "__main__":
-    g = Gauss2D()
-    g_model = g.eval_model([2], 10, 256)
-    print(g_flux := g.get_flux(0.5, 0.55, 1500, 19, 140, 9e-6))
-    # plt.imshow(g._radius)
-    plt.imshow(g_model)
-    # plt.plot(np.linspace(0, 256, 256), g_flux[128])
+    g = Gauss2D(1500, 7900, 19, 140, wavelength:=8e-6)
+    g_model = g.eval_model([2.5], mas_fov:=10, sampling:=129)
+    g_flux = g.get_flux(np.inf, 0.7)
+    g_tot_flux = g.get_total_flux(np.inf, 0.7)
+    g_vis = g.eval_vis([2.5], sampling, wavelength)
+    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
+    fft = FFT(g_model, wavelength)
+    ft, amp2, phase = fft.pipeline()
+    ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
+    print(fft.fftfreq)
+    print(ft_scaling)
+    print(ft_ax := ft_scaling//2*sampling)
+    ax.imshow(g_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
+    bx.imshow(g_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
+    cx.imshow(amp2, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
+    dx.imshow(amp2.copy()[61:68, 61:68], extent=[550, -550, -550, 550])
+
+    ax.set_title("Model image, Object plane")
+    bx.set_title("Temperature gradient")
+    cx.set_title("Fourier transform of object plane (normed). vis")
+    dx.set_title("Fourier transform of object plane (normed, zoomed). vis")
+
+    ax.set_xlabel("RA [mas]")
+    ax.set_ylabel("DEC [mas]")
+    bx.set_xlabel("RA [mas]")
+    bx.set_ylabel("DEC [mas]")
+    cx.set_xlabel("u [m]")
+    cx.set_ylabel("v [m]")
+    dx.set_xlabel("u [m]")
+    dx.set_ylabel("v [m]")
     plt.show()
 

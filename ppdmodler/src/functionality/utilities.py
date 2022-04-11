@@ -121,8 +121,7 @@ def sr2mas(mas_size: float, sampling: int):
     """
     return (mas_size/(sampling*3600e3*180/np.pi))**2
 
-def get_px_scaling(ax: np.ndarray, wavelength: float,
-                   mas_size: int, px_size: int) -> float:
+def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
     """Gets the model's scaling from its sampling rate/size the wavelength and
     the array's dimensionalities into 1/radians.
 
@@ -137,8 +136,7 @@ def get_px_scaling(ax: np.ndarray, wavelength: float,
     float
         The px to meter scaling
     """
-    axis = np.roll(ax, (axis_size := len(ax))//2, 0)
-    return np.diff(ax)[0]*wavelength/(mas2rad()*(mas_size/px_size))
+    return np.diff(ax)[0]*wavelength
 
 def correspond_uv2scale(scaling: float, roll: int, uvcoords: np.ndarray) -> float:
     """Calculates the axis scaling from the axis of an input image/model and
@@ -272,7 +270,6 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
 
         xr, yr = x*np.sin(pos_angle)+y*np.cos(pos_angle), \
                 (x*np.cos(pos_angle)-y*np.sin(pos_angle))/axis_ratio
-        print(xr, yr)
         radius = np.sqrt(xr**2+yr**2)
         axis, phi = [xr, yr], np.arctan2(xr, yr)
     else:

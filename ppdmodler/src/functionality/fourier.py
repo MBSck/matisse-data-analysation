@@ -8,12 +8,13 @@ import time
 import matplotlib.pyplot as plt
 
 from numpy import fft
+from scipy import interpolate
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
 # Own modules
-from src.models import Gauss2D, Ring, InclinedDisk
-from src.functionality.utilities import timeit, get_px_scaling, zoom_array
+from src.functionality.utilities import timeit, get_px_scaling, zoom_array,\
+        mas2rad
 
 # TODO: Make class and function documentation
 
@@ -28,10 +29,29 @@ class FFT:
     def __init__(self, model: np.array, wavelength: float, set_size: int = None,
                  pixelscale: float = 1.) -> None:
         self.model = model
-        self.model_size = len(self.model)
+        s = model.shape
+        self.dim = s[0]
+        self.zpfact = 1
         self.set_size = set_size
+        self.px_size = 0.1                  # [mas]
 
-        self.fftfreq = fft.fftfreq(self.model_size, d=pixelscale)
+    @property
+    def fftfreq(self):
+        return np.roll(fft.fftfreq(self.dim*self.zpfact,
+                                   mas2rad(self.px_size)), self.dim//2)
+
+    @property
+    def fftscaling_mlambda(self):
+        return np.roll(fft.fftfreq(self.dim*self.zpfact,
+                                   mas2rad(self.px_size)), self.dim//2)*1e6
+
+    def interpolate_uv2fft2(self, uvcoords: np.ndarray):
+        grid = (self.fftfreq, self.fftfreq)
+        real=interpolate.interpn(grid, np.real(fft2D), uvcoords, method='linear',
+                                 bounds_error=False, fill_value=None)
+        imag=interpolate.interpn(grid, np.imag(fft2D), uvcoords, method='linear',
+                                 bounds_error=False, fill_value=None)
+        return real+imag*1j
 
     def pipeline(self, zoom: bool = False) -> [np.ndarray, np.ndarray, np.ndarray]:
         """Combines various functions and executes them
@@ -66,7 +86,10 @@ class FFT:
 
         return ft, amp, phase
 
-    @timeit
+    def ft_translate(self, uvcoord, vcoord, wavelength, x=0, y=0):
+        """The translation factor for the fft"""
+        return np.exp(-2j*np.pi*(uvcoord*x+vcoord*y))
+
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the
         middle
@@ -76,10 +99,10 @@ class FFT:
         ft: np.ndarray
         ft_raw: np.ndarray
         """
-        return fft.fftshift(fft.fft2(fft.ifftshift(self.model))), \
-                fft.fft2(self.model)
+        s = [self.zpfact*self.dim, self.zpfact*self.dim]
+        return fft.fftshift(fft.fft2(fft.fftshift(self.model), s=s)), \
+                fft.fft2(self.model, s=s)
 
-    @timeit
     def do_ifft2(self) -> np.array:
         """Does the inverse 2D-FFT and shifts the centre to the middle
 

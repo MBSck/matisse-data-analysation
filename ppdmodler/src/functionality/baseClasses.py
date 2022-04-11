@@ -29,6 +29,7 @@ class Model(metaclass=ABCMeta):
         self._size, self._sampling, self._mas_size = 0, 0, 0
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
+        self._inner_r = 0
 
         self.T_sub, self.T_eff, self.L_star, self.d, self.wl = T_sub, T_eff, \
                 L_star, distance, wavelength
@@ -63,7 +64,11 @@ class Model(metaclass=ABCMeta):
         -------
         flux: np.ndarray
         """
-        T = temperature_gradient(self._radius, self._r_sub, q, self.T_sub)
+        if self._inner_r != 0:
+            T = temperature_gradient(self._radius, self._inner_r, q, self.T_sub)
+        else:
+            T = temperature_gradient(self._radius, self._r_sub, q, self.T_sub)
+
         flux = plancks_law_nu(T, self.wl)
         flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)
         flux[np.where(np.isnan(flux))], flux[np.where(np.isinf(flux))] = 0., 0.
