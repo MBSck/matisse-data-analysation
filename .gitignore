@@ -25,7 +25,7 @@ dataReduction/2021_11_10_MATISSE_DRS_tutorial_JVarga_ver3.pptx
 
 query/getdata_ESO_archive.py
 
-observation/P108
+observation/P*
 observation/manualsEso
 observation/phase1/make_asprox.py
 observation/phase1/P*

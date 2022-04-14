@@ -159,21 +159,18 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
-    wavelength = 8e-6
-    r = Ring(1500, 7900, 19, 140, 10e-6)
+    r = Ring(1500, 7900, 19, 140, wavelength:=10e-6)
     r_model = r.eval_model([1, 140], mas_fov:=30, sampling:=129,\
                            outer_radius=1.10*r._r_sub)
     r_flux = r.get_flux(np.inf, 0.7)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
-    fft = FFT(r_model, wavelength)
+    fft = FFT(r_model, wavelength, r.pixel_scale)
     ft, amp2, phase = fft.pipeline()
     ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
-    print(r._r_sub)
-    print(fft.fftfreq)
-    print(ft_scaling)
-    print(ft_ax := ft_scaling//2*sampling)
-    ft_lambda = ft_ax/(wavelength*1e6)
+    ft_ax = fft.fftaxis_m
+    print(ft_ax)
+    ft_lambda = fft.fftaxis_Mlambda
     ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     cx.imshow(amp2, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
@@ -190,7 +187,7 @@ if __name__ == "__main__":
     bx.set_ylabel("DEC [mas]")
     cx.set_xlabel("u [m]")
     cx.set_ylabel("v [m]")
-    dx.set_xlabel("u [m]")
-    dx.set_ylabel("v [m]")
+    dx.set_xlabel(r"u [M$\lambda$]")
+    dx.set_ylabel(r"v [m$\lambda$]")
     plt.show()
 

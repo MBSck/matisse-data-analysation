@@ -62,23 +62,27 @@ def get_nights(file: Path, run_identifier: str = "Night",
     runs_cal_sci = [[j for j in i if j[0] in ["1", "0"]] for i in runs]
 
     runs_dict = {}
+    # runs_dict2 = {for i in runs_cal_sci[0]}
 
     # Gets the sci-, cal-, and ln-list for the nights
     for i, o in enumerate(runs_cal_sci):
         sci_lst, cal_lst, tag_lst = [], [], []
         counter = -1
         for j in o:
+            # sci_lst = [x[1]+x[2] for x in o if not "cal" in j[1]]
             j = j.split(" ")
             print(j)
+            # cal_lst = [x for x in j if "cal" in j[1]]
             if "cal" in j[1]:
-                temp_cal = (j[1]+j[2]).split("_")
+                temp_cal = j[1].split("_")
+                print(temp_cal)
                 tag_lst[counter].append(temp_cal[1])
                 cal_lst[counter].append(temp_cal[2])
             else:
                 counter += 1
                 cal_lst.append([])
                 tag_lst.append([])
-                sci_lst.append(j[1]+" "+j[2])
+                sci_lst.append(j[1]+j[2])
         runs_dict[run_labels[i]] = [sci_lst, cal_lst, tag_lst]
     print(runs_dict)
     runs_dict = {}

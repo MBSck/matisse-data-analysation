@@ -41,6 +41,10 @@ class Model(metaclass=ABCMeta):
                 self._stellar_radians*1e26
 
     @property
+    def pixel_scale(self):
+        return self._mas_size/self._sampling
+
+    @property
     def stellar_flux(self):
         """Get the stellar flux scaled for the pixels"""
         return self._stellar_flux

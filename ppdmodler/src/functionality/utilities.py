@@ -278,29 +278,23 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
 
     return radius, axis, phi
 
-def zoom_array(array: np.ndarray, set_size: Optional[int] = None) -> np.ndarray :
+def zoom_array(array: np.ndarray, bounds: List) -> np.ndarray :
     """Zooms in on an image by cutting of the zero-padding
 
     Parameters
     ----------
     array: np.ndarray
         The image to be zoomed in on
-    set_size: int, optional
-        The size for the image cut-off
+    bounds: int
+        The boundaries for the zoom, the minimum and maximum
 
     Returns
     -------
     np.ndarray
-        The zoomed in array, with the zero-padding cut-off
+        The zoomed in array
     """
-    array_center = len(array)//2
-    if set_size is None:
-        set_size = int(len(array)*0.15)
-
-    ind_low, ind_high = array_center-set_size,\
-            array_center+set_size
-
-    return array[ind_low:ind_high, ind_low:ind_high]
+    min_ind, max_ind = bounds
+    return array[min_ind:max_ind, min_ind:max_ind]
 
 def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
                  uvcoords: np.ndarray = None) -> np.array:

@@ -111,20 +111,21 @@ class Gauss2D(Model):
 if __name__ == "__main__":
     g = Gauss2D(1500, 7900, 19, 140, wavelength:=8e-6)
     g_model = g.eval_model([2.5], mas_fov:=10, sampling:=129)
+    print(g.pixel_scale)
     g_flux = g.get_flux(np.inf, 0.7)
     g_tot_flux = g.get_total_flux(np.inf, 0.7)
-    g_vis = g.eval_vis([2.5], sampling, wavelength)
-    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
-    fft = FFT(g_model, wavelength)
+    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(30, 5))
+    fft = FFT(g_model, wavelength, g.pixel_scale, zero_padding_order=4)
     ft, amp2, phase = fft.pipeline()
-    ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
-    print(fft.fftfreq)
-    print(ft_scaling)
-    print(ft_ax := ft_scaling//2*sampling)
+    print(amp2[fft.model_unpadded_centre, fft.model_unpadded_centre], "0th element")
     ax.imshow(g_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     bx.imshow(g_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    cx.imshow(amp2, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
-    dx.imshow(amp2.copy()[61:68, 61:68], extent=[550, -550, -550, 550])
+    print(fft.fftaxis_m)
+    ft_axis = fft.fftaxis_m
+    ft_axis_Mlambda = fft.fftaxis_Mlambda
+    cx.imshow(amp2, extent=[ft_axis, -ft_axis, -ft_axis, ft_axis])
+    dx.imshow(amp2, extent=[ft_axis_Mlambda, -ft_axis_Mlambda,\
+                           -ft_axis_Mlambda, ft_axis_Mlambda])
 
     ax.set_title("Model image, Object plane")
     bx.set_title("Temperature gradient")
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     bx.set_ylabel("DEC [mas]")
     cx.set_xlabel("u [m]")
     cx.set_ylabel("v [m]")
-    dx.set_xlabel("u [m]")
-    dx.set_ylabel("v [m]")
+    dx.set_xlabel(r"u [M$\lambda$]")
+    dx.set_ylabel(r"v [m$\lambda$]")
     plt.show()
 
