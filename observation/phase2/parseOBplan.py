@@ -1,24 +1,130 @@
 #!/usr/bin/env python3
 
 import os
-import pickle
+import yaml
 
-from typing import Any, Dict, List, Union, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Union, Optional
 
 def readout_txt(file):
     """Reads a txt into its individual lines"""
     with open(file, "r+") as f:
         return f.readlines()
 
-def save_night_lst(input_dict: List, output_path: str):
-    """Saves the output dict into a pickle file"""
-    with open(output_path, "wb") as fp:
-        pickle.dump(input_dict, fp)
+def save_dictionary(input_dict: Dict, output_path: Path) -> int:
+    """Saves the output dict into a '.yaml'-file. A superset of '.json'-file
+    that can easily be read by people as well
 
-def get_nights(file: Path, run_identifier: Optional[str] = "run",
-               sub_identifier: Optional[str] = "night",
-               default_key: Optional[str] = "full_run") -> Dict[str, List]:
+    Parameters
+    ----------
+    input_dict: Dict
+        The dictionary to be saved
+    output_path: Path
+        The path the '.yaml'-file is to be saved to
+
+    Returns
+    -------
+    int
+        ERROR or SUCCESS
+    """
+    with open(output_path, "w") as fy:
+        yaml.safe_dump(input_dict, fy)
+
+    return 0
+
+def check_lst4elem(input_lst: List, elem: str) -> bool:
+    """Checks if the element is in list and returns True or False"""
+    for i in input_lst:
+        if elem in i:
+            return True
+
+    return False
+
+def get_file_section(lines: List, identifier: str):
+    """Gets the section of a file corresponding to the given identifier and
+    returns a dict with the keys being the match to the identifier and the
+    values being a subset of the lines list
+
+    Parameters
+    ----------
+    lines: List
+        The lines read from a file
+    identifier: str
+        The identifier by which they should be split into subsets
+
+    Returns
+    --------
+    subset: dict
+        A dict that contains a subsets of the original lines
+    """
+    indices_lst, labels = [], []
+    default_key = "full_" + identifier
+    for i, o in enumerate(lines):
+        if identifier in o.lower():
+            indices_lst.append(i)
+            labels.append(o.replace('\n', ''))
+
+    if len(indices_lst) == 0:
+        indices_lst, labels = [0], [default_key]
+
+    sections = [lines[o:] if o == indices_lst[~0] else \
+                  lines[o:indices_lst[i+1]] for i, o in enumerate(indices_lst)]
+
+    return {labels: sections for (labels, sections) in zip(labels, sections)}
+
+def get_sci_cal_tag_lst(lines: List):
+    """Gets the info for the SCI, CAL and TAGs from the individual lines
+
+    Parameters
+    -----------
+    lines: List
+        The input lines to be parsed
+
+    Returns
+    -------
+    List:
+        The lists in the output format [[SCI], [CAL], [TAG]]
+    """
+    line_range = [i for i, o in enumerate(lines) if o[0].isdigit()]
+    lines = lines[line_range[0]:line_range[~0]+1]
+
+    for i, o in enumerate(lines):
+        lines[i] = o.replace('\n', '')
+
+    # TODO: Check for more than one calibrator per science target. Add position
+    # in night plan
+    # TODO: Make a different separating instead of the '' lines
+
+    sci_lst, cal_lst, tag_lst  = [], [[]], [[]]
+    counter = 0
+
+    for i, o in enumerate(lines):
+        if o == '':
+            counter += 1
+            cal_lst.append([])
+            tag_lst.append([])
+        else:
+            o = o.split()
+            if not o[0][0].isdigit():
+                # NOTE: Bodge to skip over irrelevant lines
+                continue
+
+            if "cal_" in o[1]:
+                temp_cal = o[1].split("_")
+                cal_lst[counter].append(temp_cal[2])
+                tag_lst[counter].append(temp_cal[1])
+            else:
+            # TODO: Make the parse more robust for numbers (e.g., WA Oph 6)
+                if (o[3] != '') and (not o[3].isdigit()):
+                    sci_lst.append(o[1]+' '+o[2]+' '+o[3])
+                else:
+                    sci_lst.append(o[1]+' '+o[2])
+
+    return {"SCI": sci_lst, "CAL": cal_lst, "TAG": tag_lst}
+
+def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
+                     sub_identifier: Optional[str] = "night",
+                     save2file: bool = False) -> Dict[str, List]:
     """
     Parses the night plan created with 'calibrator_find.pro' into the
     individual runs as key of a dictionary, specified by the 'run_identifier'.
@@ -35,9 +141,9 @@ def get_nights(file: Path, run_identifier: Optional[str] = "run",
     sub_identifier: str, optional
         Set to default sub identifier that splits the individual runs into the
         individual nights. That is, in keys of the return dict as 'night'
-    default_key: str, optional
-        The default identifier that is choosen as a key if 'run_identifier' has
-        no matches. Defaults to 'full_run'
+    save2file: bool, optional
+        If this is set to true then it saves the dictionary as
+        'night_plan.yaml', Default is 'False'
 
     Returns
     -------
@@ -46,60 +152,24 @@ def get_nights(file: Path, run_identifier: Optional[str] = "run",
         containing the sub lists 'sci_lst', 'cal_lst' and 'tag_lst'
     """
     lines = readout_txt(file)
-    run_indices_lst, run_labels = [], []
-    for i, o in enumerate(lines):
-        if run_identifier in o.lower():
-            run_indices_lst.append(i)
-            run_labels.append(o.replace('\n', ''))
+    runs = get_file_section(lines, run_identifier)
+    night_plan = {}
 
-    runs = [lines[o:] if o == run_indices_lst[~0] else \
-                  lines[o:run_indices_lst[i+1]] for i, o in enumerate(run_indices_lst)]
+    for i, o in runs.items():
+        temp_dict = get_file_section(o, sub_identifier)
+        nights = {}
+        for j, l in temp_dict.items():
+            if check_lst4elem(l, "cal_"):
+                nights[j] = get_sci_cal_tag_lst(l)
 
-    # If there are no specified search terms, whole list will be parsed
-    if len(run_indices_lst) == 0:
-        run_indices_lst, run_labels = [1], [default_key]
+        night_plan[i] = nights
 
-    night_indices_lst, night_labels = [], []
-    for i, o in enumerate(runs):
-        night_indices_lst.append([])
-        night_labels.append([])
-        for j, l in enumerate(o):
-            if sub_identifier in l.lower():
-                night_indices_lst[i].append(j)
-                night_labels[i].append(l)
+    if save2file:
+        save_dictionary(night_plan, "night_plan.yaml")
 
-    nights = []
-    for i, o in enumerate(runs):
-        night = [o[j:] if l == night_indices_lst[i][~0] else\
-                 o[j:night_indices_lst[i][j+1]] for j, l in enumerate(night_indices_lst[i])]
-        nights.append(night)
-
-    # Only gets the lines of the runs starting with numbers (SCI or CAL)
-    runs_cal_sci = [[j for j in i if j[0] in ["1", "0"]] for i in runs]
-
-    runs_dict = {}
-    for i, o in enumerate(runs_cal_sci):
-        sci_lst, cal_lst, tag_lst = [], [], []
-        counter = -1
-        for j in o:
-            j = j.split(" ")
-            if "cal" in j[1]:
-                temp_cal = j[1].split("_")
-                tag_lst[counter].append(temp_cal[1])
-                cal_lst[counter].append(temp_cal[2])
-            else:
-                counter += 1
-                cal_lst.append([])
-                tag_lst.append([])
-                sci_lst.append(j[1]+j[2])
-        runs_dict[run_labels[i]] = [sci_lst, cal_lst, tag_lst]
-
-    return runs_dict
-
+    return night_plan
 
 if __name__ == "__main__":
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.1.txt"
-    print(path)
-    nights = get_nights(path)
-    # save_night_lst()
+    run_dict = parse_night_plan(path, save2file=True)
 

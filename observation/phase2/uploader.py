@@ -6,6 +6,9 @@ from glob import glob
 from pathlib import Path
 from typing import Any, Dict, List, Union, Optional
 
+# TODO: Start with automated folder sorting and creation, will make the process
+# faster already
+
 def ob_uploader(path: Path, environment: str, username: str,
                 password: str, run_id: int) -> int:
     """Creates folders and uploades the obs
