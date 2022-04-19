@@ -159,17 +159,21 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
+    # NOTE: There is a discrepancy between the model and the ASPRO model of
+    # about 10m, possibly due to numerical effects?
     r = Ring(1500, 7900, 19, 140, wavelength:=10e-6)
-    r_model = r.eval_model([1, 140], mas_fov:=30, sampling:=129,\
-                           outer_radius=1.10*r._r_sub)
+    r_model = r.eval_model([1, 140], mas_fov:=10, sampling:=513,\
+                           outer_radius=(width:=1.05)*r._r_sub)
     r_flux = r.get_flux(np.inf, 0.7)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
-    fft = FFT(r_model, wavelength, r.pixel_scale)
+    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=5)
     ft, amp2, phase = fft.pipeline()
     ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
     ft_ax = fft.fftaxis_m
-    print(ft_ax)
+    print(ft_ax, "scaling of the FFT to meters")
+    print(r._r_sub, "sublimation radius")
+    print(r._r_sub*width-r._r_sub, "width of the ring in mas")
     ft_lambda = fft.fftaxis_Mlambda
     ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])

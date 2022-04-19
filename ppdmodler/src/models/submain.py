@@ -82,10 +82,7 @@ def plot_all(model, mas_size, wavelength, sampling):
 
 def main():
     wavelength = 9.5e-6
-
-    # How to use corr_flux with vis in model
-    c = CompoundModel(1500, 7900, 19, 140, wavelength)
-    plot_all(c, 10, wavelength, 2048)
+    r = Ring(1500, 7900, 19, 140, wavelength)
 
 if __name__ == "__main__":
     # print(comparefft2modvis(Gauss2D(), 8e-06))

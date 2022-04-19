@@ -19,8 +19,8 @@ def main():
     cp_model = cp.eval_model([1, 45], 5, 128)
     ax1.imshow(cp_model)
 
-    ft, amp, phase = FFT(cp_model, wavelength).pipeline()
-    ax2.imshow(abs(amp))
+    ft = FFT(cp_model, wavelength).pipeline()
+    
     plt.show()
 
 if __name__ == "__main__":

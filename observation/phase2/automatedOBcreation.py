@@ -55,6 +55,7 @@ def get_res_dit(resolution: str):
     dit: float
         The corresponding dit to the resolution
     """
+    # NOTE: Remove this as well
     if "MR" in resolution:
         return "L-MR_N-LR", 1.3
     if "HR" in resolution:
@@ -204,7 +205,7 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
                              temp_path, res_dict, standard_res,\
                              obs_templates, acq_template)
     else:
-        raise RuntimeError("Neither '.yaml'-file nor input list found!")
+        raise IOError("Neither '.yaml'-file nor input list found!")
 
     return 0
 
@@ -216,7 +217,7 @@ if __name__ == "__main__":
      except:
          # If non valid path is given then default to empty string
          print("No input file for parsing found or not readable!")
-         path2file= ""
+         path2file= None
 
      # Specifies the paths, where the '.obx'-files are saved to, name of run can
      # be changed to actual one

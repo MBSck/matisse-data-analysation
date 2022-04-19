@@ -12,11 +12,9 @@ from scipy import interpolate
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
-# Own modules
 from src.functionality.utilities import timeit, get_px_scaling, zoom_array,\
         mas2rad
 
-# TODO: Add further documentation to the individual functions/properties
 # TODO: Add all class attributes to the documentation
 
 class FFT:
@@ -41,11 +39,19 @@ class FFT:
     model_shape
     dim
     model_centre
-    zero_padding
     fftfreq
     fftscaling2m
-    fftscaling2Mlambda
-    zpfact: int
+    fftaxis_m
+    fftaxis_Mlambda
+    zero_padding
+
+    Methods
+    -------
+    zero_pad_model()
+    interpolate_uv2fft2()
+    get_amp_phase()
+    do_fft2()
+    pipeline()
     """
     def __init__(self, model: np.array, wavelength: float, pixel_scale: float,
                  zero_padding_order: Optional[int] = 1) -> None:
@@ -55,43 +61,52 @@ class FFT:
         self.pixel_scale = mas2rad(pixel_scale)
         self.zero_padding_order = zero_padding_order
 
-        self.zpfact = 1
-
     @property
     def model_shape(self):
+        """Fetches the model's x, and y shape"""
         return self.model.shape
 
     @property
     def dim(self):
+        """Fetches the model's x-dimension. Both dimensions are identical"""
         return self.model_shape[0]
 
     @property
     def model_centre(self):
+        """Fetches the model's centre"""
         return self.dim//2
 
     @property
-    def zero_padding(self):
-        return 2**int(math.log(self.dim-1, 2)+self.zero_padding_order)+1
-
-    @property
     def fftfreq(self):
-        return np.fft.fftfreq(self.dim*self.zpfact, self.pixel_scale)
+        """Fetches the FFT's frequency axis, scaled according to the
+        pixel_scale (determined by the sampling and the FOV) as well as the
+        zero padding factor"""
+        return np.fft.fftfreq(self.zero_padding, self.pixel_scale)
 
     @property
     def fftscaling2m(self):
+        """Fetches the FFT's scaling in meters"""
         return get_px_scaling(np.roll(self.fftfreq, self.dim//2), self.wl)
 
     @property
     def fftscaling2Mlambda(self):
+        """Fetches the FFT's scaling in mega lambda"""
         return self.fftscaling2m/(self.wl*1e6)
 
     @property
     def fftaxis_m(self):
+        """Gets the FFT's axis's endpoints in meter"""
         return self.fftscaling2m*self.dim//2
 
     @property
     def fftaxis_Mlambda(self):
+        """Gets the FFT's axis's endpoints in mega lambda"""
         return self.fftscaling2Mlambda*self.dim//2
+
+    @property
+    def zero_padding(self):
+        """Zero pads the model image"""
+        return 2**int(math.log(self.dim-1, 2)+self.zero_padding_order)+1
 
     def zero_pad_model(self):
         """This adds zero padding to the model image before it is transformed
@@ -109,39 +124,48 @@ class FFT:
                      self.mod_min:self.mod_max] = self.model
         return padded_image
 
-    def interpolate_uv2fft2(self, uvcoords: np.ndarray):
-        grid = (self.fftfreq, self.fftfreq)
-        real=interpolate.interpn(grid, np.real(fft2D), uvcoords, method='linear',
-                                 bounds_error=False, fill_value=None)
-        imag=interpolate.interpn(grid, np.imag(fft2D), uvcoords, method='linear',
-                                 bounds_error=False, fill_value=None)
-        return real+imag*1j
+    def interpolate_uv2fft2(self, ft: np.ndarray,
+                            uvcoords: np.ndarray) -> np.ndarray:
+        """Interpolate the uvcoordinates to the grid of the FFT
 
-    def pipeline(self) -> [np.ndarray, np.ndarray, np.ndarray]:
-        """Combines various functions and executes them
+        Parameters
+        ----------
+        ft: np.ndarray
+            The FFT
+        uvcoords: np.ndarray
+            The uv-coords
 
         Returns
         -------
+        np.ndarray
+            The interpolated FFT
+        """
+        grid = (self.fftfreq, self.fftfreq)
+        real=interpolate.interpn(grid, np.real(ft), uvcoords, method='linear',
+                                 bounds_error=False, fill_value=None)
+        imag=interpolate.interpn(grid, np.imag(ft), uvcoords, method='linear',
+                                 bounds_error=False, fill_value=None)
+        return real+imag*1j
+
+    def get_amp_phase(self, ft: np.ndarray) -> [np.ndarray, np.ndarray]:
+        """Gets the amplitude and the phase of the FFT
+
+        Parameters
+        ----------
         ft: np.ndarray
             The FFT of the model image
-        vis: np.ndarray
+
+        Returns
+        --------
+        amp: np.ndarray
             The normed visibilities
         phase: np.ndarray
             The phase
         """
-        self.model = self.zero_pad_model()
-        ft = zoom_array(self.do_fft2(), [self.mod_min, self.mod_max])
-        # ft = self.do_fft2()
-
-        amp, phase = np.abs(ft)/np.abs(ft[self.model_unpadded_centre,
-                                          self.model_unpadded_centre]),\
-                np.angle(ft, deg=True)
-
-        return ft, amp, phase
-
-    def ft_translate(self, uvcoord, vcoord, x=0, y=0):
-        """The translation factor for the fft"""
-        return np.exp(-2j*np.pi*(uvcoord*x+vcoord*y))
+        amp = np.abs(ft)/np.abs(ft[self.model_unpadded_centre,
+                                          self.model_unpadded_centre])
+        phase = np.angle(ft, deg=True)
+        return amp, phase
 
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the
@@ -152,8 +176,22 @@ class FFT:
         ft: np.ndarray
         ft_raw: np.ndarray
         """
-        s = [self.zpfact*self.dim, self.zpfact*self.dim]
-        return np.fft.fftshift(np.fft.fft2(np.fft.fftshift(self.model), s=s))
+        return np.fft.fftshift(np.fft.fft2(np.fft.fftshift(self.model)))
+
+    def pipeline(self) -> np.ndarray:
+        """Combines various functions and executes them
+
+        Returns
+        -------
+        ft: np.ndarray
+            The FFT of the model image
+        """
+        self.model = self.zero_pad_model()
+        ft = zoom_array(self.do_fft2(), [self.mod_min, self.mod_max])
+
+        # NOTE: Without zooming the picture to coordinate scaling is scuffed
+        # ft = self.do_fft2()
+        return ft
 
 
 if __name__ == "__main__":
