@@ -357,14 +357,14 @@ def set_data(fits_file: Path, pixel_size: int,
     -------
     tuple
         The data required for the mcmc-fit, in the format (data, dataerr,
-        pixel_size, sampling, wavelength, flux, u, v)
+        pixel_size, sampling, wavelength, uvcoords, flux, u, v)
     """
     readout = ReadoutFits(fits_file)
-
     wavelength = readout.get_wl()
-    if wl_ind:
-        wavelength = wavelength[wl_ind]
 
+    # TODO: Check how the vis/vis2 data is fetched -> Is it done correctly?
+
+    if wl_ind:
         if vis2:
             data, dataerr = readout.get_vis24wl(wl_ind)
         else:
@@ -372,18 +372,20 @@ def set_data(fits_file: Path, pixel_size: int,
             data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
 
         if flux_file:
-            flux = read_single_dish_txt2np(flux_file, wavelength_axis)[wavelength]
+            flux = read_single_dish_txt2np(flux_file, wavelength)[wavelength[wl_ind]]
         else:
             flux = readout.get_flux4wl(wl_ind)
+
+        wavelength = wavelength[wl_ind]
     else:
         if vis2:
             data, dataerr = readout.get_vis2()
         else:
-            temp_data = readout.get_vis
+            temp_data = readout.get_vis()
             data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
 
         if flux_file:
-            flux = read_single_dish_txt2np(flux_file, wavelength_axis)
+            flux = read_single_dish_txt2np(flux_file, wavelength)
         else:
             flux = readout.get_flux()
 
@@ -428,18 +430,19 @@ if __name__ == "__main__":
     # File to read data from
     f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
-    flux_file = "/Users/scheuck/Documents/HD_142666_timmi2.txt"
+    flux_file = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=30,
-                    sampling=256, wl_ind=30, vis=True)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=10,
+                    sampling=256)
+    print(data)
 
     # Set the mcmc parameters and the the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=10, niter_burn=50)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
-                vis=True, modulation=True, bb_params=bb_params,
-                fractional_value=0.4, out_path=out_path)
-    mcmc.pipeline()
+    # mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
+    #             vis=True, modulation=True, bb_params=bb_params,
+    #             fractional_value=0.4, out_path=out_path)
+    # mcmc.pipeline()
 

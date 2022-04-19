@@ -11,10 +11,8 @@ from src.functionality.utilities import get_distance
 def read_single_dish_txt2np(file, wl_axis):
     """Reads x, y '.txt'-file intwo 2 numpy arrays"""
     file_data = np.loadtxt(file)
-    wavelength_axis = [i[0] for i in file_data]
-    flux_axis = [i[1] for i in file_data]
-    wavelength_axis, flux_axis = np.array(wavelength_axis)*1e-6,\
-            np.array(flux_axis)
+    wavelength_axis = np.array([i[0] for i in file_data])*1e-6
+    flux_axis = np.array([i[1] for i in file_data])
 
     wl2flux_dict = {}
     cs = CubicSpline(wavelength_axis, flux_axis)
@@ -83,11 +81,19 @@ class ReadoutFits:
         """Fetches the closure phase data, its error and sta_indicies"""
         return self.get_data("oi_t3", "t3phi", "t3phierr", "sta_index")
 
+    def get_flux(self) -> np.ndarray:
+        """Fetches the flux"""
+        return self.get_data("oi_flux")
+
     def get_wl(self) -> np.ndarray:
         return self.get_data("oi_wavelength", "eff_wave")
 
     def get_tel_sta(self) -> np.ndarray:
         return self.get_data(2, "tel_name", "sta_index")
+
+    def get_flux4wl(self, wl_ind: int) -> np.ndarray:
+        """Fetches the flux for a specific wavelength"""
+        return self.get_flux[wl_ind]
 
     def get_vis4wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the visdata(amp/phase)/correlated fluxes for one specific wavelength
