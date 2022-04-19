@@ -331,35 +331,89 @@ class MCMC:
 
 # Functions
 
-def set_data(fits_file: Path, flux_file: Path,
-             pixel_size: int, sampling: int,
-             wl_ind: int, vis: bool = False) -> List:
-    """Fetches the required info and then gets the uvcoords and makes the
-    data"""
+def set_data(fits_file: Path, pixel_size: int,
+             sampling: int, flux_file: Path = None,
+             wl_ind: Optional[int] = None,
+             vis2: Optional[bool] = False) -> List:
+    """Fetches the required info from the '.fits'-files and then returns a
+    tuple containing it
+
+    Parameters
+    ----------
+    fits_file: Path
+        The '.fits'-file containing the data of the object
+    pixel_size: int
+        The size of the FOV, that is used
+    sampling: int
+        The amount of pixels used in the model image
+    flux_file: Path, optional
+        An additional '.fits'-file that contains the flux of the object
+    wl_ind: int, optional
+        If specified, picks one specific wavelength by its index
+    vis: bool, optional
+        If specified, gets the vis2 data, if not gets the vis/corr_flux data
+
+    Returns
+    -------
+    tuple
+        The data required for the mcmc-fit, in the format (data, dataerr,
+        pixel_size, sampling, wavelength, flux, u, v)
+    """
     readout = ReadoutFits(fits_file)
 
-    if vis:
-        temp_data = readout.get_vis4wl(wl_ind)
-        data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+    wavelength = readout.get_wl()
+    if wl_ind:
+        wavelength = wavelength[wl_ind]
+
+        if vis2:
+            data, dataerr = readout.get_vis24wl(wl_ind)
+        else:
+            temp_data = readout.get_vis4wl(wl_ind)
+            data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+
+        if flux_file:
+            flux = read_single_dish_txt2np(flux_file, wavelength_axis)[wavelength]
+        else:
+            flux = readout.get_flux4wl(wl_ind)
     else:
-        data, dataerr = readout.get_vis24wl(wl_ind)
+        if vis2:
+            data, dataerr = readout.get_vis2()
+        else:
+            temp_data = readout.get_vis
+            data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+
+        if flux_file:
+            flux = read_single_dish_txt2np(flux_file, wavelength_axis)
+        else:
+            flux = readout.get_flux()
 
     uvcoords = readout.get_uvcoords()
-    wavelength_axis = readout.get_wl()
-    wavelength = wavelength_axis[wl_ind]
-
-    flux = read_single_dish_txt2np(flux_file, wavelength_axis)[wavelength]
     u, v = readout.get_split_uvcoords()
 
     return (data, dataerr, pixel_size, sampling,
             wavelength, uvcoords, flux, u, v)
 
-def set_mc_params(initial, nwalkers, ndim, niter_burn, niter):
-    """Sets the mcmc parameters"""
-    # This vector defines the starting points of each walker for the amount of
-    # dimensions
-    p0 = [np.array(initial) + 1e-7*np.random.randn(ndim) for i in range(nwalkers)]
+def set_mc_params(initial, nwalkers, niter_burn):
+    """Sets the mcmc parameters. The p0 vector defines the starting points of
+    each walker for the amount of dimensions with an almost negligible offset
 
+    Parameters
+    ----------
+    inital: List
+        Contains the initial values of the parameters to be fitted
+    nwalker: int
+        The amount of walkers. Should always be a least twice that of the
+        parameters
+    niter_burn: int
+        The amount of burn in steps until the production run starts
+
+    Returns
+    -------
+    tuple
+        A tuple that contains (p0, nwalkers, ndim, niter_burn, niter)
+    """
+    ndim, niter  = len(initial), niter_burn*10
+    p0 = [np.array(initial) + 1e-7*np.random.randn(ndim) for i in range(nwalkers)]
     return (p0, nwalkers, ndim, niter_burn, niter)
 
 if __name__ == "__main__":
@@ -381,8 +435,7 @@ if __name__ == "__main__":
                     sampling=256, wl_ind=30, vis=True)
 
     # Set the mcmc parameters and the the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=10, ndim=len(initial),
-                              niter_burn=50, niter=500)
+    mc_params = set_mc_params(initial=initial, nwalkers=10, niter_burn=50)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
