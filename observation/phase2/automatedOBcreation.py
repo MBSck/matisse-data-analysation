@@ -217,7 +217,7 @@ if __name__ == "__main__":
      except:
          # If non valid path is given then default to empty string
          print("No input file for parsing found or not readable!")
-         path2file= None
+         path2filea = None
 
      # Specifies the paths, where the '.obx'-files are saved to, name of run can
      # be changed to actual one
