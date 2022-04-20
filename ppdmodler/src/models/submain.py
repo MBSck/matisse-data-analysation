@@ -81,17 +81,18 @@ def plot_all(model, mas_size, wavelength, sampling):
     plt.show()
 
 def main():
-    wavelength, pixel_scale = 9.5e-6, 10
+    wavelength, pixel_size = 9.5e-6, 10
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     readout = ReadoutFits(path)
     uv = readout.get_uvcoords()
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([0.5, 140], pixel_scale, 129)
+    r_model = r.eval_model([0.5, 140], pixel_size, 129)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     r_flux = r.get_flux(np.inf, 0.7)
-    fft = FFT(r_model, wavelength, pixel_scale, zero_padding_order=2)
+    fft = FFT(r_flux, wavelength, r.pixel_scale, zero_padding_order=4)
     ft = fft.pipeline()
     ft = fft.interpolate_uv2fft2(ft, uv)
+    print(ft)
 
 if __name__ == "__main__":
     main()

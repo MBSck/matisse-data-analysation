@@ -8,7 +8,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy import interpolate
+from scipy.interpolate import interpn
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
@@ -18,7 +18,7 @@ from src.functionality.utilities import timeit, get_px_scaling, zoom_array,\
 # TODO: Add all class attributes to the documentation
 
 class FFT:
-    """A collection of the fft-functionality given by scipy
+    """A collection and build up on the of the FFT-functionality given by numpy
 
     ...
 
@@ -41,7 +41,9 @@ class FFT:
     model_centre
     fftfreq
     fftscaling2m
+    fftaxis_m_end
     fftaxis_m
+    fftaxis_Mlambda_end
     fftaxis_Mlambda
     zero_padding
 
@@ -95,14 +97,24 @@ class FFT:
         return self.fftscaling2m/(self.wl*1e6)
 
     @property
-    def fftaxis_m(self):
-        """Gets the FFT's axis's endpoints in meter"""
+    def fftaxis_m_end(self):
+        """Fetches the endpoint of the FFT's axis in meters"""
         return self.fftscaling2m*self.dim//2
 
     @property
-    def fftaxis_Mlambda(self):
-        """Gets the FFT's axis's endpoints in mega lambda"""
+    def fftaxis_Mlambda_end(self):
+        """Fetches the endpoint of the FFT's axis in mega lambdas"""
         return self.fftscaling2Mlambda*self.dim//2
+
+    @property
+    def fftaxis_m(self):
+        """Gets the FFT's axis's in meters"""
+        return np.linspace(-self.fftaxis_m_end, self.fftaxis_m_end, self.dim)
+
+    @property
+    def fftaxis_Mlambda(self):
+        """Gets the FFT's axis's endpoints in mega lambdas"""
+        return np.linspace(-self.fftaxis_Mlambda_end, self.fftaxis_Mlambda_end, self.dim)
 
     @property
     def zero_padding(self):
@@ -142,11 +154,10 @@ class FFT:
         np.ndarray
             The interpolated FFT
         """
-        grid = (np.fft.fftshift(self.fftfreq),
-                np.fft.fftshift(self.fftfreq))
-        real=interpolate.interpn(grid, np.real(ft), uvcoords, method='linear',
+        grid = (self.fftaxis_m, self.fftaxis_m)
+        real = interpn(grid, np.real(ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        imag=interpolate.interpn(grid, np.imag(ft), uvcoords, method='linear',
+        imag = interpn(grid, np.imag(ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
         return real+imag*1j
 
@@ -165,11 +176,7 @@ class FFT:
         phase: np.ndarray
             The phase
         """
-        ft = zoom_array(ft, [self.mod_min, self.mod_max])
-        amp = np.abs(ft)/np.abs(ft[self.model_unpadded_centre,
-                                          self.model_unpadded_centre])
-        phase = np.angle(ft, deg=True)
-        return amp, phase
+        return np.abs(ft)/np.abs(self.ft_center), np.angle(ft, deg=True)
 
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the
@@ -180,7 +187,9 @@ class FFT:
         ft: np.ndarray
         ft_raw: np.ndarray
         """
-        return np.fft.fftshift(np.fft.fft2(np.fft.fftshift(self.model)))
+        ft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(self.model)))
+        self.ft_center = ft[self.model_centre, self.model_centre]
+        return ft
 
     def pipeline(self) -> np.ndarray:
         """Combines various functions and executes them
@@ -191,7 +200,6 @@ class FFT:
             The FFT of the model image
         """
         self.model = self.zero_pad_model()
-        # TODO: Without zooming the picture to coordinate scaling is scuffed
         return self.do_fft2()
 
 

@@ -135,6 +135,6 @@ class ReadoutFits:
 
 if __name__ == "__main__":
     readout = ReadoutFits("/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits")
-    r_wl = readout.get_wl()
-    print(read_single_dish_txt2np("/Users/scheuck/Documents/HD_142666_timmi2.txt", r_wl))
+    print(readout.get_vis()[1][5][110])
+    print(readout.get_vis4wl(110))
 
