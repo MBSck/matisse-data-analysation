@@ -59,7 +59,7 @@ class FFT:
                  zero_padding_order: Optional[int] = 1) -> None:
         self.model = model
         self.model_unpadded_dim = self.model.shape[0]
-        self.model_unpadded_centre = self.model_unpadded_dim//2
+
         self.wl = wavelength
         self.pixel_scale = mas2rad(pixel_scale)
         self.zero_padding_order = zero_padding_order
