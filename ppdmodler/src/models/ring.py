@@ -162,13 +162,14 @@ if __name__ == "__main__":
     # NOTE: There is a discrepancy between the model and the ASPRO model of
     # about 10m, possibly due to numerical effects?
     r = Ring(1500, 7900, 19, 140, wavelength:=10e-6)
-    r_model = r.eval_model([1, 140], mas_fov:=10, sampling:=513,\
+    r_model = r.eval_model([1, 140], mas_fov:=10, sampling:=2049,\
                            outer_radius=(width:=1.05)*r._r_sub)
     r_flux = r.get_flux(np.inf, 0.7)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
-    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=5)
-    ft, amp2, phase = fft.pipeline()
+    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=4)
+    ft = fft.pipeline()
+    amp, phase = fft.get_amp_phase(ft)
     ft_scaling = get_px_scaling(fft.fftfreq, wavelength)
     ft_ax = fft.fftaxis_m
     print(ft_ax, "scaling of the FFT to meters")
@@ -177,8 +178,8 @@ if __name__ == "__main__":
     ft_lambda = fft.fftaxis_Mlambda
     ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    cx.imshow(amp2, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
-    dx.imshow(amp2, extent=[ft_lambda, -ft_lambda, -ft_lambda, ft_lambda])
+    cx.imshow(amp, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
+    dx.imshow(amp, extent=[ft_lambda, -ft_lambda, -ft_lambda, ft_lambda])
 
     ax.set_title("Model image, Object plane")
     bx.set_title("Temperature gradient")

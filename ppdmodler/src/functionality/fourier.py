@@ -29,10 +29,10 @@ class FFT:
     wavelength: float
         The wavelength at which the fourier transform should be conducted
     zero_padding: int, optional
-        Sets the order of the zero padding in Default is '1'. The order is the
-        power of two that is then added up with 1 to make a centre pixel
-    pixelscale: float, optional
-        The pixelscale for the frequency scaling of the fourier transform
+        Sets the order of the zero padding. Default is '1'. The order is the
+        power of two,  plus one (to make it odd to facilitate a centre pixel)
+    pixel_scale: float, optional
+        The pixel_scale for the frequency scaling of the fourier transform
 
     Attributes
     ----------
@@ -56,7 +56,8 @@ class FFT:
     def __init__(self, model: np.array, wavelength: float, pixel_scale: float,
                  zero_padding_order: Optional[int] = 1) -> None:
         self.model = model
-        self.model_unpadded_centre = self.model.shape[0]//2
+        self.model_unpadded_dim = self.model.shape[0]
+        self.model_unpadded_centre = self.model_unpadded_dim//2
         self.wl = wavelength
         self.pixel_scale = mas2rad(pixel_scale)
         self.zero_padding_order = zero_padding_order
@@ -106,7 +107,8 @@ class FFT:
     @property
     def zero_padding(self):
         """Zero pads the model image"""
-        return 2**int(math.log(self.dim-1, 2)+self.zero_padding_order)+1
+        return 2**int(math.log(self.model_unpadded_dim-1, 2)\
+                      +self.zero_padding_order)+1
 
     def zero_pad_model(self):
         """This adds zero padding to the model image before it is transformed
@@ -140,7 +142,8 @@ class FFT:
         np.ndarray
             The interpolated FFT
         """
-        grid = (self.fftfreq, self.fftfreq)
+        grid = (np.fft.fftshift(self.fftfreq),
+                np.fft.fftshift(self.fftfreq))
         real=interpolate.interpn(grid, np.real(ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
         imag=interpolate.interpn(grid, np.imag(ft), uvcoords, method='linear',
@@ -162,6 +165,7 @@ class FFT:
         phase: np.ndarray
             The phase
         """
+        ft = zoom_array(ft, [self.mod_min, self.mod_max])
         amp = np.abs(ft)/np.abs(ft[self.model_unpadded_centre,
                                           self.model_unpadded_centre])
         phase = np.angle(ft, deg=True)
@@ -187,11 +191,8 @@ class FFT:
             The FFT of the model image
         """
         self.model = self.zero_pad_model()
-        ft = zoom_array(self.do_fft2(), [self.mod_min, self.mod_max])
-
-        # NOTE: Without zooming the picture to coordinate scaling is scuffed
-        # ft = self.do_fft2()
-        return ft
+        # TODO: Without zooming the picture to coordinate scaling is scuffed
+        return self.do_fft2()
 
 
 if __name__ == "__main__":
