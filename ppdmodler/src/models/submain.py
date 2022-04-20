@@ -86,13 +86,14 @@ def main():
     readout = ReadoutFits(path)
     uv = readout.get_uvcoords()
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([0.5, 140], pixel_size, 129)
+    r_model = r.eval_model([0.2, 40], pixel_size, 129)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     r_flux = r.get_flux(np.inf, 0.7)
-    fft = FFT(r_flux, wavelength, r.pixel_scale, zero_padding_order=4)
+    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=4)
     ft = fft.pipeline()
     ft = fft.interpolate_uv2fft2(ft, uv)
-    print(ft)
+    amp, phase = fft.get_amp_phase(ft)
+    print(amp*r_tot_flux, phase)
 
 if __name__ == "__main__":
     main()

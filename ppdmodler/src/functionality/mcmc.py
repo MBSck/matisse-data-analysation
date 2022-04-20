@@ -19,9 +19,11 @@ from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.utilities import trunc, correspond_uv2scale, \
         azimuthal_modulation, get_px_scaling
 
-# NOTE, TODO: The code has some difficulties rescaling for higher pixel numbers
+# TODO: The code has some difficulties rescaling for higher pixel numbers
 # and does in that case not approximate the right values for the corr_fluxes,
 # see pixel_scaling
+
+# TODO: Safe the model as a '.yaml'-file? Better than '.fits'?
 
 # TODO: Think of rewriting code so that params are taken differently
 # TODO: Make documentation in Evernote of this file and then remove unncessary
@@ -36,15 +38,15 @@ from src.functionality.utilities import trunc, correspond_uv2scale, \
 # being saved to
 
 class MCMC:
+    """"""
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
                  numerical: bool = True, vis: bool = False,
                  modulation: bool = False, bb_params: List = None,
-                 fractional_value: float = 0.2, out_path: Path = None) -> None:
-        self.data = data[:-3]
+                 out_path: Path = None) -> None:
+        self.data = data[:-4]
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
-        self.fractional_value = fractional_value
 
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical, self.vis = numerical, vis
@@ -54,7 +56,7 @@ class MCMC:
 
         self.realdata, self.realerr, self.pixel_size,\
                 self.sampling, self.wavelength, self.uvcoords,\
-                self.realflux, self.u, self.v = data
+                self.realflux, self.u, self.v, self.zero_padding_order = data
 
         self.model = model(*self.bb_params, self.wavelength)
 
@@ -77,7 +79,7 @@ class MCMC:
         self.plot_corner(sampler)
 
         # This plots the resulting model
-        self.plot_model_and_vis_curve(sampler, 128, self.wavelength)
+        self.plot_model_and_vis_curve(sampler, 2049, self.wavelength)
 
         # This saves the best-fit model data and the real data
         self.save_fit_data()
@@ -133,7 +135,7 @@ class MCMC:
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         tau, q = theta[-2:]
         if self.numerical:
-            datamod, phase, ft = self.model4fit_numerical(theta[:-2], sampling, wavelength, uvcoords)
+            datamod, phase = self.model4fit_numerical(theta[:-2], sampling, wavelength, uvcoords)
         else:
             datamod = self.model4fit_analytical(theta[:-2], sampling, wavelength, uvcoords)
 
@@ -145,13 +147,17 @@ class MCMC:
         else:
             datamod = datamod*np.conj(datamod)
 
-        sigma2corrflux = realdataerr**2 + realdata**2*self.fractional_value
-        sigma2totflux = self.realflux**2*self.fractional_value
+        sigma2corrflux = realdataerr**2 + realdata**2
+        sigma2totflux = self.realflux**2*0.2
         print(datamod, "datamod", '\n', realdata, "realdata")
         print(self.realflux, "real flux", tot_flux, "calculated flux")
 
-        return -0.5*np.sum((realdata-datamod)**2/sigma2corrflux+\
-                           (self.realflux-tot_flux)**2/sigma2totflux)
+        data_chi_sq = np.sum((realdata-datamod)**2/sigma2corrflux)
+        flux_chi_sq = np.sum((self.realflux-tot_flux)**2/sigma2totflux)
+        whole_chi_sq = data_chi_sq + flux_chi_sq
+        print(data_chi_sq/whole_chi_sq, flux_chi_sq/whole_chi_sq)
+
+        return -0.5*whole_chi_sq
 
     def lnprior(self, theta):
         """Checks if all variables are within their priors (as well as
@@ -194,15 +200,19 @@ class MCMC:
         """The model image, that is fourier transformed for the fitting process"""
         model_img = self.model.eval_model(theta, self.pixel_size, sampling)
 
-        fr = FFT(model_img, wavelength)
-        ft, amp, phase = fr.pipeline()
+        fft = FFT(model_img, wavelength, self.model.pixel_scale,
+                 self.zero_padding_order)
+        ft = fft.pipeline()
+        ft = fft.interpolate_uv2fft2(ft, uvcoords)
+        amp, phase = fft.get_amp_phase(ft)
 
+        # TODO: Use this as a test for the interpolation
         # rescaling of the uv-coords to the corresponding image size
-        self.fr_scaling = get_px_scaling(fr.fftfreq, wavelength,
-                                    self.model._mas_size, self.model._sampling)
-        self.xcoord, self.ycoord = correspond_uv2scale(self.fr_scaling, fr.model_size//2, uvcoords)
-        amp = np.array([amp[j, i] for i, j in zip(self.xcoord, self.ycoord)])
-        return amp, phase, ft
+        # self.fr_scaling = get_px_scaling(fr.fftfreq, wavelength,
+        #                             self.model._mas_size, self.model._sampling)
+        # self.xcoord, self.ycoord = correspond_uv2scale(self.fr_scaling, fr.model_size//2, uvcoords)
+        # amp = np.array([amp[j, i] for i, j in zip(self.xcoord, self.ycoord)])
+        return amp, phase
 
     def get_best_fit(self, sampler) -> np.ndarray:
         """Fetches the best fit values from the sampler"""
@@ -213,69 +223,61 @@ class MCMC:
     def plot_model_and_vis_curve(self, sampler, sampling, wavelength) -> None:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
-        fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 8))
-
-        # Gets the best value and calculates a full model
         self.theta_max = self.get_best_fit(sampler)
+        fig, ax = plt.subplots(1, 1)
         print(self.theta_max, "Theta max")
+
         tau, q = self.theta_max[-2:]
 
-        if self.numerical:
-            datamod, phase, ft = self.model4fit_numerical(self.theta_max[:-2],
-                                                          sampling, wavelength,
-                                                          self.uvcoords)
-            model_img = self.model.eval_model(self.theta_max[:-2],
-                                                   self.pixel_size, sampling)
-            fourier= FFT(model_img, wavelength)
-            best_fit_model = fourier.pipeline()[1]
-
-            if self.vis:
-                flux  = self.model.get_total_flux(tau, q)
-                datamod *= flux
-                best_fit_model *= flux
-            else:
-                datamod = datamod*np.conj(datamod)
-
-            self.datamod = datamod
+        datamod, phase = self.model4fit_numerical(self.theta_max[:-2],
+                                                      sampling, wavelength,
+                                                      self.uvcoords)
+        model_img = self.model.eval_model(self.theta_max[:-2],
+                                               self.pixel_size, sampling)
+        if self.vis:
+            flux  = self.model.get_total_flux(tau, q)
+            datamod *= flux
         else:
-            best_fit_model = self.model.eval_vis(self.theta_max, sampling, wavelength)
+            datamod = datamod*np.conj(datamod)
+
+        self.datamod = datamod
 
         # Correspond the best fit to the uv coords
         print("best fit data", datamod, "real data", self.realdata)
 
-        # Takes a slice of the model and shows vis2-baselines
-        size_model = len(best_fit_model)
-        u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
-        wavelength = trunc(self.wavelength*1e06, 2)
-        xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
-        yvis_curve = best_fit_model[centre]
+        # # Takes a slice of the model and shows vis2-baselines
+        # size_model = len(best_fit_model)
+        # u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
+        # wavelength = trunc(self.wavelength*1e06, 2)
+        # xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
+        # yvis_curve = best_fit_model[centre]
 
         # Combines the plots and gives descriptions to the axes
         ax.imshow(self.model.get_flux(tau, q), vmax=self.model._max_sub_flux,\
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                          -self.pixel_size//2, self.pixel_size//2])
-        ax.set_title(fr"{self.model.name}: Temperature gradient, at {wavelength}$\mu$m")
+        ax.set_title(fr"{self.model.name}: Temperature gradient, at {wavelength*1e6}$\mu$m")
         ax.set_xlabel(f"[mas]")
         ax.set_ylabel(f"[mas]")
-        bx.plot(xvis_curve, yvis_curve)
-        bx.set_xlabel(r"$B_p$ [m]")
+        # bx.plot(xvis_curve, yvis_curve)
+        # bx.set_xlabel(r"$B_p$ [m]")
 
-        if self.vis:
-            bx.set_ylabel("vis/corr_flux [Jy]")
-        else:
-            bx.set_ylabel("vis2")
+        # if self.vis:
+        #     bx.set_ylabel("vis/corr_flux [Jy]")
+        # else:
+        #     bx.set_ylabel("vis2")
 
-        third_max = len(best_fit_model)//2 - 3
+        # third_max = len(best_fit_model)//2 - 3
 
-        cx.imshow(best_fit_model, vmax=best_fit_model[third_max, third_max],\
-                  extent=[self.pixel_size//2, -self.pixel_size//2,\
-                          -self.pixel_size//2, self.pixel_size//2])
+        # cx.imshow(best_fit_model, vmax=best_fit_model[third_max, third_max],\
+        #           extent=[self.pixel_size//2, -self.pixel_size//2,\
+        #                   -self.pixel_size//2, self.pixel_size//2])
 
 
-        cx.scatter(self.u/self.fr_scaling, self.v/self.fr_scaling)
-        cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
-        cx.set_xlabel(f"[mas]")
-        cx.set_ylabel(f"[mas]")
+        # cx.scatter(self.u/self.fr_scaling, self.v/self.fr_scaling)
+        # cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
+        # cx.set_xlabel(f"[mas]")
+        # cx.set_ylabel(f"[mas]")
 
         if self.out_path is None:
             plt.savefig(f"{self.model.name}_model_after_fit.png")
@@ -334,7 +336,8 @@ class MCMC:
 def set_data(fits_file: Path, pixel_size: int,
              sampling: int, flux_file: Path = None,
              wl_ind: Optional[int] = None,
-             vis2: Optional[bool] = False) -> List:
+             vis2: Optional[bool] = False,
+             zero_padding_order: Optional[int] = 4) -> List:
     """Fetches the required info from the '.fits'-files and then returns a
     tuple containing it
 
@@ -393,7 +396,7 @@ def set_data(fits_file: Path, pixel_size: int,
     u, v = readout.get_split_uvcoords()
 
     return (data, dataerr, pixel_size, sampling,
-            wavelength, uvcoords, flux, u, v)
+            wavelength, uvcoords, flux, u, v, zero_padding_order)
 
 def set_mc_params(initial, nwalkers, niter_burn):
     """Sets the mcmc parameters. The p0 vector defines the starting points of
@@ -422,8 +425,8 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([1.6, 45, 0.01, 0.5])
-    priors = [[0., 10.], [0, 360], [0.0, 0.1], [0.5, 1.]]
+    initial = np.array([0.4, 45, 0.1, 0.5])
+    priors = [[0., 1.], [0, 360], [0.01, 1.], [0.01, 1.]]
     labels = ["AXIS_RATIO", "P_A", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
@@ -433,16 +436,14 @@ if __name__ == "__main__":
     flux_file = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavlength has to be the fourth argument [3]
-    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=10,
-                    sampling=256)
-    print(data)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=30,
+                    sampling=129, wl_ind=30, zero_padding_order=3)
 
     # Set the mcmc parameters and the the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=10, niter_burn=50)
+    mc_params = set_mc_params(initial=initial, nwalkers=10, niter_burn=1000)
 
     # This calls the MCMC fitting
-    # mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
-    #             vis=True, modulation=True, bb_params=bb_params,
-    #             fractional_value=0.4, out_path=out_path)
-    # mcmc.pipeline()
+    mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
+                vis=True, modulation=True, bb_params=bb_params, out_path=out_path)
+    mcmc.pipeline()
 

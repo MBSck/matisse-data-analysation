@@ -75,9 +75,11 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod = c.eval_model([1.6, 45], 30, 2048)
+    c_mod = c.eval_model([0.5, 45], 30, 128)
     c_flux = c.get_flux(np.inf, 0.7)
     max_flux = np.max(c_flux)
+    c_tot_flux = c.get_total_flux(np.inf, 0.7)
+    print(c_tot_flux)
     plt.imshow(c_flux, vmax=c._max_sub_flux)
     plt.show()
 
