@@ -1,0 +1,38 @@
+Traceback (most recent call last):
+  File "mcmc.py", line 16, in <module>
+    from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
+  File "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/ppdmodler/src/models/__init__.py", line 1, in <module>
+    from src.models.delta import Delta
+  File "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/ppdmodler/src/models/delta.py", line 5, in <module>
+    from src.functionality.utilities import timeit
+  File "/data/beegfs/astro-storage/groups/matisse/scheuck/scripts/ppdmodler/src/functionality/utilities.py", line 9, in <module>
+    from astropy.io import fits
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/__init__.py", line 70, in <module>
+    from . import convenience
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/convenience.py", line 64, in <module>
+    from .diff import FITSDiff, HDUDiff
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/diff.py", line 28, in <module>
+    from .hdu.hdulist import fitsopen, HDUList  # pylint: disable=W0611
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/hdu/__init__.py", line 5, in <module>
+    from .compressed import CompImageHDU
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/hdu/compressed.py", line 15, in <module>
+    from .image import ImageHDU
+  File "/usr/local/lib64/python3.6/site-packages/astropy/io/fits/hdu/image.py", line 17, in <module>
+    from dask.array import Array as DaskArray
+  File "/usr/local/lib/python3.6/site-packages/dask/__init__.py", line 3, in <module>
+    from . import config, datasets
+  File "/usr/local/lib/python3.6/site-packages/dask/datasets.py", line 5, in <module>
+    from .utils import import_required
+  File "/usr/local/lib/python3.6/site-packages/dask/utils.py", line 20, in <module>
+    from .core import get_deps
+  File "<frozen importlib._bootstrap>", line 971, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 955, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 665, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 674, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 764, in get_code
+  File "<frozen importlib._bootstrap_external>", line 833, in get_data
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "mcmc.py", line 16, in <module>
+    from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
+ImportError: cannot import name 'CompoundModel'

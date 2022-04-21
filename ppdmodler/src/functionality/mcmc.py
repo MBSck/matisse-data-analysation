@@ -4,6 +4,7 @@
 package"""
 
 import os
+import yaml
 import numpy as np
 import emcee
 import corner
@@ -82,7 +83,7 @@ class MCMC:
         self.plot_model_and_vis_curve(sampler, 2049, self.wavelength)
 
         # This saves the best-fit model data and the real data
-        self.save_fit_data()
+        self.dump2yaml()
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -309,27 +310,20 @@ class MCMC:
         autocorr= np.mean(sampler.get_autocorr_time())
         print(f"Mean acceptance fraction {acceptance} and the autcorrelation time {autocorr}")
 
-    def write_data(self) -> str:
-        """Specifies how the fit data should be written"""
+    def dump2yaml(self) -> None:
+        """Dumps the resulting data of the model into a '.yaml'-file"""
         if self.vis:
-            write_str = f"visamp\n{str(self.realdata[0])}\n-------------------\n"\
-                    f"visphase\n{str(self.realdata[1])}\n-------------------\n"
+            vis_dict = {"visamp": self.realdata[0], "visphase": self.realdata[1]}
         else:
-            write_str = f"vis2data\n{str(self.realdata)}\n-------------------\n"
+            vis_dict = {"vis2data": self.realdata}
 
-        write_str += f"datamod\n{str(self.datamod)}\n-------------------\n"\
-                f"theta - best fit\n{str(self.theta_max)}\n-------------------\n"\
-                f"labels\n{str(self.labels)}\n"
-        return write_str
+        fit_dict = {"datamod": self.datamod, "Best fit - theta": self.theta_max,
+                    "labels": self.labels}
 
-    def save_fit_data(self) -> None:
-        """This saves the real data and the best-fitted model data"""
-        if self.out_path is not None:
-            with open(os.path.join(self.out_path, f"{self.model.name}_data.txt"), "w+") as f:
-                f.write(self.write_data())
-        else:
-            with open(f"{self.model.name}_data.txt", "w+") as f:
-                f.write(self.write_data())
+        model_dict = {self.model.name: {"Real data": vis_dict, "Fit values": fit_dict}}
+
+        with open(f"{self.model.name}_model_after_fit.yaml", "w") as fy:
+            fy.safe_dump(model_dict, fy)
 
 # Functions
 
@@ -431,16 +425,17 @@ if __name__ == "__main__":
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
-    f = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
-    out_path = "/Users/scheuck/Documents/PhD/matisse_stuff/ppdmodler/assets"
-    flux_file = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/HD_142666_timmi2.txt"
+    path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514/combined/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged"
+    f = os.path.join(path ,"Final_CAL.fits")
+    out_path = "../../assets"
+    flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavlength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=30,
-                    sampling=129, wl_ind=30, zero_padding_order=3)
+                    sampling=257, wl_ind=30, zero_padding_order=3)
 
     # Set the mcmc parameters and the the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=10, niter_burn=1000)
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=1000)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
