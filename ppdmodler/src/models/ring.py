@@ -161,9 +161,10 @@ class Ring(Model):
 if __name__ == "__main__":
     # NOTE: There is a discrepancy between the model and the ASPRO model of
     # about 10m, possibly due to numerical effects?
-    r = Ring(1500, 7900, 19, 140, wavelength:=10e-6)
-    r_model = r.eval_model([1, 140], mas_fov:=10, sampling:=129,\
-                           outer_radius=(width:=1.05)*r._r_sub)
+    wavelength, mas_fov, sampling, width  = 10e-6, 10, 129, 1.05
+    r = Ring(1500, 7900, 19, 140, wavelength)
+    r_model = r.eval_model([1, 140], mas_fov, sampling,\
+                           outer_radius=width*r._r_sub)
     r_flux = r.get_flux(np.inf, 0.7)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))

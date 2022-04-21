@@ -109,8 +109,9 @@ class Gauss2D(Model):
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
 if __name__ == "__main__":
-    g = Gauss2D(1500, 7900, 19, 140, wavelength:=8e-6)
-    g_model = g.eval_model([2.5], mas_fov:=10, sampling:=129)
+    wavelength, mas_fov, sampling = 8e-6, 10, 129
+    g = Gauss2D(1500, 7900, 19, 140, wavelength)
+    g_model = g.eval_model([2.5], mas_fov, sampling)
     print(g.pixel_scale)
     g_flux = g.get_flux(np.inf, 0.7)
     g_tot_flux = g.get_total_flux(np.inf, 0.7)
