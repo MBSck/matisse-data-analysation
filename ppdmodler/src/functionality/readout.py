@@ -69,6 +69,11 @@ class ReadoutFits:
         uvcoords = self.get_uvcoords()
         return np.array([item[0] for item in uvcoords]), np.array([item[1] for item in uvcoords])
 
+    def get_baselines(self):
+        """Calculates the baselines from the uv coordinates"""
+        u, v = self.get_split_uvcoords()
+        return np.sqrt(u**2+v**2)
+
     def get_vis(self) -> np.ndarray:
         """Fetches the visibility data/correlated fluxes, its errors and sta-indices"""
         return self.get_data("oi_vis", "visamp", "visamperr", "visphi", "visphierr", "sta_index")

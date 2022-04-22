@@ -213,7 +213,8 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
 if __name__ == "__main__":
     # Get and parses the night plans Roy's script creates
      try:
-         path2file = os.path.join(os.getcwd(), "night_plan.yaml")
+         # path2file = os.path.join(os.getcwd(), "night_plan.yaml")
+        path2file = ""
      except:
          # If non valid path is given then default to empty string
          print("No input file for parsing found or not readable!")
@@ -230,12 +231,10 @@ if __name__ == "__main__":
      # sci_lst = ["AS 209", "VV Ser"]
      # cal_lst = [["HD 142567", "HD 467893"], "]
      # tag_lst = [["LN", "N"], "L"]
-     # sci_lst = ["HD 141569", "VV Ser", "MWC 297",
-     #            "HD169142", "IM Lup", "HD135344B", "HD144668", "R Cra"]
-     # cal_lst = [["HD147929"], ["HD178131"], ["HD176678"], ["HD316665"], ["HD138492", "HD138816"],
-     #            ["HD138492"], ["HD151051"], ["HD181925"]]
-     # tag_lst = [["LN"], ["LN"], ["LN"], ["LN"], ["LN", "LN"], ["LN"], ["LN"], ["LN"]]
-     sci_lst, cal_lst, tag_lst = [], [], []
+     # sci_lst, cal_lst, tag_lst = ["HD 97048", "HP Cha"], [["HD149324"], ["HD149324"]], [["LN"], ] "LN"]]
+     sci_lst = ["HD 97048", "HP Cha"]
+     cal_lst = [["HD149324"], ["HD149324"]]
+     tag_lst = [["LN"], ["LN"]]
 
      # Specifies the res_dict, in the format. Can be left empty.
      # Example of usage, at the moment only changes L-band resolution

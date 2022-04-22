@@ -28,11 +28,11 @@ class FFT:
         The model image to be fourier transformed
     wavelength: float
         The wavelength at which the fourier transform should be conducted
+    pixel_scale: float
+        The pixel_scale for the frequency scaling of the fourier transform
     zero_padding: int, optional
         Sets the order of the zero padding. Default is '1'. The order is the
         power of two,  plus one (to make it odd to facilitate a centre pixel)
-    pixel_scale: float, optional
-        The pixel_scale for the frequency scaling of the fourier transform
 
     Attributes
     ----------
@@ -63,6 +63,8 @@ class FFT:
         self.wl = wavelength
         self.pixel_scale = mas2rad(pixel_scale)
         self.zero_padding_order = zero_padding_order
+
+        self.ft = self.pipeline()
 
     @property
     def model_shape(self):
@@ -138,16 +140,17 @@ class FFT:
                      self.mod_min:self.mod_max] = self.model
         return padded_image
 
-    def interpolate_uv2fft2(self, ft: np.ndarray,
-                            uvcoords: np.ndarray) -> np.ndarray:
+    def interpolate_uv2fft2(self, uvcoords: np.ndarray,
+                            corr_flux: bool = False) -> np.ndarray:
         """Interpolate the uvcoordinates to the grid of the FFT
 
         Parameters
         ----------
-        ft: np.ndarray
-            The FFT
         uvcoords: np.ndarray
             The uv-coords
+        corr_flux: bool
+            If the input image is a temperature gradient model then set this to
+            'True' and the output will be the correlated fluxes
 
         Returns
         -------
@@ -155,19 +158,24 @@ class FFT:
             The interpolated FFT
         """
         grid = (self.fftaxis_m, self.fftaxis_m)
-        real = interpn(grid, np.real(ft), uvcoords, method='linear',
+        real = interpn(grid, np.real(self.ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        imag = interpn(grid, np.imag(ft), uvcoords, method='linear',
+        imag = interpn(grid, np.imag(self.ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        return real+imag*1j
+        ft_intp = real+1*imag
 
-    def get_amp_phase(self, ft: np.ndarray) -> [np.ndarray, np.ndarray]:
+        if corr_flux:
+            return np.abs(ft_intp), np.angle(ft_intp, deg=True)
+        return np.abs(ft_intp)/np.abs(self.ft_center), np.angle(ft_intp, deg=True)
+
+    def get_amp_phase(self, corr_flux: bool = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT
 
         Parameters
         ----------
-        ft: np.ndarray
-            The FFT of the model image
+        corr_flux: bool
+            If the input image is a temperature gradient model then set this to
+            'True' and the output will be the correlated fluxes
 
         Returns
         --------
@@ -176,7 +184,9 @@ class FFT:
         phase: np.ndarray
             The phase
         """
-        return np.abs(ft)/np.abs(self.ft_center), np.angle(ft, deg=True)
+        if corr_flux:
+            return np.abs(self.ft), np.angle(self.ft, deg=True)
+        return np.abs(self.ft)/np.abs(self.ft_center), np.angle(self.ft, deg=True)
 
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the

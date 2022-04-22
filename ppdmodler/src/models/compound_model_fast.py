@@ -28,7 +28,7 @@ class CompoundModel(Model):
     """
     def __init__(self, *args):
         super().__init__(*args)
-        self.name = "Compound Model - Test"
+        self.name = "Compound Model"
         self.d, self.r = Delta(*args), Ring(*args)
 
     def get_flux(self, *args) -> np.array:
@@ -75,7 +75,7 @@ class CompoundModel(Model):
 
 if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod = c.eval_model([0.5, 45], 30, 128)
+    c_mod = c.eval_model([0.5, 45], 30, 129)
     c_flux = c.get_flux(np.inf, 0.7)
     max_flux = np.max(c_flux)
     c_tot_flux = c.get_total_flux(np.inf, 0.7)

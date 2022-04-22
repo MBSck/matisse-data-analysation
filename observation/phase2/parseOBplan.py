@@ -170,6 +170,6 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
     return night_plan
 
 if __name__ == "__main__":
-    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.1.txt"
+    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.3.txt"
     print(run_dict := parse_night_plan(path, save2file=True))
 
