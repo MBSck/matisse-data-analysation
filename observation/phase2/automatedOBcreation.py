@@ -231,10 +231,10 @@ if __name__ == "__main__":
      # sci_lst = ["AS 209", "VV Ser"]
      # cal_lst = [["HD 142567", "HD 467893"], "]
      # tag_lst = [["LN", "N"], "L"]
-     # sci_lst, cal_lst, tag_lst = ["HD 97048", "HP Cha"], [["HD149324"], ["HD149324"]], [["LN"], ] "LN"]]
-     sci_lst = ["HD 97048", "HP Cha"]
-     cal_lst = [["HD149324"], ["HD149324"]]
-     tag_lst = [["LN"], ["LN"]]
+     # sci_lst, cal_lst, tag_lst = [], [], []
+     sci_lst = []
+     cal_lst = []
+     tag_lst = []
 
      # Specifies the res_dict, in the format. Can be left empty.
      # Example of usage, at the moment only changes L-band resolution

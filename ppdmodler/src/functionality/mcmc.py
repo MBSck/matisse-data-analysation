@@ -308,7 +308,7 @@ class MCMC:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
         self.theta_max = self.get_best_fit(sampler)
-        fig, (ax, bx) = plt.subplots(1, 2)
+        fig, (ax, bx) = plt.subplots(1, 2, figsize=(20, 20))
         print(self.theta_max, "Theta max")
 
         tau, q = self.theta_max[-2:]
@@ -433,11 +433,11 @@ if __name__ == "__main__":
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
-    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=80,
-                    sampling=129, wl_ind=55, zero_padding_order=3)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
+                    sampling=129, wl_ind=70, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=20,
+    mc_params = set_mc_params(initial=initial, nwalkers=200, niter_burn=20,
                               niter=20)
 
     # This calls the MCMC fitting
