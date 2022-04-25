@@ -365,22 +365,23 @@ class MCMC:
         # cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
         # cx.set_xlabel(f"[mas]")
         # cx.set_ylabel(f"[mas]")
+        save_path = f"{self.model.name}_model_after_fit_{trunc(wavelength*1e6, 2)}.png"
 
         if self.out_path is None:
-            plt.savefig(f"{self.model.name}_model_after_fit_{trunc(wavelength*1e6, 2)}.png")
+            plt.savefig(save_path)
         else:
-            plt.savefig(os.path.join(self.out_path,
-                                     f"{self.model.name}_model_after_fit_{trunc(wavelength*1e6, 2)}.png"))
+            plt.savefig(os.path.join(self.out_path, save_path))
         plt.show()
 
     def plot_corner(self, sampler) -> None:
         """Plots the corner plot of the posterior spread"""
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
         fig = corner.corner(samples, labels=self.labels)
+        save_path = f"{self.model.name}_corner_plot_{trunc(self.wavelength*1e6, 2}).png"
         if self.out_path is None:
-            plt.savefig(f"{self.model.name}_corner_plot.png")
+            plt.savefig(save_path)
         else:
-            plt.savefig(os.path.join(self.out_path, f"{self.model.name}_corner_plot.png"))
+            plt.savefig(os.path.join(self.out_path, save_path))
 
     def test_model(self, sampler) -> None:
         # TODO: Implement printout of theta_max
@@ -422,9 +423,9 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.5, 139, 0.001, 0.7])
-    priors = [[0.35, 1.], [130, 143], [0., 0.06], [0.5, 0.9]]
-    labels = ["AXIS_RATIO", "P_A", "TAU", "Q"]
+    initial = np.array([0.5, 139, 1., 1., 0.001, 0.7])
+    priors = [[0.35, 1.], [130, 143], [0., 10.], [0., 10.], [0., 0.06], [0.5, 0.9]]
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
@@ -434,7 +435,7 @@ if __name__ == "__main__":
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=70, zero_padding_order=3)
+                    sampling=129, wl_ind=45, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=200, niter_burn=20,

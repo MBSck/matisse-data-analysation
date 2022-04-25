@@ -33,7 +33,7 @@ class CompoundModel(Model):
 
     def get_flux(self, *args) -> np.array:
         flux = self.r.get_flux(*args)
-        flux *= azimuthal_modulation(self.r._phi)
+        flux *= azimuthal_modulation(self.r._phi, self.amplitudes)
         self._max_sub_flux = np.max(flux)
         flux[self.d._size//2, self.d._size//2] = self.d.stellar_flux
         return flux
@@ -52,7 +52,8 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            axis_ratio, pa = theta
+            axis_ratio, pa, c, s = theta
+            self.amplitudes = [[c, s]]
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"

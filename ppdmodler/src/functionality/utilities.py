@@ -12,7 +12,6 @@ from functools import wraps
 
 from src.functionality.constant import *
 
-# TODO: Check sr2mas conversion for pixel scaling
 # TODO: Check linspace in set_size for accuracy? -> Don't use sampling
 
 # Functions
@@ -215,13 +214,27 @@ def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: 
     return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
 
 def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
-                         amps: List[List] = [[1, 1]],
-                         order: int = 1) -> Union[float, np.ndarray]:
-    """Azimuthal modulation of an object"""
+                         amplitudes: List[List] = [[1, 1]],
+                         order: Optional[int] = 1) -> Union[float, np.ndarray]:
+    """Azimuthal modulation of an object
+
+    Parameters
+    ----------
+    polar_angle: float | np.ndarray
+        The polar angle of the x, y-coordinates
+    amplitudes: List[List]
+        The 'c' and 's' amplitudes
+    order: int, optional
+        The order of azimuthal modulation
+
+    Returns
+    -------
+    azimuthal_modulation: float | np.ndarray
+    """
     total_mod = 0
     for i in range(0, order):
-        c, s = amps[i]
-        total_mod += (c*np.cos((i+1)*polar_angle)+s*np.abs((i+1)*polar_angle))
+        c, s = amplitudes[i]
+        total_mod += (c*np.cos((i+1)*polar_angle)+s*np.sin((i+1)*polar_angle))
 
     modulation = np.array(1+total_mod)
     modulation[modulation < 0] = 0.
