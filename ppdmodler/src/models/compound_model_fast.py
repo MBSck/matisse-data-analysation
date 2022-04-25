@@ -39,7 +39,7 @@ class CompoundModel(Model):
         return flux
 
     def eval_model(self, theta: List, mas_size: int, px_size: int,
-                   sampling: Optional[int] = None, inner_radius = 0) -> np.ndarray:
+                   sampling: Optional[int] = None) -> np.ndarray:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1
 
         Returns
@@ -51,7 +51,10 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            axis_ratio, pa, c, s = theta
+            if len(theta) < 4:
+                axis_ratio, pa, c, s = theta
+            else:
+                axis_ratio, pa, c, s, inner_radius = theta
             self.amplitudes = [[c, s]]
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
@@ -64,7 +67,7 @@ class CompoundModel(Model):
         self._size, self._mas_size = px_size, mas_size
 
         image = self.r.eval_model([axis_ratio, pa], mas_size, px_size,
-                                  sampling, inner_radius)
+                                  sampling, inner_radius=inner_radius)
         self._max_obj = np.max(image)
         image += self.d.eval_model(mas_size, px_size)
         return image

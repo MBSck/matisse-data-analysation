@@ -159,7 +159,9 @@ class MCMC:
         self.model = model(*self.bb_params, self.wavelength)
 
         if self.vis:
-            self.realdata, self.datamod = self.realdata[0], None
+            self.datamod = None
+            self.realdata, self.realphase = self.realdata
+            self.realdataerr, self.realphaserr = self.realerr
 
         self.theta_max = None
         self.x, self.y = 0, 0
@@ -317,10 +319,10 @@ class MCMC:
 
         tau, q = self.theta_max[-2:]
 
-        datamod, phase = self.model4fit_numerical(tau, q, self.theta_max[:-2],
+        datamod, cphase = self.model4fit_numerical(tau, q, self.theta_max[:-2],
                                                       sampling, wavelength,
                                                       self.uvcoords)
-        self.datamod = datamod
+        self.datamod, self.cphasemod = datamod, phase
         model_img = self.model.eval_model(self.theta_max[:-2],
                                                self.pixel_size, sampling)
         self.total_flux_fit = self.model.get_total_flux(tau, q)
@@ -342,14 +344,22 @@ class MCMC:
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                          -self.pixel_size//2, self.pixel_size//2])
         ax.set_title(fr"{self.model.name}: Temperature gradient, at {trunc(wavelength*1e6, 2)}$\mu$m")
-        ax.set_xlabel(f"[mas]")
-        ax.set_ylabel(f"[mas]")
+        ax.set_xlabel(f"RA [mas]")
+        ax.set_ylabel(f"DEC [mas]")
 
-        bx.errorbar(self.realbaselines, self.realdata, self.sigma2corrflux, fmt='o', label="Real data")
+        bx.errorbar(self.realbaselines, self.realdata, self.realdataerr,
+                    color="yellow", fmt='o', label="Real data")
         bx.scatter(self.realbaselines, self.datamod, label="Fit data")
-        bx.set_title("Correlated fluxes")
-        bx.set_xlabel(f"Real flux {trunc(self.realflux, 2)} Jy vs Fit Flux {trunc(self.total_flux_fit, 2)} +/- {trunc(self.sigma2totflux, 2)} Jy")
+        bx.set_title("Correlated fluxes [Jy]")
+        bx.set_xlabel("Baselines [m]")
         bx.legend(loc="upper right")
+
+        cx.errorbar(self.realbaselines[1:], self.realphase, self.realphaserr,
+                    color="yellow", fmt='o', label="Real data")
+        cx.scatter(self.realbaselines[1:], self.cphasemod, label="Fit data")
+        cx.set_title(fr"Closure Phases [$^\circ$]")
+        cx.set_xlabel("Baselines [m]")
+        cx.legend(loc="upper right")
         # bx.plot(xvis_curve, yvis_curve)
         # bx.set_xlabel(r"$B_p$ [m]")
 
@@ -427,8 +437,8 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.5, 139, 1., 1., 0.001, 0.7])
-    priors = [[0.35, 1.], [130, 143], [0., 10.], [0., 10.], [0., 0.06], [0.5, 0.9]]
+    initial = np.array([0.5, 139, 1., 1., 1.6,  0.001, 0.7])
+    priors = [[0.35, 1.], [130, 143], [0., 10.], [0., 10.], [0., 20.], [0., 0.06], [0.5, 0.9]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
