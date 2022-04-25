@@ -20,6 +20,8 @@ from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.utilities import trunc, correspond_uv2scale, \
         azimuthal_modulation, get_px_scaling
 
+# Interesting stuff -> Change p0, how it gets made and more
+
 # TODO: The code has some difficulties rescaling for higher pixel numbers
 # and does in that case not approximate the right values for the corr_fluxes,
 # see pixel_scaling
@@ -127,8 +129,8 @@ def set_mc_params(initial: np.ndarray, nwalkers: int,
     tuple
         A tuple that contains (p0, nwalkers, ndim, niter_burn, niter)
     """
-    ndim, niter  = len(initial), niter_burn*10
-    p0 = [np.array(initial) + 1e-7*np.random.randn(ndim) for i in range(nwalkers)]
+    ndim = len(initial)
+    p0 = [np.array(initial) + 1e-2*np.random.randn(ndim) for i in range(nwalkers)]
     return (p0, nwalkers, ndim, niter_burn, niter)
 
 
@@ -152,9 +154,6 @@ class MCMC:
         self.realdata, self.realerr, self.pixel_size,\
                 self.sampling, self.wavelength, self.uvcoords,\
                 self.realflux, self.u, self.v, self.zero_padding_order = data
-
-        self.realbaselines = np.sqrt(self.u**2+self.v**2)
-        np.insert(self.realbaselines, 0, 0.)
 
         self.model = model(*self.bb_params, self.wavelength)
 
@@ -246,9 +245,10 @@ class MCMC:
         self.sigma2corrflux = realdataerr**2
         self.sigma2cphase = realphaseerr**2
 
-        print(datamod, "datamod", '\n', realdata, "realdata", '\n', theta,
-              "theta", '\n', phasemod, "phasemod", '\n', realphase,
-              "realphase",  end='\r')
+        print(datamod, "datamod", '\n', realdata, "realdata", '\n',
+              phasemod, "phasemod", '\n', realphase, "realphase")
+        print(theta, "theta")
+        print("------------------------------------------------")
 
         data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
         phase_chi_sq = np.sum((realphase-phasemod)**2/self.sigma2cphase)
@@ -314,7 +314,7 @@ class MCMC:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
         self.theta_max = self.get_best_fit(sampler)
-        fig, (ax, bx) = plt.subplots(1, 2, figsize=(20, 20))
+        fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 10))
         print(self.theta_max, "Theta max")
 
         tau, q = self.theta_max[-2:]
@@ -322,12 +322,18 @@ class MCMC:
         datamod, cphase = self.model4fit_numerical(tau, q, self.theta_max[:-2],
                                                       sampling, wavelength,
                                                       self.uvcoords)
-        self.datamod, self.cphasemod = datamod, phase
+        self.datamod, self.cphasemod = datamod, cphase
         model_img = self.model.eval_model(self.theta_max[:-2],
                                                self.pixel_size, sampling)
         self.total_flux_fit = self.model.get_total_flux(tau, q)
-        model_flux = self.model.get_flux(tau, q)
+        self.datamod = np.insert(self.datamod, 0, self.total_flux_fit)
 
+        model_flux = self.model.get_flux(tau, q)
+        self.realdata = np.insert(self.realdata, 0, self.realflux)
+        self.realdataerr = np.insert(self.realdataerr, 0, np.mean(self.realdataerr))
+
+        self.realbaselines = np.sqrt(self.u**2+self.v**2)
+        self.realbaselines = np.insert(self.realbaselines, 0, 0.)
 
         # Correspond the best fit to the uv coords
         print("best fit data", datamod, "real data", self.realdata)
@@ -348,14 +354,14 @@ class MCMC:
         ax.set_ylabel(f"DEC [mas]")
 
         bx.errorbar(self.realbaselines, self.realdata, self.realdataerr,
-                    color="yellow", fmt='o', label="Real data")
+                    color="goldenrod", fmt='o', label="Real data")
         bx.scatter(self.realbaselines, self.datamod, label="Fit data")
         bx.set_title("Correlated fluxes [Jy]")
         bx.set_xlabel("Baselines [m]")
         bx.legend(loc="upper right")
 
         cx.errorbar(self.realbaselines[1:], self.realphase, self.realphaserr,
-                    color="yellow", fmt='o', label="Real data")
+                    color="goldenrod", fmt='o', label="Real data")
         cx.scatter(self.realbaselines[1:], self.cphasemod, label="Fit data")
         cx.set_title(fr"Closure Phases [$^\circ$]")
         cx.set_xlabel("Baselines [m]")
@@ -437,9 +443,9 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.5, 139, 1., 1., 1.6,  0.001, 0.7])
-    priors = [[0.35, 1.], [130, 143], [0., 10.], [0., 10.], [0., 20.], [0., 0.06], [0.5, 0.9]]
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "TAU", "Q"]
+    initial = np.array([0.4, 180, 1., 1., 4.,  0.1, 0.7])
+    priors = [[0.3, 0.6], [178, 182], [0.75, 1.25], [0.75, 1.25], [3., 6.], [0., 1.], [0.6, 0.8]]
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
@@ -452,7 +458,7 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=45, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=200, niter_burn=20,
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=20,
                               niter=20)
 
     # This calls the MCMC fitting
