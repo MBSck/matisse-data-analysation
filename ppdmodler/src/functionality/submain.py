@@ -23,7 +23,7 @@ def main():
 
     cp = CompoundModel(1500, 7900, 19, 140, wavelength)
 
-    cp_model = cp.eval_model([0.2, 45], 10, 129)
+    cp_model = cp.eval_model([0.2, 45, 1., 1.], 10, 129)
     cp_flux = cp.get_flux(np.inf, 0.7)
     ax1.imshow(cp_flux)
     ax1.set_title("Temperature gradient")

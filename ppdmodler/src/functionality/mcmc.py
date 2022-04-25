@@ -232,22 +232,25 @@ class MCMC:
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         tau, q = theta[-2:]
-        datamod, phase = self.model4fit_numerical(tau, q, theta[:-2], sampling, wavelength, uvcoords)
+        datamod, phasemod = self.model4fit_numerical(tau, q, theta[:-2], sampling, wavelength, uvcoords)
         tot_flux = self.model.get_total_flux(tau, q)
-        np.insert(datamod, 0, tot_flux)
+        datamod = np.insert(datamod, 0, tot_flux)
 
         realdata, realphase = realdata
         realdataerr, realphaseerr = realerr
-        np.insert(realdata, 0, self.realflux)
-        np.insert(realerr, 0, np.mean(realdata))
+        realdata = np.insert(realdata, 0, self.realflux)
+        realdataerr = np.insert(realdataerr, 0, np.mean(realdataerr))
 
         self.sigma2corrflux = realdataerr**2
+        self.sigma2cphase = realphaseerr**2
 
-        print(datamod, "datamod", '\n', realdata, "realdata")
-        print(theta, "theta")
+        print(datamod, "datamod", '\n', realdata, "realdata", '\n', theta,
+              "theta", '\n', phasemod, "phasemod", '\n', realphase,
+              "realphase",  end='\r')
 
         data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
-        whole_chi_sq = data_chi_sq
+        phase_chi_sq = np.sum((realphase-phasemod)**2/self.sigma2cphase)
+        whole_chi_sq = data_chi_sq + phase_chi_sq
 
         return -0.5*whole_chi_sq
 

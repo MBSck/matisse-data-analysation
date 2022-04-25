@@ -162,7 +162,7 @@ class FFT:
                                  bounds_error=False, fill_value=None)
         imag = interpn(grid, np.imag(self.ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        ft_intp = real+1*imag
+        ft_intp = real+1j*imag
 
         if corr_flux:
             return np.abs(ft_intp), np.angle(ft_intp, deg=True)
