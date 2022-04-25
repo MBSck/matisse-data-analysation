@@ -38,7 +38,6 @@ class CompoundModel(Model):
         flux[self.d._size//2, self.d._size//2] = self.d.stellar_flux
         return flux
 
-    @timeit
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None, inner_radius = 0) -> np.ndarray:
         """Evaluates the model. In case of zero divison error, the major will be replaced by 1

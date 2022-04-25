@@ -154,6 +154,7 @@ class MCMC:
                 self.realflux, self.u, self.v, self.zero_padding_order = data
 
         self.realbaselines = np.sqrt(self.u**2+self.v**2)
+        np.insert(self.realbaselines, 0, 0.)
 
         self.model = model(*self.bb_params, self.wavelength)
 
@@ -233,20 +234,20 @@ class MCMC:
         tau, q = theta[-2:]
         datamod, phase = self.model4fit_numerical(tau, q, theta[:-2], sampling, wavelength, uvcoords)
         tot_flux = self.model.get_total_flux(tau, q)
+        np.insert(datamod, 0, tot_flux)
 
         realdata, realphase = realdata
         realdataerr, realphaseerr = realerr
+        np.insert(realdata, 0, self.realflux)
+        np.insert(realerr, 0, np.mean(realdata))
 
-        self.sigma2corrflux = realdataerr**2 + (realdata*0.2)**2
-        self.sigma2totflux = (self.realflux*0.1)**2
+        self.sigma2corrflux = realdataerr**2
+
         print(datamod, "datamod", '\n', realdata, "realdata")
-        print(self.realflux, "real flux", tot_flux, "calculated flux")
+        print(theta, "theta")
 
         data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
-        flux_chi_sq = np.sum((self.realflux-tot_flux)**2/self.sigma2totflux)
-        whole_chi_sq = data_chi_sq + 5*flux_chi_sq
-        print("Ratio of chi_sq", data_chi_sq/whole_chi_sq, flux_chi_sq/whole_chi_sq)
-        print(theta, "theta")
+        whole_chi_sq = data_chi_sq
 
         return -0.5*whole_chi_sq
 
@@ -377,7 +378,7 @@ class MCMC:
         """Plots the corner plot of the posterior spread"""
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
         fig = corner.corner(samples, labels=self.labels)
-        save_path = f"{self.model.name}_corner_plot_{trunc(self.wavelength*1e6, 2}).png"
+        save_path = f"{self.model.name}_corner_plot_{trunc(self.wavelength*1e6, 2)}.png"
         if self.out_path is None:
             plt.savefig(save_path)
         else:

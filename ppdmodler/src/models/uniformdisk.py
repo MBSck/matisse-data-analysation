@@ -26,7 +26,6 @@ class UniformDisk(Model):
         super().__init__()
         self.name = "Uniform Disk"
 
-    @timeit
     def eval_model(self, theta: List, size: int,
                    sampling: Optional[int] = None, centre: Optional[int] = None) -> np.ndarray:
         """Evaluates the model
@@ -68,7 +67,6 @@ class UniformDisk(Model):
 
         return radius
 
-    @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength:
                  float, uvcoords: np.ndarray = None) -> np.ndarray:
         """Evaluates the visibilities of the model

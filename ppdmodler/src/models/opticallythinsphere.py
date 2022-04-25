@@ -24,7 +24,6 @@ class OpticallyThinSphere(Model):
         super().__init__()
         self.name = "Optically-Thin-Sphere"
 
-    @timeit
     def eval_model(self, theta: List, size: int, sampling: Optional[int] = None,
                    centre: Optional[int] = None) -> np.array:
         """Evaluates the model
@@ -65,7 +64,6 @@ class OpticallyThinSphere(Model):
 
         return output
 
-    @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float) -> np.array:
         """Evaluates the visibilities of the model
 

@@ -32,7 +32,6 @@ class InclinedDisk(Model):
         super().__init__()
         self.name = "Inclined Disk"
 
-    @timeit
     def eval_model(self, theta: List, size: int,
                    sampling: Optional[int] = None,
                    centre: Optional[bool] = None,
@@ -97,7 +96,6 @@ class InclinedDisk(Model):
 
         return radius
 
-#     @timeit
 #     def eval_model(self, theta: List, wavelength: float,
 #                    size: int, sampling: Optional[int] = None,
 #                    centre: Optional[int] = None) -> np.array:
@@ -155,7 +153,6 @@ class InclinedDisk(Model):
 #
 #         return output_lst
 
-    @timeit
     def eval_vis(self, theta: List, wavelength: float, sampling: int) -> np.array:
         """Evaluates the visibilities of the model
 

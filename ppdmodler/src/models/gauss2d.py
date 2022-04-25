@@ -29,7 +29,6 @@ class Gauss2D(Model):
         super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "2D-Gaussian"
 
-    @timeit
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None) -> np.array:
         """Evaluates the model
@@ -71,7 +70,6 @@ class Gauss2D(Model):
 
         return (1/(np.sqrt(np.pi/(4*np.log(2)))*fwhm))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
-    @timeit
     def eval_vis(self, theta: np.ndarray, sampling: int,
                  wavelength: float, uvcoords: np.ndarray = None) -> np.array:
         """Evaluates the visibilities of the model

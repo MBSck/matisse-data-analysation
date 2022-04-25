@@ -37,7 +37,6 @@ class Ring(Model):
         super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "Ring"
 
-    @timeit
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
                    inner_radius: Optional[int] = 0,
@@ -97,7 +96,6 @@ class Ring(Model):
         radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
         return radius
 
-    @timeit
     def eval_vis(self, theta: List, sampling: int, wavelength: float, uvcoords:
                  np.ndarray = None, do_flux: bool = False) -> np.array:
         """Evaluates the visibilities of the model

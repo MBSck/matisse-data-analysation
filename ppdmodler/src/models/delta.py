@@ -27,7 +27,6 @@ class Delta(Model):
         super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "Delta"
 
-    @timeit
     def eval_model(self, mas_size: int, px_size: int) -> np.array:
         """Evaluates the model
 
@@ -48,7 +47,6 @@ class Delta(Model):
         self._radius[px_size//2, px_size//2] = 1
         return self._radius
 
-    @timeit
     def eval_vis(self, theta: List, sampling: int) -> np.array:
         """Evaluates the visibilities of the model
 
