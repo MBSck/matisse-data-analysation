@@ -195,6 +195,7 @@ class MCMC:
         # into the maximum of the density. Saves the walkers in the state variable
         print("Running burn-in...")
         p0 = sampler.run_mcmc(self.p0, self.nib, progress=True)
+        print("--------------------------------------------------------------")
 
         # Resets the chain to remove burn in samples and sets the walkers lower
         sampler.reset()
@@ -203,6 +204,7 @@ class MCMC:
         # the state of the internal random number generator)
         print("Running production...")
         pos, prob, state = sampler.run_mcmc(p0, self.ni, progress=True)
+        print("--------------------------------------------------------------")
 
         return sampler, pos, prob, state
 
@@ -244,11 +246,6 @@ class MCMC:
 
         self.sigma2corrflux = realdataerr**2
         self.sigma2cphase = realphaseerr**2
-
-        # print(datamod, "datamod", '\n', realdata, "realdata", '\n',
-        #       phasemod, "phasemod", '\n', realphase, "realphase")
-        # print(theta, "theta")
-        # print("------------------------------------------------")
 
         data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
         phase_chi_sq = np.sum((realphase-phasemod)**2/self.sigma2cphase)
@@ -315,7 +312,6 @@ class MCMC:
         test if sampling went well"""
         self.theta_max = self.get_best_fit(sampler)
         fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 10))
-        print(self.theta_max, "Theta max")
 
         tau, q = self.theta_max[-2:]
 
@@ -336,8 +332,15 @@ class MCMC:
         self.realbaselines = np.insert(self.realbaselines, 0, 0.)
 
         # Correspond the best fit to the uv coords
-        print("best fit data", datamod, "real data", self.realdata)
-        print("Real flux", self.realflux, "Calculated best fit flux", self.total_flux_fit)
+        print("Best fit corr. fluxes:")
+        print(datamod)
+        print("Real corr. fluxes")
+        print(self.realdata[1:])
+        print("--------------------------------------------------------------")
+        print("Real flux:", self.realflux, "- Best fit flux:", self.total_flux_fit)
+        print("--------------------------------------------------------------")
+        print("Theta max:")
+        print(self.theta_max)
         # # Takes a slice of the model and shows vis2-baselines
         # size_model = len(best_fit_model)
         # u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
@@ -458,8 +461,8 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=100, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=500, niter_burn=50,
-                              niter=100)
+    mc_params = set_mc_params(initial=initial, nwalkers=20, niter_burn=20,
+                              niter=20)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
