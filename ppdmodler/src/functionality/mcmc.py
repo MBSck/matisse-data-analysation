@@ -194,7 +194,7 @@ class MCMC:
         # Burn-in of the sampler. Explores the parameter space. The walkers get settled
         # into the maximum of the density. Saves the walkers in the state variable
         print("Running burn-in...")
-        p0 = sampler.run_mcmc(self.p0, self.nib)
+        p0 = sampler.run_mcmc(self.p0, self.nib, progress=True)
 
         # Resets the chain to remove burn in samples and sets the walkers lower
         sampler.reset()
@@ -202,7 +202,7 @@ class MCMC:
         # Do production. Starts from the final position of burn-in chain (rstate0 is
         # the state of the internal random number generator)
         print("Running production...")
-        pos, prob, state = sampler.run_mcmc(p0, self.ni)
+        pos, prob, state = sampler.run_mcmc(p0, self.ni, progress=True)
 
         return sampler, pos, prob, state
 
@@ -245,10 +245,10 @@ class MCMC:
         self.sigma2corrflux = realdataerr**2
         self.sigma2cphase = realphaseerr**2
 
-        print(datamod, "datamod", '\n', realdata, "realdata", '\n',
-              phasemod, "phasemod", '\n', realphase, "realphase")
-        print(theta, "theta")
-        print("------------------------------------------------")
+        # print(datamod, "datamod", '\n', realdata, "realdata", '\n',
+        #       phasemod, "phasemod", '\n', realphase, "realphase")
+        # print(theta, "theta")
+        # print("------------------------------------------------")
 
         data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
         phase_chi_sq = np.sum((realphase-phasemod)**2/self.sigma2cphase)
@@ -349,7 +349,7 @@ class MCMC:
         ax.imshow(model_flux, vmax=self.model._max_sub_flux,\
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                          -self.pixel_size//2, self.pixel_size//2])
-        ax.set_title(fr"{self.model.name}: Temperature gradient, at {trunc(wavelength*1e6, 2)}$\mu$m")
+        ax.set_title(fr"{self.model.name}: Temperature gradient, at {wavelength*1e6:.2f}$\mu$m")
         ax.set_xlabel(f"RA [mas]")
         ax.set_ylabel(f"DEC [mas]")
 
@@ -385,7 +385,7 @@ class MCMC:
         # cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
         # cx.set_xlabel(f"[mas]")
         # cx.set_ylabel(f"[mas]")
-        save_path = f"{self.model.name}_model_after_fit_{trunc(wavelength*1e6, 2)}.png"
+        save_path = f"{self.model.name}_model_after_fit_{wavelength*1e6:.2f}.png"
 
         if self.out_path is None:
             plt.savefig(save_path)
@@ -397,7 +397,7 @@ class MCMC:
         """Plots the corner plot of the posterior spread"""
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
         fig = corner.corner(samples, labels=self.labels)
-        save_path = f"{self.model.name}_corner_plot_{trunc(self.wavelength*1e6, 2)}.png"
+        save_path = f"{self.model.name}_corner_plot_{self.wavelength*1e6:.2f}.png"
         if self.out_path is None:
             plt.savefig(save_path)
         else:
@@ -458,7 +458,7 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=100, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=50,
+    mc_params = set_mc_params(initial=initial, nwalkers=500, niter_burn=50,
                               niter=100)
 
     # This calls the MCMC fitting
