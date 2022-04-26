@@ -443,8 +443,8 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.4, 180, 1., 1., 4.,  0.1, 0.7])
-    priors = [[0.3, 0.6], [178, 182], [0.75, 1.25], [0.75, 1.25], [3., 6.], [0., 1.], [0.6, 0.8]]
+    initial = np.array([0.2, 180, 1., 1., 6.,  0.05, 0.7])
+    priors = [[0.1, 1.], [0, 360], [0.75, 1.25], [0.75, 1.25], [3., 10.], [0., 1.], [0.6, 0.8]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
@@ -455,11 +455,11 @@ if __name__ == "__main__":
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=45, zero_padding_order=3)
+                    sampling=129, wl_ind=100, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=20,
-                              niter=20)
+    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=50,
+                              niter=100)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
