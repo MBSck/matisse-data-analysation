@@ -109,18 +109,27 @@ class ReadoutFits:
             The visamp for a specific wavelength
         visamperr4wl: np.ndarray
             The visamperr for a specific wavelength
-        visphase4wl: np.ndarray
-            The visphase for a specific wavelength
-        visphaseerr4wl: np.ndarray
-            The visphaseerr for a specific wavelength
         """
         visdata = self.get_vis()
         visamp, visamperr = map(lambda x: x[:6], visdata[:2])
-        visphase, visphaseerr = map(lambda x: x[:6], visdata[2:4])
         visamp4wl, visamperr4wl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [visamp, visamperr])
-        visphase4wl, visphaseerr4wl= map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [visphase, visphaseerr])
 
-        return visamp4wl, visamperr4wl, visphase4wl, visphaseerr4wl
+        return visamp4wl, visamperr4wl
+
+    def t3phi4wl(self, wl_ind: int) -> np.ndarray:
+        """Fetches the closure phases for one specific wavelength
+
+        Returns
+        -------
+        t3phi4wl: np.ndarray
+            The closure phase for a specific wavelength
+        t3phierr4wl: np.ndarray
+            The closure phase error for a specific wavelength
+        """
+        t3phi, t3phierr = self.get_t3phi()[:2]
+        t3phi4wl, t3phierr4wl = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [t3phi, t3phierr])
+
+        return t3phi4wl, t3phierr4wl
 
     def get_vis24wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the vis2data for one specific wavelength
@@ -140,6 +149,5 @@ class ReadoutFits:
 
 if __name__ == "__main__":
     readout = ReadoutFits("/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits")
-    print(readout.get_vis()[1][5][110])
-    print(readout.get_vis4wl(110))
+    print(readout.get_t3phi())
 
