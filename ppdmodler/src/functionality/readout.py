@@ -69,6 +69,20 @@ class ReadoutFits:
         uvcoords = self.get_uvcoords()
         return np.array([item[0] for item in uvcoords]), np.array([item[1] for item in uvcoords])
 
+    def get_t3phi_uvcoords(self):
+        """Fetches the (u1, v1), (u2, v2) coordinate tuples and then calculates
+        the corresponding baselines
+
+        Returns
+        -------
+        u: np.ndarray
+        v: np.ndarray
+        """
+        u1, v1 = self.get_data("oi_t3", "u1coord", "v1coord")
+        u2, v2 = self.get_data("oi_t3", "u2coord", "v2coord")
+        u3, v3 = -(u1+u2), -(v1+v2)
+        return (u3, v3)
+
     def get_baselines(self):
         """Calculates the baselines from the uv coordinates"""
         u, v = self.get_split_uvcoords()
@@ -116,7 +130,7 @@ class ReadoutFits:
 
         return visamp4wl, visamperr4wl
 
-    def t3phi4wl(self, wl_ind: int) -> np.ndarray:
+    def get_t3phi4wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the closure phases for one specific wavelength
 
         Returns
@@ -148,6 +162,7 @@ class ReadoutFits:
 
 
 if __name__ == "__main__":
-    readout = ReadoutFits("/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits")
-    print(readout.get_t3phi())
-
+    path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits"
+    readout = ReadoutFits(path)
+    u, v = readout.get_t3phi_uvcoords()
+    print(np.sqrt(u**2+v**2))

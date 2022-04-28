@@ -141,13 +141,16 @@ class FFT:
         return padded_image
 
     def interpolate_uv2fft2(self, uvcoords: np.ndarray,
+                            uvcoords_cphase: np.ndarray,
                             corr_flux: bool = False) -> np.ndarray:
         """Interpolate the uvcoordinates to the grid of the FFT
 
         Parameters
         ----------
         uvcoords: np.ndarray
-            The uv-coords
+            The uv-coords for the correlated fluxes
+        uvcoords_cphase: np.ndarray
+            The uv-coords for the closure phases
         corr_flux: bool
             If the input image is a temperature gradient model then set this to
             'True' and the output will be the correlated fluxes
@@ -158,15 +161,22 @@ class FFT:
             The interpolated FFT
         """
         grid = (self.fftaxis_m, self.fftaxis_m)
-        real = interpn(grid, np.real(self.ft), uvcoords, method='linear',
+        real_corr = interpn(grid, np.real(self.ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        imag = interpn(grid, np.imag(self.ft), uvcoords, method='linear',
+        imag_corr = interpn(grid, np.imag(self.ft), uvcoords, method='linear',
                                  bounds_error=False, fill_value=None)
-        ft_intp = real+1j*imag
+        ft_intp_corr = real_corr+1j*imag_corr
+
+        real_phase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
+                                 bounds_error=False, fill_value=None)
+        imag_phase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
+                                 bounds_error=False, fill_value=None)
+
+        ft_intp_phase = real_phase+1j*imag_phase
 
         if corr_flux:
-            return np.abs(ft_intp), np.angle(ft_intp, deg=True)
-        return np.abs(ft_intp)/np.abs(self.ft_center), np.angle(ft_intp, deg=True)
+            return np.abs(ft_intp_corr), np.angle(ft_intp_phase, deg=True)
+        return np.abs(ft_intp_corr)/np.abs(self.ft_center), np.angle(ft_intp_phase, deg=True)
 
     def get_amp_phase(self, corr_flux: bool = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT

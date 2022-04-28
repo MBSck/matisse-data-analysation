@@ -74,14 +74,14 @@ def set_data(fits_file: Path, pixel_size: int,
     readout = ReadoutFits(fits_file)
     wavelength = readout.get_wl()
 
-    # TODO: Check how the vis/vis2 data is fetched -> Is it done correctly?
-
     if wl_ind:
         if vis2:
-            data, dataerr = readout.get_vis24wl(wl_ind)
+            vis, viserr = readout.get_vis24wl(wl_ind)
         else:
-            temp_data = readout.get_vis4wl(wl_ind)
-            data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+            vis, viserr = readout.get_vis4wl(wl_ind)
+
+        cphase, cphaseerr = readout.get_t3phi4wl(wl_ind)
+
 
         if flux_file:
             flux = read_single_dish_txt2np(flux_file, wavelength)[wavelength[wl_ind]]
@@ -91,10 +91,11 @@ def set_data(fits_file: Path, pixel_size: int,
         wavelength = wavelength[wl_ind]
     else:
         if vis2:
-            data, dataerr = readout.get_vis2()
+            vis, viserr = readout.get_vis2()
         else:
-            temp_data = readout.get_vis()
-            data, dataerr = [temp_data[0], temp_data[2]], [temp_data[1], temp_data[3]]
+            vis, viserr = readout.get_vis()
+
+        cphase, cphaseerr = readout.get_t3phi()
 
         if flux_file:
             flux = read_single_dish_txt2np(flux_file, wavelength)
@@ -103,9 +104,11 @@ def set_data(fits_file: Path, pixel_size: int,
 
     uvcoords = readout.get_uvcoords()
     u, v = readout.get_split_uvcoords()
+    t3phi_baselines = readout.get_t3phi_uvcoords()
+    data = (vis, viserr, cphase, cphaseerr)
 
-    return (data, dataerr, pixel_size, sampling,
-            wavelength, uvcoords, flux, u, v, zero_padding_order)
+    return (data, pixel_size, sampling, wavelength, uvcoords, flux,
+            u, v, zero_padding_order, t3phi_baselines)
 
 def set_mc_params(initial: np.ndarray, nwalkers: int,
                   niter_burn: int, niter: int) -> List:
@@ -141,35 +144,39 @@ class MCMC:
                  numerical: bool = True, vis: bool = False,
                  modulation: bool = False, bb_params: List = None,
                  out_path: Path = None) -> None:
-        self.data = data[:-4]
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
 
         self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
-        self.numerical, self.vis = numerical, vis
-        self.vis2 = not self.vis
+        self.numerical, self.vis, self.vis2 = numerical, vis, not vis
         self.modulation = modulation
         self.fr_scaling = 0
 
-        self.realdata, self.realerr, self.pixel_size,\
-                self.sampling, self.wavelength, self.uvcoords,\
-                self.realflux, self.u, self.v, self.zero_padding_order = data
+        self.data, self.pixel_size, self.sampling,self.wavelength,\
+                self.uvcoords, self.realflux, self.u, self.v,\
+                self.zero_padding_order, self.t3phi_uvcoords = data
+
+        self.realdata, self.realdataerr,\
+                self.realcphase, self.realcphaserr = self.data
 
         self.model = model(*self.bb_params, self.wavelength)
 
-        if self.vis:
-            self.datamod = None
-            self.realdata, self.realphase = self.realdata
-            self.realdataerr, self.realphaserr = self.realerr
+        self.realdata = np.insert(self.realdata, 0, self.realflux)
+        self.realdataerr = np.insert(self.realdataerr, 0, np.mean(self.realdataerr))
 
-        self.theta_max = None
-        self.x, self.y = 0, 0
+        self.sigma2corrflux = self.realdataerr**2
+        self.sigma2cphase = self.realcphaserr**2
+
+        self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
+        self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
+        self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)
+        print(self.t3phi_baselines)
 
         self.out_path = out_path
 
-    @property
-    def xycoords(self):
-        return [i for i in zip(self.xcoord, self.ycoord)]
+    # @property
+    # def xycoords(self):
+    #     return [i for i in zip(self.xcoord, self.ycoord)]
 
     def pipeline(self) -> None:
         sampler, pos, prob, state = self.do_fit()
@@ -189,7 +196,7 @@ class MCMC:
         # The EnsambleSampler gets the parameters. The args are the args put into the
         # lob_prob function. Additional parameter a can be used for the stepsize. None is
         # the default
-        sampler = emcee.EnsembleSampler(self.nw, self.nd, self.lnprob, args=self.data)
+        sampler = emcee.EnsembleSampler(self.nw, self.nd, self.lnprob)
 
         # Burn-in of the sampler. Explores the parameter space. The walkers get settled
         # into the maximum of the density. Saves the walkers in the state variable
@@ -208,8 +215,7 @@ class MCMC:
 
         return sampler, pos, prob, state
 
-    def lnprob(self, theta: np.ndarray, realdata, realerr, pixel_size, sampling,
-               wavelength, uvcoords) -> np.ndarray:
+    def lnprob(self, theta: np.ndarray) -> np.ndarray:
         """This function runs the lnprior and checks if it returned -np.inf, and
         returns if it does. If not, (all priors are good) it returns the inlike for
         that model (convention is lnprior + lnlike)
@@ -227,28 +233,19 @@ class MCMC:
         if not np.isfinite(lp):
             return -np.inf
 
-        return lp + self.lnlike(theta, realdata, realerr, sampling, wavelength, uvcoords)
+        return lp + self.lnlike(theta)
 
-    def lnlike(self, theta: np.ndarray, realdata: np.ndarray, realerr:
-               np.ndarray, sampling, wavelength, uvcoords):
+    def lnlike(self, theta: np.ndarray):
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         tau, q = theta[-2:]
-        datamod, phasemod = self.model4fit_numerical(tau, q, theta[:-2], sampling, wavelength, uvcoords)
+        datamod, cphasemod = self.model4fit_numerical(tau, q, theta[:-2])
         tot_flux = self.model.get_total_flux(tau, q)
         datamod = np.insert(datamod, 0, tot_flux)
 
-        realdata, realphase = realdata
-        realdataerr, realphaseerr = realerr
-        realdata = np.insert(realdata, 0, self.realflux)
-        realdataerr = np.insert(realdataerr, 0, np.mean(realdataerr))
-
-        self.sigma2corrflux = realdataerr**2
-        self.sigma2cphase = realphaseerr**2
-
-        data_chi_sq = np.sum((realdata-datamod)**2/self.sigma2corrflux)
-        phase_chi_sq = np.sum((realphase-phasemod)**2/self.sigma2cphase)
+        data_chi_sq = np.sum((self.realdata-datamod)**2/self.sigma2corrflux)
+        phase_chi_sq = np.sum((self.realcphase-cphasemod)**2/self.sigma2cphase)
         whole_chi_sq = data_chi_sq + phase_chi_sq
 
         return -0.5*whole_chi_sq
@@ -283,15 +280,14 @@ class MCMC:
         else:
             return -np.inf
 
-    def model4fit_numerical(self, tau, q, theta: np.ndarray, sampling, wavelength,
-                            uvcoords) -> np.ndarray:
+    def model4fit_numerical(self, tau, q, theta: np.ndarray) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img = self.model.eval_model(theta, self.pixel_size, sampling)
+        model_img = self.model.eval_model(theta, self.pixel_size, self.sampling)
         model_flux = self.model.get_flux(tau, q)
 
-        fft = FFT(model_flux, wavelength, self.model.pixel_scale,
+        fft = FFT(model_flux, self.wavelength, self.model.pixel_scale,
                  self.zero_padding_order)
-        amp, phase = fft.interpolate_uv2fft2(uvcoords, True)
+        amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords, True)
 
         # TODO: Use this as a test for the interpolation
         # rescaling of the uv-coords to the corresponding image size
@@ -314,28 +310,27 @@ class MCMC:
         fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 10))
 
         tau, q = self.theta_max[-2:]
+        self.sampling, self.wavelength = sampling, wavelength
 
-        datamod, cphase = self.model4fit_numerical(tau, q, self.theta_max[:-2],
-                                                      sampling, wavelength,
-                                                      self.uvcoords)
-        self.datamod, self.cphasemod = datamod, cphase
+        datamod, cphasemod = self.model4fit_numerical(tau, q, self.theta_max[:-2])
+        self.datamod, self.cphasemod = datamod, cphasemod
         model_img = self.model.eval_model(self.theta_max[:-2],
                                                self.pixel_size, sampling)
         self.total_flux_fit = self.model.get_total_flux(tau, q)
         self.datamod = np.insert(self.datamod, 0, self.total_flux_fit)
 
         model_flux = self.model.get_flux(tau, q)
-        self.realdata = np.insert(self.realdata, 0, self.realflux)
-        self.realdataerr = np.insert(self.realdataerr, 0, np.mean(self.realdataerr))
-
-        self.realbaselines = np.sqrt(self.u**2+self.v**2)
-        self.realbaselines = np.insert(self.realbaselines, 0, 0.)
 
         # Correspond the best fit to the uv coords
         print("Best fit corr. fluxes:")
         print(datamod)
         print("Real corr. fluxes")
         print(self.realdata[1:])
+        print("--------------------------------------------------------------")
+        print("Best fit cphase")
+        print(cphasemod)
+        print("Real cphase")
+        print(self.realcphase)
         print("--------------------------------------------------------------")
         print("Real flux:", self.realflux, "- Best fit flux:", self.total_flux_fit)
         print("--------------------------------------------------------------")
@@ -363,31 +358,12 @@ class MCMC:
         bx.set_xlabel("Baselines [m]")
         bx.legend(loc="upper right")
 
-        cx.errorbar(self.realbaselines[1:], self.realphase, self.realphaserr,
+        cx.errorbar(self.t3phi_baselines, self.realcphase, self.realcphaserr,
                     color="goldenrod", fmt='o', label="Real data")
-        cx.scatter(self.realbaselines[1:], self.cphasemod, label="Fit data")
+        cx.scatter(self.t3phi_baselines, self.cphasemod, label="Fit data")
         cx.set_title(fr"Closure Phases [$^\circ$]")
         cx.set_xlabel("Baselines [m]")
         cx.legend(loc="upper right")
-        # bx.plot(xvis_curve, yvis_curve)
-        # bx.set_xlabel(r"$B_p$ [m]")
-
-        # if self.vis:
-        #     bx.set_ylabel("vis/corr_flux [Jy]")
-        # else:
-        #     bx.set_ylabel("vis2")
-
-        # third_max = len(best_fit_model)//2 - 3
-
-        # cx.imshow(best_fit_model, vmax=best_fit_model[third_max, third_max],\
-        #           extent=[self.pixel_size//2, -self.pixel_size//2,\
-        #                   -self.pixel_size//2, self.pixel_size//2])
-
-
-        # cx.scatter(self.u/self.fr_scaling, self.v/self.fr_scaling)
-        # cx.set_title(fr"{self.model.name}: Correlated fluxes,  at {wavelength}$\mu$m")
-        # cx.set_xlabel(f"[mas]")
-        # cx.set_ylabel(f"[mas]")
         save_path = f"{self.model.name}_model_after_fit_{wavelength*1e6:.2f}.png"
 
         if self.out_path is None:
@@ -447,7 +423,7 @@ if __name__ == "__main__":
     # work
     # Initial sets the theta
     initial = np.array([0.2, 180, 1., 1., 6.,  0.05, 0.7])
-    priors = [[0.1, 1.], [0, 360], [0.75, 1.25], [0.75, 1.25], [3., 10.], [0., 1.], [0.6, 0.8]]
+    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [1., 20.], [0., 1.], [0., 1.]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
@@ -458,10 +434,10 @@ if __name__ == "__main__":
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=100, zero_padding_order=3)
+                    sampling=257, wl_ind=30, zero_padding_order=2)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=20, niter_burn=20,
+    mc_params = set_mc_params(initial=initial, nwalkers=500, niter_burn=20,
                               niter=20)
 
     # This calls the MCMC fitting
