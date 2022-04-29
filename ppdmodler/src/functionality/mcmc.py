@@ -9,9 +9,10 @@ import numpy as np
 import emcee
 import corner
 import matplotlib.pyplot as plt
+import scipy.optimize
 
 from pathlib import Path
-from scipy import optimize
+from scipy.optimize import Bounds
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
@@ -133,7 +134,6 @@ def set_mc_params(initial: np.ndarray, nwalkers: int,
         A tuple that contains (p0, nwalkers, ndim, niter_burn, niter)
     """
     ndim = len(initial)
-    # p0 = [np.array(initial) + 1e-2*np.random.randn(ndim) for i in range(nwalkers)]
     return (initial, nwalkers, ndim, niter_burn, niter)
 
 
@@ -168,9 +168,13 @@ class MCMC:
         self.model = model(*self.bb_params, self.wavelength)
 
         self.initial, self.nw, self.nd, self.nib, self.ni = mc_params
+
+        print("Non-optimised start parameters:")
+        print(self.initial)
+
         self.p0_full = self.optimise_inital_theta()
-        self.p0 = self.p0_full.x
-        print(self.p0)
+        self.p0 = [np.array(self.initial) +\
+                   1e-2*np.random.randn(self.nd) for i in range(self.nw)]
 
         self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
         self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
@@ -178,9 +182,9 @@ class MCMC:
 
         self.out_path = out_path
 
-    # @property
-    # def xycoords(self):
-    #     return [i for i in zip(self.xcoord, self.ycoord)]
+    @property
+    def xycoords(self):
+      return [i for i in zip(self.xcoord, self.ycoord)]
 
     def pipeline(self) -> None:
         sampler, pos, prob, state = self.do_fit()
@@ -196,7 +200,8 @@ class MCMC:
 
     def optimise_inital_theta(self):
         """Run a scipy optimisation on the initial values to get theta"""
-        return optimize.minimize(self.lnlike, x0=self.initial)
+        return scipy.optimize.minimize(self.lnlike, x0=self.initial,
+                                       bounds=self.priors)
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -263,7 +268,8 @@ class MCMC:
         determining them setting the same).
 
         If all priors are satisfied it needs to return '0.0' and if not '-np.inf'
-        This function checks for an unspecified amount of flat priors
+        This function checks for an unspecified amount of flat priors. If upper
+        bound is 'None' then no upper bound is given
 
         Parameters
         ----------
@@ -278,10 +284,16 @@ class MCMC:
         """
         check_conditons = []
         for i, o in enumerate(self.priors):
-            if o[0] < theta[i] < o[1]:
-                check_conditons.append(True)
+            if o[1] is None:
+                if o[0] < theta[i]:
+                    check_conditons.append(True)
+                else:
+                    check_conditons.append(False)
             else:
-                check_conditons.append(False)
+                if o[0] < theta[i] < o[1]:
+                    check_conditons.append(True)
+                else:
+                    check_conditons.append(False)
 
         return 0.0 if all(check_conditons) else -np.inf
 
@@ -293,13 +305,6 @@ class MCMC:
         fft = FFT(model_flux, self.wavelength, self.model.pixel_scale,
                  self.zero_padding_order)
         amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords, True)
-
-        # TODO: Use this as a test for the interpolation
-        # rescaling of the uv-coords to the corresponding image size
-        # self.fr_scaling = get_px_scaling(fr.fftfreq, wavelength,
-        #                             self.model._mas_size, self.model._sampling)
-        # self.xcoord, self.ycoord = correspond_uv2scale(self.fr_scaling, fr.model_size//2, uvcoords)
-        # amp = np.array([amp[j, i] for i, j in zip(self.xcoord, self.ycoord)])
         return amp, phase
 
     def get_best_fit(self, sampler) -> np.ndarray:
@@ -380,7 +385,8 @@ class MCMC:
     def plot_corner(self, sampler) -> None:
         """Plots the corner plot of the posterior spread"""
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
-        fig = corner.corner(samples, labels=self.labels)
+        fig = corner.corner(samples, show_titles=True, labels=self.labels,
+                           plot_datapoints=True, quantiles=[0.16, 0.5, 0.84])
         save_path = f"{self.model.name}_corner_plot_{self.wavelength*1e6:.2f}.png"
         if self.out_path is None:
             plt.savefig(save_path)
@@ -427,8 +433,8 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.2, 180, 1., 1., 6.,  0.05, 0.7])
-    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [1., 20.], [0., 1.], [0., 1.]]
+    initial = np.array([0.6, 120, 1., 1., 8., 0.1, 0.7])
+    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., None], [0., 1.], [0., 1.]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
@@ -443,8 +449,8 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=50, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=20, niter_burn=20,
-                              niter=20)
+    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=100,
+                              niter=1000)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
