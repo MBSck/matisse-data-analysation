@@ -11,7 +11,7 @@ import corner
 import matplotlib.pyplot as plt
 
 from pathlib import Path
-
+from scipy import optimize
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
@@ -133,8 +133,8 @@ def set_mc_params(initial: np.ndarray, nwalkers: int,
         A tuple that contains (p0, nwalkers, ndim, niter_burn, niter)
     """
     ndim = len(initial)
-    p0 = [np.array(initial) + 1e-2*np.random.randn(ndim) for i in range(nwalkers)]
-    return (p0, nwalkers, ndim, niter_burn, niter)
+    # p0 = [np.array(initial) + 1e-2*np.random.randn(ndim) for i in range(nwalkers)]
+    return (initial, nwalkers, ndim, niter_burn, niter)
 
 
 class MCMC:
@@ -147,9 +147,9 @@ class MCMC:
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
 
-        self.p0, self.nw, self.nd, self.nib, self.ni = mc_params
         self.numerical, self.vis, self.vis2 = numerical, vis, not vis
         self.modulation = modulation
+
         self.fr_scaling = 0
 
         self.data, self.pixel_size, self.sampling,self.wavelength,\
@@ -159,18 +159,22 @@ class MCMC:
         self.realdata, self.realdataerr,\
                 self.realcphase, self.realcphaserr = self.data
 
-        self.model = model(*self.bb_params, self.wavelength)
-
         self.realdata = np.insert(self.realdata, 0, self.realflux)
         self.realdataerr = np.insert(self.realdataerr, 0, np.mean(self.realdataerr))
 
         self.sigma2corrflux = self.realdataerr**2
         self.sigma2cphase = self.realcphaserr**2
 
+        self.model = model(*self.bb_params, self.wavelength)
+
+        self.initial, self.nw, self.nd, self.nib, self.ni = mc_params
+        self.p0_full = self.optimise_inital_theta()
+        self.p0 = self.p0_full.x
+        print(self.p0)
+
         self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
         self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
         self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)
-        print(self.t3phi_baselines)
 
         self.out_path = out_path
 
@@ -189,6 +193,10 @@ class MCMC:
 
         # This saves the best-fit model data and the real data
         # self.dump2yaml()
+
+    def optimise_inital_theta(self):
+        """Run a scipy optimisation on the initial values to get theta"""
+        return optimize.minimize(self.lnlike, x0=self.initial)
 
     def do_fit(self) -> np.array:
         """The main pipline that executes the combined mcmc code and fits the
@@ -275,10 +283,7 @@ class MCMC:
             else:
                 check_conditons.append(False)
 
-        if all(check_conditons):
-            return 0.0
-        else:
-            return -np.inf
+        return 0.0 if all(check_conditons) else -np.inf
 
     def model4fit_numerical(self, tau, q, theta: np.ndarray) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
@@ -428,16 +433,17 @@ if __name__ == "__main__":
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
-    f = "../../assets/Final_CAL.fits"
+    # f = "../../assets/Final_CAL.fits"
+    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
     out_path = "../../assets"
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=257, wl_ind=30, zero_padding_order=2)
+                    sampling=129, wl_ind=50, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=500, niter_burn=20,
+    mc_params = set_mc_params(initial=initial, nwalkers=20, niter_burn=20,
                               niter=20)
 
     # This calls the MCMC fitting

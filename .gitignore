@@ -44,6 +44,3 @@ __pycache__/
 __pycache__
 .DS_Store
 *.log
-
-# Non ignored folder
-!/ppdmodler/assets
