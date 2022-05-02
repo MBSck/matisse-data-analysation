@@ -12,6 +12,9 @@ from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import progress_bar
 
+# TODO: Make the model save the numbers of pixel and zero padding that was used
+# for the calculation and some more edge data
+
 def loop_model4wl(model, theta: List, bb_params: List,
                   mas_size: int, px_size: int, fits_file: Path) -> np.ndarray:
     """Loops a model for the input parameters and returns the slices of the
@@ -99,7 +102,7 @@ if __name__ == "__main__":
              7.79778016e+00, 2.88112551e-02, 6.63000877e-01]
     bb_params = [1500, 7900, 19, 140]
     f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
-    data = loop_model4wl(CompoundModel, theta, bb_params, 100, 129, f)
+    data = loop_model4wl(CompoundModel, theta, bb_params, 100, 513, f)
     print(data)
     save_model("../../assets/Test_model.fits", f, data)
 

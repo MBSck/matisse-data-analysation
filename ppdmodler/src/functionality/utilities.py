@@ -438,7 +438,9 @@ def temperature_gradient(radius: float, r_0: Union[int, float],
         The temperature at a certain radius
     """
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
-    return T_0*(radius/r_0)**(-q)
+    # Ignore zero division errors for now
+    with np.errstate(divide='ignore'):
+        return T_0*(radius/r_0)**(-q)
 
 def plancks_law_nu(T: Union[float, np.ndarray],
                    wavelength: float) -> [float, np.ndarray]:
@@ -462,7 +464,8 @@ def plancks_law_nu(T: Union[float, np.ndarray],
     factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
     exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)
 
-    return factor*(1/(np.exp(exponent)-1))
+    with np.errstate(divide='ignore'):
+        return factor*(1/(np.exp(exponent)-1))
 
     def do_fit():
         """Does automatic gauss fits"""
