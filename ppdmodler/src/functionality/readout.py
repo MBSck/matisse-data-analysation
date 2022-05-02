@@ -102,7 +102,7 @@ class ReadoutFits:
 
     def get_flux(self) -> np.ndarray:
         """Fetches the flux"""
-        return self.get_data("oi_flux")
+        return self.get_data("oi_flux", "fluxdata", "fluxerr")
 
     def get_wl(self) -> np.ndarray:
         return self.get_data("oi_wavelength", "eff_wave")
@@ -112,7 +112,8 @@ class ReadoutFits:
 
     def get_flux4wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the flux for a specific wavelength"""
-        return self.get_flux[wl_ind]
+        flux, fluxerr = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [self.get_flux()])
+        return flux, fluxerr
 
     def get_vis4wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the visdata(amp/phase)/correlated fluxes for one specific wavelength

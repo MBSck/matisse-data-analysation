@@ -85,9 +85,10 @@ def set_data(fits_file: Path, pixel_size: int,
 
 
         if flux_file:
-            flux = read_single_dish_txt2np(flux_file, wavelength)[wavelength[wl_ind]]
+            # TODO: Check if there is real fluxerr
+            flux, fluxerr = read_single_dish_txt2np(flux_file, wavelength)[wavelength[wl_ind]], None
         else:
-            flux = readout.get_flux4wl(wl_ind)
+            flux, fluxerr = readout.get_flux4wl(wl_ind)
 
         wavelength = wavelength[wl_ind]
     else:
@@ -99,16 +100,16 @@ def set_data(fits_file: Path, pixel_size: int,
         cphase, cphaseerr = readout.get_t3phi()
 
         if flux_file:
-            flux = read_single_dish_txt2np(flux_file, wavelength)
+            flux, fluxerr = read_single_dish_txt2np(flux_file, wavelength), None
         else:
-            flux = readout.get_flux()
+            flux, fluxerr = readout.get_flux()
 
     uvcoords = readout.get_uvcoords()
     u, v = readout.get_split_uvcoords()
     t3phi_baselines = readout.get_t3phi_uvcoords()
-    data = (vis, viserr, cphase, cphaseerr)
+    data = (vis, viserr, cphase, cphaseerr, flux, fluxerr)
 
-    return (data, pixel_size, sampling, wavelength, uvcoords, flux,
+    return (data, pixel_size, sampling, wavelength, uvcoords,
             u, v, zero_padding_order, t3phi_baselines)
 
 def set_mc_params(initial: np.ndarray, nwalkers: int,
@@ -153,14 +154,17 @@ class MCMC:
         self.fr_scaling = 0
 
         self.data, self.pixel_size, self.sampling,self.wavelength,\
-                self.uvcoords, self.realflux, self.u, self.v,\
+                self.uvcoords, self.u, self.v,\
                 self.zero_padding_order, self.t3phi_uvcoords = data
 
         self.realdata, self.realdataerr,\
-                self.realcphase, self.realcphaserr = self.data
+                self.realcphase, self.realcphaserr,\
+                self.realflux, self.realfluxerr = self.data
 
         self.realdata = np.insert(self.realdata, 0, self.realflux)
-        self.realdataerr = np.insert(self.realdataerr, 0, np.mean(self.realdataerr))
+        self.realdataerr = np.insert(self.realdataerr, 0, self.realfluxerr) \
+                if self.realfluxerr is not None else \
+                np.insert(self.realdataerr, 0, self.realflux*0.2)
 
         self.sigma2corrflux = self.realdataerr**2
         self.sigma2cphase = self.realcphaserr**2
@@ -440,7 +444,7 @@ if __name__ == "__main__":
 
     # File to read data from
     # f = "../../assets/Final_CAL.fits"
-    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
+    f = "../../assets/Test_model.fits"
     out_path = "../../assets"
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
