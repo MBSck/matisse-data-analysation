@@ -449,8 +449,8 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=50, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=100,
-                              niter=1000)
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=20,
+                              niter=20)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,

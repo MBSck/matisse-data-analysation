@@ -16,6 +16,20 @@ from src.functionality.constant import *
 
 # Functions
 
+def progress_bar(progress: int, total: int):
+    """Displays a progress bar
+
+    Parameters
+    ----------
+    progress: int
+        Total progress
+    total: int
+        Total iterations
+    """
+    percent = 100 * (progress/total)
+    bar = '#' * int(percent) + '-' * (100-int(percent))
+    print(f"\r|{bar}|{percent:.2f}%", end='\r')
+
 def trunc(values, decs=0):
     """Truncates the floating point decimals"""
     return np.trunc(values*10**decs)/(10**decs)

@@ -1,4 +1,5 @@
 import numpy as np
+import inspect
 import matplotlib.pyplot as plt
 
 from typing import Any, Dict, List, Union, Optional
@@ -59,7 +60,7 @@ class CompoundModel(Model):
         except:
             raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
                                " Check input arguments, theta must be of"
-                               " the form [axis_ratio, pos_angle]")
+                               " the form [axis_ratio, pos_angle, c, s, inner_radius]")
 
         if sampling is None:
             self._sampling = sampling = px_size
