@@ -285,32 +285,33 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
     xc: np.ndarray
         The x-axis used to calculate the radius
     """
-    if sampling == 0:
-        sampling = px_size
+    with np.errstate(divide='ignore'):
+        if sampling == 0:
+            sampling = px_size
 
-    fov_scale = mas_size/sampling
+        fov_scale = mas_size/sampling
 
-    x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
-    y = x[:, np.newaxis]
+        x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
+        y = x[:, np.newaxis]
 
-    if len(incline_params) > 0:
-        try:
-            axis_ratio, pos_angle = incline_params[0],\
-                    np.radians(incline_params[1])
-        except:
-            raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
-                               " arguments, ellipsis_angles must be of the"
-                               " form [axis_ratio, pos_angle]")
+        if len(incline_params) > 0:
+            try:
+                axis_ratio, pos_angle = incline_params[0],\
+                        np.radians(incline_params[1])
+            except:
+                raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
+                                   " arguments, ellipsis_angles must be of the"
+                                   " form [axis_ratio, pos_angle]")
 
-        xr, yr = x*np.sin(pos_angle)+y*np.cos(pos_angle), \
-                (x*np.cos(pos_angle)-y*np.sin(pos_angle))/axis_ratio
-        radius = np.sqrt(xr**2+yr**2)
-        axis, phi = [xr, yr], np.arctan2(xr, yr)
-    else:
-        radius = np.sqrt(x**2+y**2)
-        axis, phi = [x, y], np.arctan(x/y)
+            xr, yr = x*np.sin(pos_angle)+y*np.cos(pos_angle), \
+                    (x*np.cos(pos_angle)-y*np.sin(pos_angle))/axis_ratio
+            radius = np.sqrt(xr**2+yr**2)
+            axis, phi = [xr, yr], np.arctan2(xr, yr)
+        else:
+            radius = np.sqrt(x**2+y**2)
+            axis, phi = [x, y], np.arctan(x/y)
 
-    return radius, axis, phi
+        return radius, axis, phi
 
 def zoom_array(array: np.ndarray, bounds: List) -> np.ndarray :
     """Zooms in on an image by cutting of the zero-padding
@@ -352,36 +353,37 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
     B: ArrayLike
         The axis used to calculate the baslines
     """
-    if uvcoords is None:
-        axis = np.linspace(-150, 150, sampling)
+    with np.errstate(divide='ignore'):
+        if uvcoords is None:
+            axis = np.linspace(-150, 150, sampling)
 
-        # Star overhead sin(theta_0)=1 position
-        u, v = axis, axis[:, np.newaxis]
+            # Star overhead sin(theta_0)=1 position
+            u, v = axis, axis[:, np.newaxis]
 
-    else:
-        axis = uvcoords
-        u, v = np.array([i[0] for i in uvcoords]), \
-                np.array([i[1] for i in uvcoords])
+        else:
+            axis = uvcoords
+            u, v = np.array([i[0] for i in uvcoords]), \
+                    np.array([i[1] for i in uvcoords])
 
-    if angles is not None:
-        try:
-            ellipsis_angle, pos_angle, inc_angle = angles
-        except:
-            raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
-                               " arguments, ellipsis_angles must be of the form"
-                               " [ellipsis_angle, pos_angle, inc_angle]")
+        if angles is not None:
+            try:
+                ellipsis_angle, pos_angle, inc_angle = angles
+            except:
+                raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
+                                   " arguments, ellipsis_angles must be of the form"
+                                   " [ellipsis_angle, pos_angle, inc_angle]")
 
-        # The ellipsis of the projected baselines
-        a, b = u*np.sin(ellipsis_angle), v*np.cos(ellipsis_angle)
+            # The ellipsis of the projected baselines
+            a, b = u*np.sin(ellipsis_angle), v*np.cos(ellipsis_angle)
 
-        # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
-        ath, bth = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
-                a*np.cos(pos_angle)-b*np.sin(pos_angle)
-        B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
-    else:
-        B = np.sqrt(u**2+v**2)/wavelength
+            # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
+            ath, bth = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
+                    a*np.cos(pos_angle)-b*np.sin(pos_angle)
+            B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
+        else:
+            B = np.sqrt(u**2+v**2)/wavelength
 
-    return B, uvcoords
+        return B, uvcoords
 
 def stellar_radius_pc(T_eff: int, L_star: int):
     """Calculates the stellar radius from its attributes and converts it from
@@ -467,11 +469,11 @@ def plancks_law_nu(T: Union[float, np.ndarray],
         The spectral radiance (the power per unit solid angle) of a black-body
         in terms of frequency
     """
-    nu = SPEED_OF_LIGHT/wavelength
-    factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
-    exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)
-
     with np.errstate(divide='ignore'):
+        nu = SPEED_OF_LIGHT/wavelength
+        factor = (2*PLANCK_CONST*nu**3)/SPEED_OF_LIGHT**2
+        exponent = (PLANCK_CONST*nu)/(BOLTZMAN_CONST*T)
+
         return factor*(1/(np.exp(exponent)-1))
 
     def do_fit():
