@@ -167,7 +167,6 @@ def genetic_algorithm(objective, bounds: List, n_bits: int,
 
     # Enumerate generations
     print("Running genetic algorithm!")
-    print("----------------------------------")
     progress_bar(0, n_iter)
     for gen in range(n_iter):
         # Decode population
