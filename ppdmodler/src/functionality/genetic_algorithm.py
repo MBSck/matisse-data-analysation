@@ -102,16 +102,14 @@ def decode(bounds: List, n_bits: int, bitstring: List) -> List:
         # Convert string to integer
         integer = int(chars, 2)
         # Scale integers to desired range
-        if o[1] is None:
-            value = o[0] + (integer/largest) * o[0]
-        else:
-            value = o[0] + (integer/largest) * (o[1] - o[0])
+        value = o[0] + (integer/largest) * (o[1] - o[0])
         # Store
         decoded.append(value)
     return decoded
 
 def genetic_algorithm(objective, bounds: List, n_bits: int,
-                      n_iter: int, n_pop: int, r_cross: float, r_mut: float):
+                      n_iter: int, n_pop: int, r_cross: float,
+                      r_mut: float, k: Optional[int] = 3) -> [List, float]:
     """The genetic algorithm is a stochastic global search optimisation
     algorithm inspired by the biological theory of evolution by means of
     natural selection.
@@ -159,8 +157,10 @@ def genetic_algorithm(objective, bounds: List, n_bits: int,
 
     Returns
     -------
-    best
-    best_eval
+    best: List
+        The 'fittest' bitstring
+    score: float
+        The fitness score of the bitstring
     """
     # Generate first population randomly
     pop = [np.random.randint(0, 2, n_bits*len(bounds)).tolist() for _ in range(n_pop)]
@@ -184,7 +184,7 @@ def genetic_algorithm(objective, bounds: List, n_bits: int,
                 best, best_eval = pop[i], scores[i]
 
         # Select parents
-        selected = [selection(pop, scores) for _ in range(n_pop)]
+        selected = [selection(pop, scores, k) for _ in range(n_pop)]
 
         # Create the next generation
         children = list()
