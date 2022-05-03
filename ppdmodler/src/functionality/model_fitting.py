@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Union, Optional
 from src.models import CompoundModel
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
+from src.functionality.genetic_algorithm import genetic_algorithm, decode
 from src.functionality.utilities import correspond_uv2scale, \
         azimuthal_modulation, get_px_scaling, chi_sq, progress_bar
 
@@ -190,13 +191,22 @@ class MCMC:
       return [i for i in zip(self.xcoord, self.ycoord)]
 
     def pipeline(self) -> None:
-        sampler, pos, prob, state = self.do_fit()
+        n_bits = 8
+        # Do global optimisation
+        best, score = genetic_algorithm(self.lnlike, self.priors,
+                                             n_bits=n_bits, n_iter=100, n_pop=100,
+                                             r_cross=0.9,
+                                             r_mut=(1.0/(n_bits*len(self.priors))))
+        print(best, best_value)
+        decoded = decode(self.priors, n_bits, best)
+
+        # sampler, pos, prob, state = self.do_fit()
 
         # This plots the corner plots of the posterior spread
-        self.plot_corner(sampler)
+        # self.plot_corner(sampler)
 
         # This plots the resulting model
-        self.plot_model_and_vis_curve(sampler, 1025, self.wavelength)
+        # self.plot_model_and_vis_curve(sampler, 1025, self.wavelength)
 
         # This saves the best-fit model data and the real data
         # self.dump2yaml()
@@ -256,6 +266,7 @@ class MCMC:
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
         tau, q = theta[-2:]
+
         datamod, cphasemod = self.model4fit_numerical(tau, q, theta[:-2])
         tot_flux = self.model.get_total_flux(tau, q)
         datamod = np.insert(datamod, 0, tot_flux)

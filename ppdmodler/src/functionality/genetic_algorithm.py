@@ -179,7 +179,6 @@ def genetic_algorithm(objective, bounds: List, n_bits: int,
         for i in range(n_pop):
             if scores[i] < best_eval:
                 best, best_eval = pop[i], scores[i]
-                # print(">%d, new best f(%s) = %.3f" % (gen, pop[i], scores[i]))
 
         # Select parents
         selected = [selection(pop, scores) for _ in range(n_pop)]
