@@ -68,15 +68,16 @@ class Model(metaclass=ABCMeta):
         -------
         flux: np.ndarray
         """
-        if self._inner_r != 0:
-            T = temperature_gradient(self._radius, self._inner_r, q, self.T_sub)
-        else:
-            T = temperature_gradient(self._radius, self._r_sub, q, self.T_sub)
+        with np.errstate(divide='ignore'):
+            if self._inner_r != 0:
+                T = temperature_gradient(self._radius, self._inner_r, q, self.T_sub)
+            else:
+                T = temperature_gradient(self._radius, self._r_sub, q, self.T_sub)
 
-        flux = plancks_law_nu(T, self.wl)
-        flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)
-        flux[np.where(np.isnan(flux))], flux[np.where(np.isinf(flux))] = 0., 0.
-        return flux*1e26
+            flux = plancks_law_nu(T, self.wl)
+            flux *= (1-np.exp(-optical_thickness))*sr2mas(self._mas_size, self._sampling)
+            flux[np.where(np.isnan(flux))], flux[np.where(np.isinf(flux))] = 0., 0.
+            return flux*1e26
 
     @abstractmethod
     def eval_model() -> np.array:
