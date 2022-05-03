@@ -13,6 +13,8 @@ from functools import wraps
 from src.functionality.constant import *
 
 # TODO: Check linspace in set_size for accuracy? -> Don't use sampling
+# TODO: Make progress bar into a decorator and also keep the time of the
+# process and show the max time
 
 # Functions
 
