@@ -12,14 +12,13 @@ import matplotlib.pyplot as plt
 import scipy.optimize
 
 from pathlib import Path
-from scipy.optimize import Bounds
 from typing import Any, Dict, List, Union, Optional
 
-from src.models import Gauss2D, Ring, InclinedDisk, CompoundModel
+from src.models import CompoundModel
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
-from src.functionality.utilities import trunc, correspond_uv2scale, \
-        azimuthal_modulation, get_px_scaling
+from src.functionality.utilities import correspond_uv2scale, \
+        azimuthal_modulation, get_px_scaling, chi_sq, progress_bar
 
 # Interesting stuff -> Change p0, how it gets made and more
 
@@ -178,7 +177,7 @@ class MCMC:
 
         self.p0_full = self.optimise_inital_theta()
         self.p0 = [np.array(self.initial) +\
-                   1e-2*np.random.randn(self.nd) for i in range(self.nw)]
+                   1e-1*np.random.randn(self.nd) for i in range(self.nw)]
 
         self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
         self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
@@ -261,9 +260,9 @@ class MCMC:
         tot_flux = self.model.get_total_flux(tau, q)
         datamod = np.insert(datamod, 0, tot_flux)
 
-        data_chi_sq = np.sum((self.realdata-datamod)**2/self.sigma2corrflux)
-        phase_chi_sq = np.sum((self.realcphase-cphasemod)**2/self.sigma2cphase)
-        whole_chi_sq = data_chi_sq + phase_chi_sq
+        data_chi_sq = chi_sq(self.realdata, self.sigma2corrflux, datamod)
+        cphase_chi_sq = chi_sq(self.realcphase, self.sigma2cphase, cphasemod)
+        whole_chi_sq = data_chi_sq + cphase_chi_sq
 
         return -0.5*whole_chi_sq
 
@@ -437,7 +436,7 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.6, 120, 1., 1., 8., 0.1, 0.7])
+    initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
     priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., None], [0., 1.], [0., 1.]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
@@ -449,11 +448,11 @@ if __name__ == "__main__":
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
-    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=50, zero_padding_order=3)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=80,
+                    sampling=129, wl_ind=38, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=20,
+    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=20,
                               niter=20)
 
     # This calls the MCMC fitting
