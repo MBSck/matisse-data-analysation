@@ -163,7 +163,7 @@ def genetic_algorithm(objective, bounds: List, n_bits: int,
     pop = [np.random.randint(0, 2, n_bits*len(bounds)).tolist() for _ in range(n_pop)]
 
     # Keep track of best solution
-    best, best_eval = 0, objective(pop[0])
+    best, best_eval = 0, objective(decode(bounds, n_bits, pop[0]))
 
     # Enumerate generations
     print("Running genetic algorithm!")
