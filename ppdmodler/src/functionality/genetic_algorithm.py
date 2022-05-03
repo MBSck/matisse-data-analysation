@@ -102,7 +102,10 @@ def decode(bounds: List, n_bits: int, bitstring: List) -> List:
         # Convert string to integer
         integer = int(chars, 2)
         # Scale integers to desired range
-        value = o[0] + (integer/largest) * (o[1] - o[0])
+        if o[1] is None:
+            value = o[0] + (integer/largest) * o[0]
+        else:
+            value = o[0] + (integer/largest) * (o[1] - o[0])
         # Store
         decoded.append(value)
     return decoded
