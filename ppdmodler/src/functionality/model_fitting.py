@@ -19,7 +19,7 @@ from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
 from src.functionality.utilities import correspond_uv2scale, \
-        azimuthal_modulation, get_px_scaling, chi_sq, progress_bar
+        azimuthal_modulation, get_px_scaling, chi_sq
 
 # Interesting stuff -> Change p0, how it gets made and more
 
@@ -175,6 +175,7 @@ class MCMC:
 
         print("Non-optimised start parameters:")
         print(self.initial)
+        print("--------------------------------------------------------------")
 
         self.p0_full = self.optimise_inital_theta()
         self.p0 = [np.array(self.initial) +\
@@ -191,25 +192,28 @@ class MCMC:
       return [i for i in zip(self.xcoord, self.ycoord)]
 
     def pipeline(self) -> None:
-        n_bits = 8
+        # n_bits = 8
         # Do global optimisation
-        best, score = genetic_algorithm(self.lnlike, self.priors,
-                                             n_bits=n_bits, n_iter=100, n_pop=100,
-                                             r_cross=0.9,
-                                             r_mut=(1.0/(n_bits*len(self.priors))))
-        print(best, best_value)
-        decoded = decode(self.priors, n_bits, best)
+        # best, score = genetic_algorithm(self.lnlike, self.priors,
+        #                                 n_bits=n_bits, n_iter=100, n_pop=100,
+        #                                 r_cross=0.9,
+        #                                 r_mut=(1.0/(n_bits*len(self.priors))),
+        #                                 k=5)
+        # print()
+        # print(best, score)
+        # decoded = decode(self.priors, n_bits, best)
+        # print(decoded)
 
-        # sampler, pos, prob, state = self.do_fit()
+        sampler, pos, prob, state = self.do_fit()
 
         # This plots the corner plots of the posterior spread
-        # self.plot_corner(sampler)
+        self.plot_corner(sampler)
 
         # This plots the resulting model
-        # self.plot_model_and_vis_curve(sampler, 1025, self.wavelength)
+        self.plot_model_and_vis_curve(sampler, 1025, self.wavelength)
 
         # This saves the best-fit model data and the real data
-        # self.dump2yaml()
+        self.dump2yaml()
 
     def optimise_inital_theta(self):
         """Run a scipy optimisation on the initial values to get theta"""
@@ -447,24 +451,25 @@ if __name__ == "__main__":
     # TODO: make the code work for the compound model make the compound model
     # work
     # Initial sets the theta
-    initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
-    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., None], [0., 1.], [0., 1.]]
+    # initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
+    initial = np.array([0.2, 180., 1., 1., 6., 0.01, 0.7])
+    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., 10.], [0., 1.], [0., 1.]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
     # f = "../../assets/Final_CAL.fits"
-    f = "../../assets/Test_model.fits"
+    f = "../../assets/Final_CAL.fits"
     out_path = "../../assets"
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=80,
-                    sampling=129, wl_ind=38, zero_padding_order=3)
+                    sampling=129, wl_ind=65, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=250, niter_burn=20,
-                              niter=20)
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=5000,
+                              niter=7500)
 
     # This calls the MCMC fitting
     mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
