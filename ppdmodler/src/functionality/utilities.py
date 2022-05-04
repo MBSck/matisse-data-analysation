@@ -30,7 +30,7 @@ def progress_bar(progress: int, total: int):
     """
     percent = 100 * (progress/total)
     bar = '#' * int(percent) + '-' * (100-int(percent))
-    print(f"\r|{bar}|{percent:.2f}%", end='\r')
+    print(f"\r|{bar}|{percent:.2f}% - {progress}/{total}", end='\r')
 
 def trunc(values, decs=0):
     """Truncates the floating point decimals"""
