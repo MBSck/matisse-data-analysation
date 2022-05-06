@@ -1,10 +1,35 @@
 #!/usr/bin/env python3
 
+
+""" Parse OB Plan
+
+This script parses the night plans made with Roy van Boekel's "calibrator_find"
+IDL script into a (.yaml)-file that contains the CALs sorted to their
+corresponding SCI-targets in a dictionary that first specifies the run, then
+the night and then the SCIs, CALs and TAGs (If calibrator is LN/N or L-band).
+
+This tool accepts (.txt)-files.
+
+The script requires that `yaml` be installed within the Python environment this
+script is run in.
+
+This file can also be imported as a module and contains the following functions:
+
+    * readout_txt - reads a (.txt)-file into its individual lines returning them
+    * save_dictionary - Saves a dictionary as a (.yaml)-file
+    * check_lst4elem - Checks a list for an element and returns a bool
+    * get_file_section - Gets a section of the (.txt)/lines
+    * get_sci_cal_tag_lst - Gets the individual lists of the SCI, CAL and TAG
+    * parse_night_plan - The main function of the script. Parses the night plan
+
+"""
+
 import os
 import yaml
 
 from pathlib import Path
 from typing import Any, Dict, List, Union, Optional
+
 
 def readout_txt(file):
     """Reads a txt into its individual lines"""
@@ -25,15 +50,31 @@ def save_dictionary(input_dict: Dict, output_path: Path) -> int:
     Returns
     -------
     int
-        ERROR or SUCCESS
+        ERROR (-1) or SUCCESS (0)
     """
-    with open(output_path, "w") as fy:
-        yaml.safe_dump(input_dict, fy)
-
-    return 0
+    try:
+        with open(output_path, "w") as fy:
+            yaml.safe_dump(input_dict, fy)
+        return 0
+    except Exception as e:
+        print(e)
+        return -1
 
 def check_lst4elem(input_lst: List, elem: str) -> bool:
-    """Checks if the element is in list and returns True or False"""
+    """Checks if the element is in list and returns True or False
+
+    Parameters
+    ----------
+    input_lst: List
+        The input list
+    elem: str
+        The element being checked for
+
+    Returns
+    -------
+    bool
+        True if element is found, False otherwise
+    """
     for i in input_lst:
         if elem in i:
             return True
@@ -91,8 +132,6 @@ def get_sci_cal_tag_lst(lines: List):
     for i, o in enumerate(lines):
         lines[i] = o.replace('\n', '')
 
-    # TODO: Check for more than one calibrator per science target. Add position
-    # in night plan
     # TODO: Make a different separating instead of the '' lines
 
     sci_lst, cal_lst, tag_lst  = [], [[]], [[]]
@@ -106,7 +145,8 @@ def get_sci_cal_tag_lst(lines: List):
         else:
             o = o.split()
             if not o[0][0].isdigit():
-                # NOTE: Bodge to skip over irrelevant lines
+                # NOTE: Bodge (crude fix) to skip over irrelevant lines
+                # TODO: Make this more robust as well
                 continue
 
             if "cal_" in o[1]:
@@ -114,7 +154,7 @@ def get_sci_cal_tag_lst(lines: List):
                 cal_lst[counter].append(temp_cal[2])
                 tag_lst[counter].append(temp_cal[1])
             else:
-            # TODO: Make the parse more robust for numbers (e.g., WA Oph 6)
+            # FIXME: Make the parse here more robust for numbers (e.g., WA Oph 6)
                 if (o[3] != '') and (not o[3].isdigit()):
                     sci_lst.append(o[1]+' '+o[2]+' '+o[3])
                 else:
@@ -170,6 +210,7 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
     return night_plan
 
 if __name__ == "__main__":
-    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.3.txt"
+    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/"\
+            "p109_MATISSE_YSO_runs_observing_plan_v0.3.txt"
     print(run_dict := parse_night_plan(path, save2file=True))
 
