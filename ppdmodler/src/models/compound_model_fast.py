@@ -69,7 +69,6 @@ class CompoundModel(Model):
                                    sampling, inner_radius=max_radius)
         flux = self.r.get_flux(tau, q)
         temp_flux = flux.copy()
-        flux *= azimuthal_modulation(self.r._phi, self.amplitudes)
 
         self._max_sub_flux = np.max(flux)
 
@@ -78,8 +77,9 @@ class CompoundModel(Model):
                                   sampling, inner_radius=ring_inner_radius,
                                   outer_radius=ring_outer_radius)
         flux += self.r.get_flux(tau, q)
+        flux *= azimuthal_modulation(self.r._phi, self.amplitudes)
 
-        flux[self.d._size//2, self.d._size//2] = self.d.stellar_flux
+        flux[sampling//2, sampling//2] = self.d.stellar_flux
         self._max_obj = np.max(image)
 
         return image, flux
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
     c_mod, c_flux = c.eval_model([5.96207646e-02, 1.79327163e+02, 1.99972039e+00, 9.66528092e-01,
  5.84245342e-01, 3.97704978e+00, 2.31893470e+00, 6.23039738e-02,
-                                  7.89946005e-01], 20, 4049)
+                                  7.89946005e-01], 20, 4097)
     print(np.sum(c_flux))
     plt.imshow(c_flux, vmax=c._max_sub_flux)
     plt.show()
