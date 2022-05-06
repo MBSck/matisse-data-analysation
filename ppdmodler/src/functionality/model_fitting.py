@@ -138,7 +138,7 @@ def set_mc_params(initial: np.ndarray, nwalkers: int,
     return (initial, nwalkers, ndim, niter_burn, niter)
 
 
-class MCMC:
+class ModelFitting:
     """"""
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
@@ -147,6 +147,7 @@ class MCMC:
                  out_path: Path = None) -> None:
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
+        self.model = model
 
         self.numerical, self.vis, self.vis2 = numerical, vis, not vis
         self.modulation = modulation
@@ -169,9 +170,8 @@ class MCMC:
         self.sigma2corrflux = self.realdataerr**2
         self.sigma2cphase = self.realcphaserr**2
 
-        self.model = model(*self.bb_params, self.wavelength)
-
         self.initial, self.nw, self.nd, self.nib, self.ni = mc_params
+        self.model_init = self.model(*self.bb_params, self.wavelength)
 
         print("Non-optimised start parameters:")
         print(self.initial)
@@ -187,18 +187,14 @@ class MCMC:
 
         self.out_path = out_path
 
-    @property
-    def xycoords(self):
-      return [i for i in zip(self.xcoord, self.ycoord)]
-
     def pipeline(self) -> None:
         # n_bits = 8
-        # Do global optimisation
+        # # Do global optimisation
         # best, score = genetic_algorithm(self.lnlike, self.priors,
-        #                                 n_bits=n_bits, n_iter=100, n_pop=100,
-        #                                 r_cross=0.9,
+        #                                 n_bits=n_bits, n_iter=1000, n_pop=100,
+        #                                 r_cross=0.85,
         #                                 r_mut=(1.0/(n_bits*len(self.priors))),
-        #                                 k=5)
+        #                                 k=3)
         # print()
         # print(best, score)
         # decoded = decode(self.priors, n_bits, best)
@@ -210,10 +206,10 @@ class MCMC:
         self.plot_corner(sampler)
 
         # This plots the resulting model
-        self.plot_model_and_vis_curve(sampler, 1025, self.wavelength)
+        self.plot_model_and_vis_curve(sampler)
 
         # This saves the best-fit model data and the real data
-        self.dump2yaml()
+        # self.dump2yaml()
 
     def optimise_inital_theta(self):
         """Run a scipy optimisation on the initial values to get theta"""
@@ -269,10 +265,7 @@ class MCMC:
         """Takes theta vector and the x, y and the yerr of the theta.
         Returns a number corresponding to how good of a fit the model is to your
         data for a given set of parameters, weighted by the data points.  That it is more important"""
-        tau, q = theta[-2:]
-
-        datamod, cphasemod = self.model4fit_numerical(tau, q, theta[:-2])
-        tot_flux = self.model.get_total_flux(tau, q)
+        datamod, cphasemod, tot_flux = self.model4fit_numerical(theta)
         datamod = np.insert(datamod, 0, tot_flux)
 
         data_chi_sq = chi_sq(self.realdata, self.sigma2corrflux, datamod)
@@ -315,15 +308,15 @@ class MCMC:
 
         return 0.0 if all(check_conditons) else -np.inf
 
-    def model4fit_numerical(self, tau, q, theta: np.ndarray) -> np.ndarray:
+    def model4fit_numerical(self, theta: np.ndarray) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img = self.model.eval_model(theta, self.pixel_size, self.sampling)
-        model_flux = self.model.get_flux(tau, q)
+        model_img, model_flux = self.model_init.eval_model(theta, self.pixel_size, self.sampling)
+        total_flux = np.sum(model_flux)
 
-        fft = FFT(model_flux, self.wavelength, self.model.pixel_scale,
+        fft = FFT(model_flux, self.wavelength, self.model_init.pixel_scale,
                  self.zero_padding_order)
         amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords, True)
-        return amp, phase
+        return amp, phase, total_flux
 
     def get_best_fit(self, sampler) -> np.ndarray:
         """Fetches the best fit values from the sampler"""
@@ -331,23 +324,18 @@ class MCMC:
         theta_max = samples[np.argmax(sampler.flatlnprobability)]
         return theta_max
 
-    def plot_model_and_vis_curve(self, sampler, sampling, wavelength) -> None:
+    def plot_model_and_vis_curve(self, sampler) -> None:
         """Plot the samples to get estimate of the density that has been sampled, to
         test if sampling went well"""
         self.theta_max = self.get_best_fit(sampler)
         fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 10))
 
-        tau, q = self.theta_max[-2:]
-        self.sampling, self.wavelength = sampling, wavelength
-
-        datamod, cphasemod = self.model4fit_numerical(tau, q, self.theta_max[:-2])
+        model = self.model(*self.bb_params, self.wavelength)
+        datamod, cphasemod, self.total_flux_fit = self.model4fit_numerical(self.theta_max)
         self.datamod, self.cphasemod = datamod, cphasemod
-        model_img = self.model.eval_model(self.theta_max[:-2],
-                                               self.pixel_size, sampling)
-        self.total_flux_fit = self.model.get_total_flux(tau, q)
+        model_img, model_flux = model.eval_model(self.theta_max, self.pixel_size,
+                                                 4097)
         self.datamod = np.insert(self.datamod, 0, self.total_flux_fit)
-
-        model_flux = self.model.get_flux(tau, q)
 
         # Correspond the best fit to the uv coords
         print("Best fit corr. fluxes:")
@@ -372,10 +360,10 @@ class MCMC:
         # yvis_curve = best_fit_model[centre]
 
         # Combines the plots and gives descriptions to the axes
-        ax.imshow(model_flux, vmax=self.model._max_sub_flux,\
+        ax.imshow(model_flux, vmax=model._max_sub_flux,\
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                          -self.pixel_size//2, self.pixel_size//2])
-        ax.set_title(fr"{self.model.name}: Temperature gradient, at {wavelength*1e6:.2f}$\mu$m")
+        ax.set_title(fr"{self.model_init.name}: Temperature gradient, at {self.wavelength*1e6:.2f}$\mu$m")
         ax.set_xlabel(f"RA [mas]")
         ax.set_ylabel(f"DEC [mas]")
 
@@ -392,7 +380,7 @@ class MCMC:
         cx.set_title(fr"Closure Phases [$^\circ$]")
         cx.set_xlabel("Baselines [m]")
         cx.legend(loc="upper right")
-        save_path = f"{self.model.name}_model_after_fit_{wavelength*1e6:.2f}.png"
+        save_path = f"{self.model_init.name}_model_after_fit_{self.wavelength*1e6:.2f}.png"
 
         if self.out_path is None:
             plt.savefig(save_path)
@@ -405,7 +393,7 @@ class MCMC:
         samples = sampler.get_chain(flat=True)  # Or sampler.flatchain
         fig = corner.corner(samples, show_titles=True, labels=self.labels,
                            plot_datapoints=True, quantiles=[0.16, 0.5, 0.84])
-        save_path = f"{self.model.name}_corner_plot_{self.wavelength*1e6:.2f}.png"
+        save_path = f"{self.model_init.name}_corner_plot_{self.wavelength*1e6:.2f}.png"
         if self.out_path is None:
             plt.savefig(save_path)
         else:
@@ -441,8 +429,8 @@ class MCMC:
                     "Best fit - theta": self.theta_max,
                     "labels": self.labels,}
 
-        model_dict = {self.model.name: {"Real data": vis_dict, "Fit values": fit_dict}}
-        save_path = os.path.join(self.out_path, f"{self.model.name}_model_after_fit.yaml")
+        model_dict = {self.model_init.name: {"Real data": vis_dict, "Fit values": fit_dict}}
+        save_path = os.path.join(self.out_path, f"{self.model_init.name}_model_after_fit.yaml")
         with open(save_path, "w") as fy:
             yaml.safe_dump(model_dict, fy)
 
@@ -452,27 +440,29 @@ if __name__ == "__main__":
     # work
     # Initial sets the theta
     # initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
-    initial = np.array([0.2, 180., 1., 1., 6., 0.01, 0.7])
-    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., 10.], [0., 1.], [0., 1.]]
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
+    initial = np.array([0.2, 180., 1., 1., 3., 2., 1., 0.01, 0.7])
+    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., 10.], [0., 10.],
+              [0., 10.], [0., 1.], [0., 1.]]
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER",
+              "R_OUTER", "R_MAX", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
     # f = "../../assets/Final_CAL.fits"
-    f = "../../assets/Final_CAL.fits"
+    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
     out_path = "../../assets"
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
-    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=80,
-                    sampling=129, wl_ind=65, zero_padding_order=3)
+    data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
+                    sampling=129, wl_ind=67, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=5000,
-                              niter=7500)
+    mc_params = set_mc_params(initial=initial, nwalkers=25, niter_burn=2500,
+                              niter=5000)
 
     # This calls the MCMC fitting
-    mcmc = MCMC(CompoundModel, data, mc_params, priors, labels, numerical=True,
+    fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels, numerical=True,
                 vis=True, modulation=True, bb_params=bb_params, out_path=out_path)
-    mcmc.pipeline()
+    fitting.pipeline()
 
