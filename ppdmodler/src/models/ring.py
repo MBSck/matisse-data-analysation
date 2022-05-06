@@ -92,7 +92,11 @@ class Ring(Model):
         if outer_radius:
             radius[radius > outer_radius] = 0.
 
-        self._radius = radius.copy()
+        if self._radius is None:
+            self._radius = radius.copy()
+        else:
+            self._radius += radius.copy()
+
         radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
         return radius
 
@@ -168,7 +172,7 @@ if __name__ == "__main__":
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
     fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=2)
     ft = fft.pipeline()
-    amp, phase = fft.get_amp_phase(ft)
+    amp, phase = fft.get_amp_phase(True)
     ft_ax = fft.fftaxis_m_end
     ft_lambda = fft.fftaxis_Mlambda_end
     print(ft_ax, "scaling of the FFT to meters")
