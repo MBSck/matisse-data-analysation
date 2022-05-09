@@ -81,7 +81,7 @@ def check_lst4elem(input_lst: List, elem: str) -> bool:
 
     return False
 
-def get_file_section(lines: List, identifier: str):
+def get_file_section(lines: List, identifier: str) -> List:
     """Gets the section of a file corresponding to the given identifier and
     returns a dict with the keys being the match to the identifier and the
     values being a subset of the lines list
@@ -99,14 +99,13 @@ def get_file_section(lines: List, identifier: str):
         A dict that contains a subsets of the original lines
     """
     indices_lst, labels = [], []
-    default_key = "full_" + identifier
     for i, o in enumerate(lines):
         if identifier in o.lower():
             indices_lst.append(i)
             labels.append(o.replace('\n', ''))
 
-    if len(indices_lst) == 0:
-        indices_lst, labels = [0], [default_key]
+    if len(indices_lst) or len(labels) == 0:
+        indices_lst, labels = [0], ["full_" + identifier]
 
     sections = [lines[o:] if o == indices_lst[~0] else \
                   lines[o:indices_lst[i+1]] for i, o in enumerate(indices_lst)]
@@ -193,10 +192,12 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
     """
     lines = readout_txt(file)
     runs = get_file_section(lines, run_identifier)
+
     night_plan = {}
 
     for i, o in runs.items():
         temp_dict = get_file_section(o, sub_identifier)
+
         nights = {}
         for j, l in temp_dict.items():
             if check_lst4elem(l, "cal_"):
