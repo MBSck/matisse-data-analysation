@@ -153,6 +153,6 @@ def do_full_reduction(folder: str, both: bool = True,
 
 
 if __name__ == "__main__":
-    base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514"
-    do_full_reduction(base_path, both=True)
+    # base_path = "/data/beegfs/astro-storage/groups/matisse/scheuck/data/GTO/hd142666/PRODUCTS/20190514"
+    # do_full_reduction(base_path, both=True)
 

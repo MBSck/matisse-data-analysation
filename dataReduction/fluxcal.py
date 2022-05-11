@@ -1,44 +1,50 @@
-# Tool for flux and correlated flux calibration of VLTI/MATISSE data
-# Jozsef Varga, 2019-2022
-# varga@strw.leidenuniv.nl
-#
-# Example usage:
-# from fluxcal import fluxcal
-# inputfile_sci = 'path/to/raw/science/fits/file.fits'
-# inputfile_cal = 'path/to/raw/calibrator/fits/file.fits'
-# outputfile = 'path/to/calibrated/outputfile.fits'
-# cal_database_dir = 'path/to/calibrator/database/folder/'
-# cal_database_paths = [cal_database_dir+'vBoekelDatabase.fits',cal_database_dir+'calib_spec_db_v10.fits',cal_database_dir+'calib_spec_db_v10_supplement.fits']
-# output_fig_dir = 'path/to/figure/folder/'
-# fluxcal(inputfile_sci, inputfile_cal, outputfile, cal_database_paths, mode='corrflux',output_fig_dir=output_fig_dir)
-#
-# Arguments:
-# inputfile_sci: path to the raw science oifits file.
-# inputfile_cal: path to the raw calibrator oifits file.
-# outputfile: path of the output calibrated file
-# cal_database_paths: list of paths to the calibrator databases, e.g., [caldb1_path,caldb2_path]
-# mode (optional):
-#   'flux': calibrates total flux (incoherently processed oifits file expected)
-#           results written in the OI_FLUX table (FLUXDATA column)
-#    'corrflux': calibrates correlated flux (coherently processed oifits file expected)
-#                results written in the OI_VIS table (VISAMP column)
-#    'both': calibrates both total and correlated fluxes
-# output_fig_dir (optional): if it is a valid path, the script will make a plot of the calibrator model spectrum there,
-#                            deafult: '' (= no figure made)
-#
-#
+"""Tool for flux and correlated flux calibration of VLTI/MATISSE data
+ Jozsef Varga, 2019-2022
+ varga@strw.leidenuniv.nl
+
+ Example usage:
+ >>> from fluxcal import fluxcal
+ >>> inputfile_sci = 'path/to/raw/science/fits/file.fits'
+ >>> inputfile_cal = 'path/to/raw/calibrator/fits/file.fits'
+ >>> outputfile = 'path/to/calibrated/outputfile.fits'
+ >>> cal_database_dir = 'path/to/calibrator/database/folder/'
+ >>> cal_database_paths = [cal_database_dir+'vBoekelDatabase.fits',cal_database_dir+'calib_spec_db_v10.fits',cal_database_dir+'calib_spec_db_v10_supplement.fits']
+ >>> output_fig_dir = 'path/to/figure/folder/'
+ >>> fluxcal(inputfile_sci, inputfile_cal, outputfile, cal_database_paths, mode='corrflux',output_fig_dir=output_fig_dir)
+
+ Arguments:
+ * inputfile_sci: path to the raw science oifits file.
+ * inputfile_cal: path to the raw calibrator oifits file.
+ * outputfile: path of the output calibrated file
+ * cal_database_paths:
+     list of paths to the calibrator databases, e.g., [caldb1_path,caldb2_path]
+ * mode (optional):
+     'flux': calibrates total flux (incoherently processed oifits file expected)
+             results written in the OI_FLUX table (FLUXDATA column)
+     'corrflux': calibrates correlated flux (coherently processed oifits file expected)
+                 results written in the OI_VIS table (VISAMP column)
+     'both': calibrates both total and correlated fluxes
+ * output_fig_dir (optional): if it is a valid path, the script will make a plot of the calibrator model spectrum there,
+                            default: '' (= no figure made)
+
+########################################################################
+"""
+
+__autho__ == "Jozsef Varga"
+
 # load vanBoekeldatabase: DONE
 # save calibrator spectrum in a plot: DONE
-#TODO: airmass correction
-#TODO: calculate uncertainties
-#       partly implemented
-#       caveats: uncertainty in the calibrator spectrum is not taken into account
-#                uncertainty in calibrator diameter is not taken into account
-#TODO: treat if the cal database cannot be opened
+# TODO: airmass correction
+
+# TODO: calculate uncertainties partly implemented
+# caveats: uncertainty in the calibrator spectrum is not taken into account
+# uncertainty in calibrator diameter is not taken into account
+
+# TODO: treat if the cal database cannot be opened
 # treat if there is no matching source in the database: DONE
-#TODO: FIX: some dec values are NULL in vBoekeldatabase
-#
-########################################################################
+
+# TODO: FIX: some dec values are NULL in vBoekeldatabase
+
 
 import numpy as np
 from astropy import units as u
@@ -56,7 +62,7 @@ from numpy.polynomial.polynomial import polyval
 from astropy.convolution import Gaussian1DKernel,Box1DKernel,convolve
 import scipy.stats
 
-skycalc_cli_cmd = '/home/varga/.local/bin/skycalc_cli'
+skycalc_cli_cmd = "/usr/local/lib/python3.9/site-packages/skycalc_cli"
 
 # match_radius [arcsec]
 # ra, dec [degree]
@@ -727,7 +733,7 @@ def transform_spectrum_to_real_spectral_resolution(wl_orig,spec_orig,dl_coeffs,k
     wl = min_wl
     wl_new.append(wl)
     while wl < max_wl:
-        wl = wl + polyval(wl,dl_coeffs)/kernel_width_px
+        wl += polyval(wl,dl_coeffs)/kernel_width_px
         wl_new.append(wl)
     wl_new = np.array(wl_new)
     #print(wl_orig,wl_new)
@@ -799,3 +805,4 @@ def find_nearest_idx(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx
+
