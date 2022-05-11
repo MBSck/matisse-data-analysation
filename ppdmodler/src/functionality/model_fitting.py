@@ -449,9 +449,10 @@ if __name__ == "__main__":
 
     # File to read data from
     # f = "../../assets/Final_CAL.fits"
-    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
+    f = "../../assets/HD_142666_2019-03-24T09_01_46_L_TARGET_FINALCAL_INT.fits"
     out_path = "../../assets"
-    flux_file = "../../assets/HD_142666_timmi2.txt"
+    # sws is for L band flux
+    flux_file = "../../assets/HD_142666_sws.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
