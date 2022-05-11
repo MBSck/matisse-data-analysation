@@ -65,7 +65,6 @@ class CompoundModel(Model):
             self._sampling = sampling = px_size
 
         self._size, self._mas_size = px_size, mas_size
-        print(self.r.T_sub)
 
         image = self.r.eval_model([axis_ratio, pa], mas_size, px_size,
                                    sampling, inner_radius=max_radius)
@@ -83,8 +82,6 @@ class CompoundModel(Model):
 
         flux[sampling//2, sampling//2] = self.d.stellar_flux
         self._max_obj = np.max(image)
-
-        print(self.r.T_sub)
 
         return image, flux
 
