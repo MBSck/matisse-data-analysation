@@ -405,7 +405,28 @@ def stellar_radius_pc(T_eff: int, L_star: int):
     stellar_radius_m = np.sqrt(L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*T_eff**4))
     return stellar_radius_m/PARSEC2M
 
-def sublimation_radius(T_sub: int, L_star: int, distance: float):
+def sublimation_temperature(r_sub: float, L_star: int, distance: int):
+    """Calculates the sublimation temperature at the inner rim of the disk
+
+    Parameters
+    ----------
+    r_sub: float
+        The sublimation radius [mas]
+    L_star: int
+        The star's luminosity in units of nominal solar luminosity
+    distance: int
+        Distance in parsec
+
+    Returns
+    -------
+    T_sub: float
+        The sublimation temperature [K]
+    """
+    L_star *= SOLAR_LUMINOSITY
+    r_sub /= m2mas(1, distance)
+    return (L_star/(4*np.pi*STEFAN_BOLTZMAN_CONST*r_sub**2))**(1/4)
+
+def sublimation_radius(T_sub: int, L_star: int, distance: int):
     """Calculates the sublimation radius of the disk
 
     Parameters

@@ -39,8 +39,8 @@ class Ring(Model):
 
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None,
-                   inner_radius: Optional[int] = 0,
-                   outer_radius: Optional[int] = 0) -> np.array:
+                   inner_radius: Optional[int] = None,
+                   outer_radius: Optional[int] = None) -> np.array:
         """Evaluates the model
 
         Parameters
@@ -73,7 +73,9 @@ class Ring(Model):
                                " Check input arguments, theta must be of"
                                " the form [axis_ratio, pos_angle]")
 
-        self._inner_r = inner_radius
+        if inner_radius:
+            self._inner_r = self.r_sub = inner_radius
+
         if sampling is None:
             self._sampling = sampling = px_size
         else:
@@ -87,7 +89,7 @@ class Ring(Model):
         if inner_radius:
             radius[radius < inner_radius] = 0.
         else:
-            radius[radius < self._r_sub] = 0.
+            radius[radius < self.r_sub] = 0.
 
         if outer_radius:
             radius[radius > outer_radius] = 0.
@@ -97,7 +99,10 @@ class Ring(Model):
         else:
             self._radius += radius.copy()
 
-        radius[np.where(radius != 0)] = 1/(2*np.pi*self._r_sub)
+        if inner_radius:
+            radius[np.where(radius != 0)] = 1/(2*np.pi*inner_radius)
+        else:
+            radius[np.where(radius != 0)] = 1/(2*np.pi*self.r_sub)
         return radius
 
     def eval_vis(self, theta: List, sampling: int, wavelength: float, uvcoords:
@@ -166,7 +171,7 @@ if __name__ == "__main__":
     wavelength, mas_fov, sampling, width  = 10e-6, 10, 129, 1.05
     r = Ring(1500, 7900, 19, 140, wavelength)
     r_model = r.eval_model([1, 140], mas_fov, sampling,\
-                           outer_radius=width*r._r_sub)
+                           inner_radius=1., outer_radius=width*r.r_sub)
     r_flux = r.get_flux(np.inf, 0.7)
     r_tot_flux = r.get_total_flux(np.inf, 0.7)
     fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
@@ -177,8 +182,9 @@ if __name__ == "__main__":
     ft_lambda = fft.fftaxis_Mlambda_end
     print(ft_ax, "scaling of the FFT to meters")
     print(fft.fftfreq)
-    print(r._r_sub, "sublimation radius")
-    print(r._r_sub*width-r._r_sub, "width of the ring in mas")
+    print(r.T_sub, "sublimation temperature")
+    print(r.r_sub, "sublimation radius")
+    print(r.r_sub*width-r.r_sub, "width of the ring in mas")
     ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
     cx.imshow(amp, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])

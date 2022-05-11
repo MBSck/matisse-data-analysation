@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.utilities import plancks_law_nu, sublimation_radius,\
-        sr2mas, temperature_gradient, stellar_radius_pc
+        sr2mas, temperature_gradient, stellar_radius_pc, sublimation_temperature
 
 # TODO: Implement FFT as a part of the model class
 
@@ -34,7 +34,7 @@ class Model(metaclass=ABCMeta):
         self.T_sub, self.T_eff, self.L_star, self.d, self.wl = T_sub, T_eff, \
                 L_star, distance, wavelength
 
-        self._r_sub = sublimation_radius(self.T_sub, self.L_star, self.d)
+        self._r_sub = sublimation_radius(self._T_sub, self.L_star, self.d)
         self._stellar_radius = stellar_radius_pc(self.T_eff, self.L_star)
         self._stellar_radians = plancks_law_nu(self.T_eff, self.wl)
         self._stellar_flux = np.pi*(self._stellar_radius/self.d)**2*\
@@ -52,6 +52,27 @@ class Model(metaclass=ABCMeta):
     def get_total_flux(self, *args) -> np.ndarray:
         """Sums up the flux from [Jy/px] to [Jy]"""
         return np.sum(self.get_flux(*args))
+
+    @property
+    def r_sub(self):
+        """Calculates the sublimation radius"""
+        return self._r_sub
+
+    @r_sub.setter
+    def r_sub(self, value):
+        """Sets the sublimation radius"""
+        self._r_sub = value
+
+    @property
+    def T_sub(self):
+        """Calculates the sublimation temperature"""
+        self._T_sub = sublimation_temperature(self._r_sub, self.L_star, self.d)
+        return self._T_sub
+
+    @T_sub.setter
+    def T_sub(self, value):
+        """Sets the sublimation temperature"""
+        self._T_sub = value
 
     def get_flux(self, optical_thickness: float, q: float) -> np.array:
         """Calculates the total flux of the model
