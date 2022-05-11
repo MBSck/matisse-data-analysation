@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import inspect
 import time
 
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union, Optional, Callable
 from astropy.io import fits
 from functools import wraps
 
