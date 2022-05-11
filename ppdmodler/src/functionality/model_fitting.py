@@ -106,11 +106,11 @@ def set_data(fits_file: Path, pixel_size: int,
 
     uvcoords = readout.get_uvcoords()
     u, v = readout.get_split_uvcoords()
-    t3phi_baselines = readout.get_t3phi_uvcoords()
+    t3phi_uvcoords = readout.get_t3phi_uvcoords()
     data = (vis, viserr, cphase, cphaseerr, flux, fluxerr)
 
     return (data, pixel_size, sampling, wavelength, uvcoords,
-            u, v, zero_padding_order, t3phi_baselines)
+            u, v, zero_padding_order, t3phi_uvcoords)
 
 def set_mc_params(initial: np.ndarray, nwalkers: int,
                   niter_burn: int, niter: int) -> List:
@@ -183,7 +183,7 @@ class ModelFitting:
 
         self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
         self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
-        self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)
+        self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)[2]
 
         self.out_path = out_path
 
@@ -449,14 +449,14 @@ if __name__ == "__main__":
 
     # File to read data from
     # f = "../../assets/Final_CAL.fits"
-    f = "../../assets/HD_142666_2019-03-24T09_01_46_L_TARGET_FINALCAL_INT.fits"
+    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
     out_path = "../../assets"
-    # sws is for L band flux
-    flux_file = "../../assets/HD_142666_sws.txt"
+    # sws is for L-band flux; timmi2 for the N-band flux
+    flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=67, zero_padding_order=3)
+                    sampling=129, wl_ind=30, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=25, niter_burn=2500,

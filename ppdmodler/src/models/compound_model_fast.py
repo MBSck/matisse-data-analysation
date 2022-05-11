@@ -31,6 +31,7 @@ class CompoundModel(Model):
         super().__init__(*args)
         self.name = "Compound Model"
         self.d, self.r = Delta(*args), Ring(*args)
+        self._axis_mod = []
 
     def eval_model(self, theta: List, mas_size: int, px_size: int,
                    sampling: Optional[int] = None) -> np.ndarray:
@@ -82,6 +83,8 @@ class CompoundModel(Model):
         flux[sampling//2, sampling//2] = self.d.stellar_flux
         self._max_obj = np.max(image)
 
+        self._axis_mod = self.r._axis_mod + self.d._axis_mod
+
         return image, flux
 
     def eval_vis():
@@ -94,6 +97,7 @@ if __name__ == "__main__":
  5.84245342e-01, 3.97704978e+00, 2.31893470e+00, 6.23039738e-02,
                                   7.89946005e-01], 20, 4097)
     print(np.sum(c_flux))
+    print(c.r._axis_mod)
     plt.imshow(c_flux, vmax=c._max_sub_flux)
     plt.show()
 

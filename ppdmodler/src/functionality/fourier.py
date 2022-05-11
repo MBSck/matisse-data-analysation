@@ -167,16 +167,30 @@ class FFT:
                                  bounds_error=False, fill_value=None)
         ft_intp_corr = real_corr+1j*imag_corr
 
-        real_phase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
+        ucphase, vcphase = uvcoords_cphase
+        real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
                                  bounds_error=False, fill_value=None)
-        imag_phase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
+        imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
                                  bounds_error=False, fill_value=None)
+        cphases = sum(np.angle(real_cphase+1j*imag_cphase, deg=True))
 
-        ft_intp_phase = real_phase+1j*imag_phase
+        # print(ft_intp_cphase)
+
+        # x = self.model_centre+np.round(ucphase/self.fftscaling2m).astype("int")
+        # y = self.model_centre+np.round(vcphase/self.fftscaling2m).astype("int")
+
+        # cphases = sum(np.angle(self.ft, True)[y, x])
+
+        # BUG: There are two different values for the interpolatio? Which is
+        # correct?
+
+        # NOTE: Wrap phases to [-180, 180]
+        # cphases = np.degrees((np.radians(cphases)+np.pi) % (2*np.pi) - np.pi)
+        # print(phases)
 
         if corr_flux:
-            return np.abs(ft_intp_corr), np.angle(ft_intp_phase, deg=True)
-        return np.abs(ft_intp_corr)/np.abs(self.ft_center), np.angle(ft_intp_phase, deg=True)
+            return np.abs(ft_intp_corr), cphases
+        return np.abs(ft_intp_corr)/np.abs(self.ft_center), cphases
 
     def get_amp_phase(self, corr_flux: bool = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT

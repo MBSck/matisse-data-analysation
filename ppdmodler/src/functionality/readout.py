@@ -81,7 +81,7 @@ class ReadoutFits:
         u1, v1 = self.get_data("oi_t3", "u1coord", "v1coord")
         u2, v2 = self.get_data("oi_t3", "u2coord", "v2coord")
         u3, v3 = -(u1+u2), -(v1+v2)
-        return (u3, v3)
+        return np.array([u1, u2, u3]), np.array([v1, v2, v3])
 
     def get_baselines(self):
         """Calculates the baselines from the uv coordinates"""
@@ -166,4 +166,5 @@ if __name__ == "__main__":
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits"
     readout = ReadoutFits(path)
     u, v = readout.get_t3phi_uvcoords()
+    print(u, v)
     print(np.sqrt(u**2+v**2))
