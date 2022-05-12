@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 """ Parse OB Plan
 
 This script parses the night plans made with Roy van Boekel's "calibrator_find"
@@ -22,7 +21,17 @@ This file can also be imported as a module and contains the following functions:
     * get_sci_cal_tag_lst - Gets the individual lists of the SCI, CAL and TAG
     * parse_night_plan - The main function of the script. Parses the night plan
 
+Example of usage:
+    >>> from parseOBplan import parse_night_plan
+    >>> path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/"\
+    >>>         "april2022/p109_MATISSE_YSO_runs_observing_plan_v0.1.txt"
+    >>> run_dict = parse_night_plan(path, save2file=True)
+    >>> print(run_dict)
+    ... {'run 5, 109.2313.005 = 0109.C-0413(E)': {'nights 2-4: {'SCI': ['MY Lup', ...], 'CAL': [['HD142198'], ...], 'TAG': [['LN'], ...]}}}
 """
+
+__author__ = "Marten Scheuck"
+__date__   = "2022-05-11"
 
 import os
 import yaml
@@ -100,11 +109,11 @@ def get_file_section(lines: List, identifier: str) -> List:
     """
     indices_lst, labels = [], []
     for i, o in enumerate(lines):
-        if identifier in o.lower():
+        if (identifier in o.lower()) and (o.split()[0].lower() == identifier):
             indices_lst.append(i)
             labels.append(o.replace('\n', ''))
 
-    if len(indices_lst) or len(labels) == 0:
+    if not indices_lst:
         indices_lst, labels = [0], ["full_" + identifier]
 
     sections = [lines[o:] if o == indices_lst[~0] else \
@@ -125,40 +134,58 @@ def get_sci_cal_tag_lst(lines: List):
     List:
         The lists in the output format [[SCI], [CAL], [TAG]]
     """
-    line_range = [i for i, o in enumerate(lines) if o[0].isdigit()]
-    lines = lines[line_range[0]:line_range[~0]+1]
-
-    for i, o in enumerate(lines):
+    line_digit_range = [i for i, o in enumerate(lines) if o[0].isdigit()]
+    line_cal_range  = [i for i, o in enumerate(lines)\
+                       if "calibrator_find" in o]
+    lines = lines[line_digit_range[0]:line_cal_range[0]]
+    for i, o in enumerate(lines.copy()):
         lines[i] = o.replace('\n', '')
 
-    # TODO: Make a different separating instead of the '' lines
-
     sci_lst, cal_lst, tag_lst  = [], [[]], [[]]
-    counter = 0
+    counter, temp_cal = 0, None
+
+    # FIXME: Copy the CAL object if one CAL shares two SCI targets
 
     for i, o in enumerate(lines):
-        if o == '':
-            counter += 1
-            cal_lst.append([])
-            tag_lst.append([])
+        # print(o.split()[0][0].isdigit())
+        try:
+            if o.split()[0][0].isdigit():
+                counter += 1
+                cal_lst.append([])
+                tag_lst.append([])
+        except:
+            pass
         else:
-            o = o.split()
-            if not o[0][0].isdigit():
-                # NOTE: Bodge (crude fix) to skip over irrelevant lines
-                # TODO: Make this more robust as well
-                continue
-
-            if "cal_" in o[1]:
-                temp_cal = o[1].split("_")
-                cal_lst[counter].append(temp_cal[2])
-                tag_lst[counter].append(temp_cal[1])
+            if o == '':
+                counter += 1
+                cal_lst.append([])
+                tag_lst.append([])
             else:
-            # FIXME: Make the parse here more robust for numbers (e.g., WA Oph 6)
-                if (o[3] != '') and (not o[3].isdigit()):
-                    sci_lst.append(o[1]+' '+o[2]+' '+o[3])
-                else:
-                    sci_lst.append(o[1]+' '+o[2])
+                o = o.split()
+                if (o[0][0].isdigit()) and (len(o) > 2)\
+                   and (len(o[0].split(":")) == 2):
+                    if "cal_" in o[1]:
+                        temp_cal = o[1].split("_")
+                        cal_lst[counter].append(temp_cal[2])
+                        tag_lst[counter].append(temp_cal[1])
+                    else:
+                    # FIXME: Make the parse here more robust for numbers (e.g., WA Oph 6)
+                        if (o[3] != '') and (not o[3].isdigit()):
+                            sci_lst.append(o[1]+' '+o[2]+' '+o[3])
+                        else:
+                            sci_lst.append(o[1]+' '+o[2])
 
+                        # if (len(sci_lst) != counter+1) and (temp_cal is not None):
+                        #     cal_lst.append([])
+                        #     tag_lst.append([])
+                        #     # NOTE: Bodge to move the counter, problems if more than
+                        #     # two SCI for one CAL -> Should not occur?
+                        #     counter += 1
+                        #     cal_lst[counter].append(temp_cal[2])
+                        #     tag_lst[counter].append(temp_cal[1])
+
+    sci_lst, cal_lst, tag_lst = map(lambda x: [i for i in x if i != []],\
+                                    [sci_lst, cal_lst, tag_lst])
     return {"SCI": sci_lst, "CAL": cal_lst, "TAG": tag_lst}
 
 def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
@@ -211,7 +238,7 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
     return night_plan
 
 if __name__ == "__main__":
-    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/"\
-            "p109_MATISSE_YSO_runs_observing_plan_v0.3.txt"
+    # path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.1.txt"
+    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/may2022/p109_observing_plan_v0.4.txt"
     print(run_dict := parse_night_plan(path, save2file=True))
 
