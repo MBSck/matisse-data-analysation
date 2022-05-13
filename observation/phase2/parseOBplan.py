@@ -30,6 +30,10 @@ Example of usage:
     ... {'run 5, 109.2313.005 = 0109.C-0413(E)': {'nights 2-4: {'SCI': ['MY Lup', ...], 'CAL': [['HD142198'], ...], 'TAG': [['LN'], ...]}}}
 """
 
+# TODO: Make parser accept more than one calibrator block for one night, by
+# checking if there are integers for numbers higher than last calibrator and
+# then adding these
+
 __author__ = "Marten Scheuck"
 __date__   = "2022-05-11"
 
@@ -153,7 +157,7 @@ def get_sci_cal_tag_lst(lines: List):
              enumerate(lines[line_start:line_end])]
 
     sci_lst, cal_lst, tag_lst  = [], [[]], [[]]
-    counter = 0
+    double_sci, counter = False, 0
     # TODO: Make CAL duplication, if two SCI share one calibrator
 
     for i, o in enumerate(lines):
@@ -178,7 +182,23 @@ def get_sci_cal_tag_lst(lines: List):
                         temp_cal = o[1].split("_")
                         cal_lst[counter].append(temp_cal[2])
                         tag_lst[counter].append(temp_cal[1])
+
+                        if double_sci:
+                            cal_lst.append([])
+                            tag_lst.append([])
+                            cal_lst[counter+1].append(temp_cal[2])
+                            tag_lst[counter+1].append(temp_cal[1])
+                            double_sci = False
                     else:
+                        # NOTE: Fixes the case where one CAL is for two SCI
+                        if (i != len(lines)-3):
+                            try:
+                                if lines[i+1][0][0].isdigit() and\
+                                   lines[i+2][0][0].isdigit():
+                                    double_sci = True
+                            except:
+                                pass
+
                         # NOTE: Gets the SCI
                         if o[3] != '':
                             sci_lst.append(o[1]+' '+o[2]+' '+o[3])
