@@ -92,9 +92,9 @@ def load_yaml(file_path):
     with open(file_path, "r") as fy:
         return yaml.safe_load(fy)
 
-def make_sci_obs(sci_lst: List, array_config: str,
+def make_sci_obs(sci_lst: List, array_config: str, mode: str,
                  outdir: str, res_dict: Dict, standard_res: List,
-                 obs_templates: List, acq_template, mode: str) -> None:
+                 obs_templates: List = None, acq_template = None) -> None:
     """Gets the inputs from a list and calls the 'mat_gen_ob' for every list element
 
     Parameters
@@ -105,9 +105,7 @@ def make_sci_obs(sci_lst: List, array_config: str,
         The array configuration ('small', 'medium', 'large') or 'UTs'
     outdir: str
         The output directory, where the '.obx'-files will be created in
-    resolution: str, optional
-        The resolution of the OB
-    standard_res: List, optional
+    standard_res: List
         The default spectral resolutions for L- and N-band. Set to low for both
         as a default
 
@@ -132,7 +130,7 @@ def make_sci_obs(sci_lst: List, array_config: str,
         print(e)
 
 def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
-                 array_config: str, outdir: str,
+                 array_config: str, mode: str, outdir: str,
                  res_dict: Dict, standard_res: List,
                  obs_templates: List, acq_template) -> None:
     """Checks if there are sublists in the calibration list and calls the 'mat_gen_ob' with the right inputs
@@ -189,7 +187,9 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         print("Skipped OB - Check")
         print(e)
 
-def read_yaml_into_OBs(path2file: Path outpath: Path, mode: str) -> None:
+def read_yaml_into_OBs(path2file: Path, outpath: Path,
+                       array_config: str, res_dict: Dict,
+                       mode: str) -> None:
     """This reads the (.yaml)-file into a format suitable for the Jozsef
     Varga's OB creation code and subsequently makes the OBs with it
 
@@ -215,8 +215,8 @@ def read_yaml_into_OBs(path2file: Path outpath: Path, mode: str) -> None:
 
             time.sleep(1)
             night = SimpleNamespace(**l)
-            make_sci_obs(night.SCI, array_config, temp_path, res_dict, standard_res,
-                         obs_templates, acq_template, mode)
+            make_sci_obs(night.SCI, array_config, temp_path, res_dict
+                         , mode)
             make_cal_obs(night.CAL, night.SCI, night.TAG, array_config,\
                          temp_path, res_dict, standard_res,\
                          obs_templates, acq_template, mode)
@@ -224,9 +224,9 @@ def read_yaml_into_OBs(path2file: Path outpath: Path, mode: str) -> None:
 def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = None,
                 manual_lst: Optional[List] = None, res_dict: Optional[Dict] = None,
                 standard_res: Optional[List] = None,
-                obs_templates: Optional[List] = None
+                obs_templates: Optional[List] = None,
                 acq_template = None, mode: str = "st") -> int:
-    """Gets all functionality and automatically creates the OBs
+    """Gets all functionality and automatically creates the OBs.
 
     Parameters
     ----------
@@ -239,8 +239,8 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
     res_dict: Dict, optional
         A dict with entries corresponding to non low-resolution
     standard_res: List, optional
-        The default spectral resolutions for L- and N-band. Set to low for both
-        as a default
+        The default spectral resolutions for L- and N-band. By default it is set
+        to medium for L- and low for N-band
     mode: str
         The mode MATISSE is operated in and for which the OBs are created.
         Either 'st' for standalone, 'gr' for GRA4MAT or 'both', if OBs for both
@@ -251,8 +251,13 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
     Execution_code
         '1' for SUCCESS '-1' for ERROR
     """
-    if manual_lst[0]:
+    if all(i for i in manual_lst):
         sci_lst, cal_lst, tag_lst = manual_lst
+        outpath = os.path.join(outpath, "manualOBs")
+
+        if not os.path.exists(outpath):
+            os.makedirs(outpath)
+
         make_sci_obs(sci_lst, array_config, outpath, res_dict, standard_res,\
                      obs_templates, acq_template, mode)
         make_cal_obs(cal_lst, sci_lst, tag_lst, array_config,\
@@ -274,7 +279,7 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
 
 
 if __name__ == "__main__":
-    path2file = ""
+    path2file = "night_plan.yaml"
 
     outdir = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/obmaking/obs/"
     outpath = os.path.join(outdir)
@@ -286,4 +291,4 @@ if __name__ == "__main__":
     res_dict = {}
 
     ob_pipeline("UTs", outpath, path2file,  manual_lst=[sci_lst, cal_lst, tag_lst],\
-             res_dict=res_dict}
+             res_dict=res_dict)
