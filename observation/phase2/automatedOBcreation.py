@@ -72,6 +72,8 @@ from typing import Any, Dict, List, Union, Optional
 import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for N-band as well
+# TODO: Check how to act if H_mag error occurs
+# FIXME: Fix the list range error?!
 
 # Logging configuration
 
@@ -184,6 +186,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         standard_res = "LOW" if array_config == "UTs" else "MED"
 
     try:
+        # FIXME: List index range is out of bounds? -> Why?
         # NOTE: Iterates through the calibration list
         for i, o in enumerate(cal_lst):
             if res_dict and (sci_lst[i] in res_dict):
