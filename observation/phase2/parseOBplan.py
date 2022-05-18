@@ -166,17 +166,12 @@ def get_sci_cal_tag_lst(lines: List):
 
     for i, o in enumerate(lines):
         try:
-            if o.split()[0][0].isdigit():
+            if ((o == '') or (not o.split()[0][0].isdigit()))\
+               and (lines[i+1].split()[0][0].isdigit()):
                 counter += 1
                 cal_lst.append([])
                 tag_lst.append([])
-        except:
-            pass
-        else:
-            if o == '':
-                counter += 1
-                cal_lst.append([])
-                tag_lst.append([])
+
             else:
                 o = o.split(' ')
                 if (o[0][0].isdigit()) and (len(o) > 2)\
@@ -209,9 +204,9 @@ def get_sci_cal_tag_lst(lines: List):
                             sci_lst.append((o[1]+' '+o[2]+' '+o[3]).strip())
                         else:
                             sci_lst.append((o[1]+' '+o[2]).strip())
+        except:
+            pass
 
-    sci_lst, cal_lst, tag_lst = map(lambda x: remove_empty_lst(x),\
-                                    [sci_lst, cal_lst, tag_lst])
     return {"SCI": sci_lst, "CAL": cal_lst, "TAG": tag_lst}
 
 def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
@@ -265,5 +260,7 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
 if __name__ == "__main__":
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/may2022/p109_observing_plan_v0.5.txt"
     run_dict = parse_night_plan(path, save2file=True)
-    print(run_dict)
+    for i, o in run_dict.items():
+        if "run 2" in i:
+            print(i, o)
 
