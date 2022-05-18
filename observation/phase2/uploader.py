@@ -245,5 +245,5 @@ def ob_uploader(path: Path, server: str, run_data: List,
 if __name__ == "__main__":
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/phase2/obs"
     run_data = ["109", "2313"]
-    ob_uploader(path, "production", run_data, "MbS", "QekutafAmeNGNVZ")
+    ob_uploader(path, "production", run_data, "MbS")
 
