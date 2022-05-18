@@ -9,17 +9,62 @@ from typing import Any, Dict, List, Union, Optional
 
 import loadobx
 
+"""OB Uploader
+
+This script makes the main folders for a MATISSE run in P2, i.e., the nights in
+which are observed, the mode in which is observed (GRA4MAT or standalone) and
+the subfolders 'main_targets' and 'backup_targets'. Additionally, under the
+'main_targets'-folder it creates a folder for every SCI-OB, and imports the
+SCI-OB as well as the corresponding CALs into the folder.
+
+DISCLAIMER: Guaranteed for working only in conjunction with the 'parseOBplan'
+and the 'automaticOBcreation' scripts, as they format the folders correctly.
+
+The structure that the folder of the given path need to be in is the following:
+    >>> path/<GRA4MAT_ft_vis or standalone>/<run>/<night>/*.obx
+
+This is automatically the case if the folders are made with the above mentioned
+scripts.
+
+This file can also be imported as a module and contains the following functions:
+    * get_corresponding_run - Gets a run corresponding to an input List
+    * create_folder - Creates a folder on P2 and returns its ID
+    * get_subfolders - Gets all the folders from a directory
+    * check4folder - Checks if a folder with that ID already exists
+    * generate_finding_chart_verify - Not yet implemented
+    * make_folders4OBs - Makes the individual folders for the OBs and uses the
+    'loadobx' script to import the already made (.obx)-files to P2
+    * ob_uploader - The main loop of the script, makes the folders and uploads
+    the OBs in a folder to the P2
+
+Example of usage:
+    >>> from uploader import ob_uploader
+
+    # The path to the top most folder
+
+    >>> path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/phase2/obs"
+
+    # The data describing the run
+
+    >>> run_data = ["109", "2313"]
+
+    # The main loop
+
+    >>> ob_uploader(path, "production", run_data, "MbS", "QekutafAmeNGNVZ")
 """
 
-"""
+__author__ = "Marten Scheuck"
+__date__   = "2022-05"
 
-def get_corresponding_run(p2, period: str, proposal_tag: str, number: int):
+def get_corresponding_run(p2, period: str,
+                          proposal_tag: str, number: int) -> int:
     """Gets the run that corresponds to the period, proposal and the number and
     returns its runId
 
     Parameters
     ----------
-    p2
+    p2: p2api
+        The P2 python api
     period: str
         The period the run is part of
     proposal_tag: str
@@ -30,7 +75,7 @@ def get_corresponding_run(p2, period: str, proposal_tag: str, number: int):
 
     Returns
     -------
-    run_id: str
+    run_id: int
         The run's Id that can be used to access and modify it with the p2api
     """
     runs = p2.getRuns()
@@ -50,8 +95,8 @@ def create_folder(p2, name: str, container_id: int) -> int:
 
     Parameters
     ----------
-    p2
-        The ApiConnection to ESO
+    p2: p2api
+        The P2 python api
     name: str
         The folder's name
     container_id: int
@@ -66,18 +111,33 @@ def create_folder(p2, name: str, container_id: int) -> int:
     print(f"folder: {name} created!")
     return folder_id
 
-def get_existing_folders(p2, run_id: str):
-    """Fetches the folders' names and ids in the run from the p2 api"""
-    folders_dict = {}
-    ...
+def get_subfolders(path: Path) -> List:
+    """Fetches the subfolders of a directory
 
-def get_subfolders(path: Path):
-    """Fetches the subfolders of a directory"""
+    Parameters
+    ----------
+    path: Path
+        The path of the folder of which the subfolders are to be fetched
+
+    Returns
+    -------
+    List
+        List of the folder-paths
+    """
     return [os.path.join(path, d) for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
 def check4folder(p2, container_id: int) -> bool:
-    """Checks if the a container with this id exists, if not then returns
-    None"""
+    """Checks if the container with this id exists on P2
+
+    Parameters
+    ----------
+        The id of the container on the P2
+
+    Returns
+    -------
+    bool
+        True or False if container exists on P2 or not
+    """
     if container_id is None:
         return False
 
@@ -90,19 +150,17 @@ def check4folder(p2, container_id: int) -> bool:
 def generate_finding_chart_verify():
     ...
 
-def make_folders4OBs(p2, files: List[Path], container_id: int):
+def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
     """Makes the respective folders for a list of (.obx)-files
 
     Parameters
     ----------
     p2: p2api
+        The P2 python api
     files: List[Path]
+        The (.obx)-files from the lowest folder in the directory
     container_id: int
-
-    Returns
-    -------
-    Dict
-        A dictionary with the names of the folders and their container_ids
+        The id of the container on the P2
     """
     container_id_dict = {}
     for i in files:
@@ -122,7 +180,7 @@ def make_folders4OBs(p2, files: List[Path], container_id: int):
 
 def ob_uploader(path: Path, server: str, run_data: List,
                 username: str, password: Optional[str] = None) -> int:
-    """Creates folders and uploades the obs
+    """Creates folders on the P2 and subsequently uploades the OBs to the P2
 
     Parameters
     ----------
@@ -140,6 +198,10 @@ def ob_uploader(path: Path, server: str, run_data: List,
         The username for P2
     password: str, optional
         The password for P2, if not given then prompt asking for it is called
+
+    Returns
+    -------
+    error_code: int
     """
     # TODO: Make manual entry for run data possible (full_night), maybe ask for
     # prompt for run number and night name
