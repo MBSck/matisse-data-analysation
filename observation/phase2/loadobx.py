@@ -131,7 +131,6 @@ obsDescriptionMapping = [
 # Change by Marten Scheuck May 2022 - Add MATISSE-Templates
 
 
-
 # --- converting template parameters from OBX to p2 format
 
 def convert(obxvalue, typ, currentvalue):
@@ -209,7 +208,7 @@ def booleanValue(s):
 
 Converter = {
     'string': str,
-    'keyword': str,    'keyworlist': keywordlistValue,
+    'keyword': str,    'keywordlist': keywordlistValue,
     'coord': str,  # no conversion necessary
     'integer': int,    'intlist': intlistValue,
     'number': float,    'numlist': numlistValue,
@@ -270,19 +269,27 @@ def hhmm(v):
 
 # --- using the API
 
-def login(username):
-    '''Login to the p2 API with the given username.
-    Return the API connection.
-    The password must be entered interactively.'''
-    server = 'demo'
-    prompt = f'Password for {username}: '
-    if sys.platform == 'ios':  # assume running in Pythonista
-        import console
-        password = console.password_alert(prompt)
-    elif sys.stdin.isatty():
-        password = getpass.getpass(prompt)
-    else:
-        password = input()
+def login(username, password: str = None, server: str = "demo"):
+    '''Login to the p2 API with the given username. Return the API connection.
+
+    Parameters
+    ----------
+    username
+    password: str, optional
+        If none is given, then it will ask for it
+    server: str, optional
+        Either 'demo', 'production' for paranal or 'production_lasilla' for la
+        silla
+    '''
+    if password is None:
+        prompt = f'Password for {username}: '
+        if sys.platform == 'ios':  # assume running in Pythonista
+            import console
+            password = console.password_alert(prompt)
+        elif sys.stdin.isatty():
+            password = getpass.getpass(prompt)
+        else:
+            password = input()
     return p2api.ApiConnection(server, username, password)
 
 
@@ -431,14 +438,5 @@ def main():
         print(str(e))
 
 if __name__ == '__main__':
-    # main()
-
-    obx_files = glob(os.path.join(os.getcwd(), "*.obx"))
-    period = "109"
-    print(obx_files)
-    p2 = login("52052")
-    runs = p2.getRuns()
-    print(runs)
-#    for i in obx_files:
-#        loadob(p2, i)
+    main()
 
