@@ -13,6 +13,8 @@ This file can also be imported as a module and contains the following functions:
 
     * load_yaml - Loads a (.yaml)-file into a dictionary (compatible with
     (.json))
+    * get_array - Automatically gets the array config if possible and if not
+    prompts the user to input it
     * make_sci_obs - Makes the SCI-OBs
     * make_cal_obs - Makes the CAL-OBs
     * read_dict_into_OBs - Reads either a (.yaml)-file or a Dict into a format
@@ -37,7 +39,7 @@ Example of usage:
     # but also single items, same for tag_lst
 
     >>> sci_lst = ["AS 209", "VV Ser"]
-    >>> cal_lst = [["HD 142567", "HD 467893"], "]
+    >>> cal_lst = [["HD 142567", "HD 467893"], ["HD 142567"]]
     >>> tag_lst = [["LN", "N"], "L"]
 
     # Specifies the paths, where the '.obx'-files are saved to, name of run can
@@ -52,13 +54,13 @@ Example of usage:
 
     # The main OB creation
 
-    >>> ob_creation("medium", outpath, path2file, run_data=run_data,
+    >>> ob_creation(outpath, path2file, run_data=run_data,
                     manual_lst=[sci_lst, cal_lst, tag_lst],
                     res_dict=res_dict, mode="gr")
 """
 
 __author__ = "Marten Scheuck"
-__date__   = "2022-05-12"
+__date__   = "2022-05"
 
 import os
 import yaml
@@ -73,7 +75,8 @@ import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for N-band as well
 # TODO: Check how to act if H_mag error occurs
-# FIXME: Fix the list range error?!
+# FIXME: Fix the list range error?! -> This makes wrong SCI-CAL combinations ->
+# High priority of fixing!!!!!
 
 # Logging configuration
 
@@ -112,6 +115,48 @@ def load_yaml(file_path):
     """Loads a '.yaml'-file into a dictionary"""
     with open(file_path, "r") as fy:
         return yaml.safe_load(fy)
+
+def get_array(run_name: Optional[str] = None) -> str:
+    """Fetches the array configuration from the name of the run. And if no run
+    name is specified or no match can be found prompts the user for the
+    configuration
+
+    Parameters
+    ----------
+    run_name: str, optional
+        The name of the run
+
+    Returns
+    -------
+    array_config: str
+    """
+    at_config = ["small", "medium", "large"]
+    tel_config = ["UTs", *at_config]
+
+    if run_name:
+        if "UTs" in run_name:
+            print(run_name)
+            return "UTs"
+        elif ("ATs" in run_name) or (at_config in run_name):
+            if "small" in run_name:
+                return "small"
+            elif "medium" in run_name:
+                return "medium"
+            elif "large" in run_name:
+                return "large"
+            print(run_name)
+        else:
+            user_inp = int(input("No configuration can be found, please input"\
+                             " ('UTs': 1; 'small': 2, 'medium': 3, 'large: 4): "))
+
+            user_inp -= 1
+            return tel_config[user_inp]
+    else:
+        user_inp = int(input("No configuration can be found, please input"\
+                         " ('UTs': 1; 'small': 2, 'medium': 3, 'large: 4): "))
+
+        user_inp -= 1
+        return tel_config[user_inp]
 
 def make_sci_obs(sci_lst: List, array_config: str, mode: str,
                  outdir: str, res_dict: Dict, standard_res: List) -> None:
@@ -189,6 +234,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         # FIXME: List index range is out of bounds? -> Why?
         # NOTE: Iterates through the calibration list
         for i, o in enumerate(cal_lst):
+            print(i, o)
             if res_dict and (sci_lst[i] in res_dict):
                 temp = SimpleNamespace(**template[res_dict[sci_lst[i]]])
             else:
@@ -197,6 +243,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
             # NOTE: Checks if list item is itself a list
             if isinstance(o, list):
                 for j, l in enumerate(o):
+                    print(j, l)
                     ob.mat_gen_ob(l, array_config, 'CAL', outdir=outdir,\
                                   spectral_setups=temp.RES, obs_tpls=temp.TEMP,\
                                   acq_tpl=ACQ, sci_name=sci_lst[i], \
@@ -207,20 +254,22 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                               obs_tpls=temp.TEMP,\
                               acq_tpl=ACQ, sci_name=sci_lst[i],\
                               tag=tag_lst[i], DITs=temp.DIT)
-            logging.info(f"Created OB CAL-{i}")
+                logging.info(f"Created OB CAL-{i}")
 
     except Exception as e:
         logging.error("Skipped - OB", exc_info=True)
         print("ERROR: Skipped OB - Check (.log)-file")
 
-def read_dict_into_OBs(path2file: Path, outpath: Path,
-                       array_config: str, mode: str,
+def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
                        run_data: Optional[Dict] = None,
                        res_dict: Optional[Dict] = None,
                        standard_res: Optional[List] = None) -> None:
     """This reads either the (.yaml)-file into a format suitable for the Jozsef
     Varga's OB creation code or reads out the run dict if 'run_data' is given,
-    and subsequently makes the OBs
+    and subsequently makes the OBs.
+
+    Also automatically gets the array_config from the run name and if not
+    possible then prompts the user to input it
 
     Parameters
     ----------
@@ -228,8 +277,6 @@ def read_dict_into_OBs(path2file: Path, outpath: Path,
         The night plan (.yaml)-file
     outpath: Path
         The output path
-    array_config: str
-        The array configuration
     mode: str
         The mode of operation of MATISSE
     res_dict: Dict, optional
@@ -244,6 +291,10 @@ def read_dict_into_OBs(path2file: Path, outpath: Path,
         run_dict = load_yaml(path2file)
 
     for i, o in run_dict.items():
+        print(f"Making OBs for {i}")
+        logging.info(f"OBs for {i}")
+
+        array_config = get_array(i)
         for j, l in o.items():
             temp_path = os.path.join(outpath,\
                                      i.split(",")[0].replace(' ', ''),\
@@ -260,7 +311,7 @@ def read_dict_into_OBs(path2file: Path, outpath: Path,
             make_cal_obs(night.CAL, night.SCI, night.TAG, array_config, mode,
                          temp_path, res_dict, standard_res)
 
-def ob_creation(array_config: str, outpath: str, path2file: Optional[Path] = None,
+def ob_creation(outpath: str, path2file: Optional[Path] = None,
                 run_data: Optional[Dict] = None, manual_lst: Optional[List] = None,
                 res_dict: Optional[Dict] = None,
                 standard_res: Optional[List] = None,
@@ -304,6 +355,9 @@ def ob_creation(array_config: str, outpath: str, path2file: Optional[Path] = Non
             if not os.path.exists(outpath):
                 os.makedirs(outpath)
 
+            array_config = get_array()
+            print(array_config)
+
             make_sci_obs(sci_lst, array_config, i, outpath, res_dict,
                          standard_res)
             make_cal_obs(cal_lst, sci_lst, tag_lst, array_config, i,\
@@ -311,8 +365,8 @@ def ob_creation(array_config: str, outpath: str, path2file: Optional[Path] = Non
 
         elif path2file or run_data:
             outpath = os.path.join(outpath, i)
-            read_dict_into_OBs(path2file, outpath, array_config, i,
-                               run_data, res_dict, standard_res)
+            read_dict_into_OBs(path2file, outpath, i, run_data,
+                               res_dict, standard_res)
 
         elif IOError:
             raise IOError("Neither '.yaml'-file nor input list found or input"
@@ -325,13 +379,12 @@ if __name__ == "__main__":
     path2file = "night_plan.yaml"
 
     outdir = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/phase2/obs/"
-    outpath = os.path.join(outdir)
 
-    sci_lst = []
-    cal_lst = []
-    tag_lst = []
+    sci_lst = [""]
+    cal_lst = [""]
+    tag_lst = [""]
+    manual_lst = [sci_lst, cal_lst, tag_lst]
 
     res_dict = {}
 
-    ob_creation("medium", outpath, path2file,  manual_lst=[sci_lst, cal_lst, tag_lst],\
-                res_dict=res_dict, mode="gr")
+    ob_creation(outdir, path2file=path2file, res_dict=res_dict, mode="gr")
