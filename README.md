@@ -30,4 +30,5 @@ _Is currently being worked on_
 ## Credit
 ### Contributors
 * [Jacob Isbell](#https://www.github.com/jwisbell/ "Jacob Isbell")
+*  Jozsef Varga
 * [Marten Scheuck](#https://www.github.com/MBSck/ "Marten Scheuck")
