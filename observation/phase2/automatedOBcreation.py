@@ -2,23 +2,36 @@
 
 """Automated OB Creation
 
-...
+This script creates the OBs from either a manual input list a manual input
+dictionary, or a (.yaml)-file and makes folders corresponding to the structure
+of the MATISSE observations on the P2
+
+DISCLAIMER: Standalone only works for the UTs at the moment and for ATs it
+            shows keyerror
 
 This file can also be imported as a module and contains the following functions:
 
-    * load_yaml -
-    * set_res -
-    * make_sci_obs -
-    * make_cal_obs -
-    * ob_creation -
+    * load_yaml - Loads a (.yaml)-file into a dictionary (compatible with
+    (.json))
+    * make_sci_obs - Makes the SCI-OBs
+    * make_cal_obs - Makes the CAL-OBs
+    * read_dict_into_OBs - Reads either a (.yaml)-file or a Dict into a format
+    for OB creation
+    * ob_creation - The main loop for OB creation
 
 Example of usage:
     >>> from automatedOBcreation import ob_pipeline
 
-    # Script needs either manual_lst or path2file (to the parsed night plan) in
-    # (.yaml)-file format
+    # Script needs either manual_lst, path2file (to the parsed night plan) in
+    # (.yaml)-file format or run_data (the parsed night plan without it being
+    # saved)
 
     >>> path2file = "night_plan.yaml"
+
+    # or
+
+    >>> from parseOBplan import parse_night_plan
+    >>> run_data = parse_night_plan(...)
 
     # Calibration lists accept sublists (with more than one item)
     # but also single items, same for tag_lst
@@ -32,18 +45,16 @@ Example of usage:
 
     >>> outdir = "..."
 
-    # Specifies the res_dict. Can be left empty. Changes only L-band res atm
+    # Specifies the res_dict. Can be left empty. Changes only L-band res at the
+    # moment resolutions are 'LOW', 'MED', 'HIGH'
 
-    >>> res_dict = {"AS 209": "MR"}
+    >>> res_dict = {"AS 209": "MED"}
 
-    # Templates that can be used, for acq. only one at a time, for obs multiple
-    # For instance ob.acq_ft_tpl, ob.acq_tpl, ob.obs_tpl, ob.obs_ft_tpl,
-    # ob.obs_ft_coh_tpl, ob.obs_ft_vis_tpl
+    # The main OB creation
 
-    >>> ob_pipeline("UTs", outpath, path2file,
+    >>> ob_creation("medium", outpath, path2file, run_data=run_data,
                     manual_lst=[sci_lst, cal_lst, tag_lst],
-                    res_dict=res_dict, standard_res=["LR", "LR"],
-                    obs_templates=[ob.obs_tpl], acq_template=ob.acq_tpl)
+                    res_dict=res_dict, mode="gr")
 """
 
 __author__ = "Marten Scheuck"
@@ -60,11 +71,10 @@ from typing import Any, Dict, List, Union, Optional
 
 import MATISSE_create_OB_2 as ob
 
-# TODO: Make this work for n-band as well
-# NOTE: Standalone only works for the UTs for ATs it shows keyerror
-# TODO: Log if an OB is skipped
+# TODO: Make this work for N-band as well
 
 # Logging configuration
+
 if os.path.exists("automatedOBcreation.log"):
     os.system("rm -rf autmatedOBcreation.log")
 logging.basicConfig(filename='automatedOBcreation.log', filemode='w',
