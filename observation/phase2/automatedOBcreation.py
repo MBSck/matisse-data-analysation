@@ -52,6 +52,7 @@ __date__   = "2022-05-12"
 import os
 import yaml
 import time
+import logging
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -60,8 +61,15 @@ from typing import Any, Dict, List, Union, Optional
 import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for n-band as well
-# TODO: Reset all changes after the OB creation
 # NOTE: Standalone only works for the UTs for ATs it shows keyerror
+# TODO: Log if an OB is skipped
+
+# Logging configuration
+if os.path.exists("automatedOBcreation.log"):
+    os.system("rm -rf autmatedOBcreation.log")
+logging.basicConfig(filename='automatedOBcreation.log', filemode='w',
+                    format='%(asctime)s - %(message)s', level=logging.INFO)
+
 
 # Dicts for the template and resolution configuration
 
@@ -88,7 +96,6 @@ UT_DICT_GRA4MAT = {"ACQ": ob.acq_ft_tpl,
 TEMPLATE_RES_DICT = {"standalone": {"UTs": UT_DICT_STANDALONE},
                      "GRA4MAT_ft_vis": {"UTs": UT_DICT_GRA4MAT,
                                         "ATs": AT_DICT_GRA4MAT}}
-
 def load_yaml(file_path):
     """Loads a '.yaml'-file into a dictionary"""
     with open(file_path, "r") as fy:
@@ -129,9 +136,10 @@ def make_sci_obs(sci_lst: List, array_config: str, mode: str,
             ob.mat_gen_ob(i, array_config, 'SCI', outdir=outdir,\
                           spectral_setups=temp.RES, obs_tpls=temp.TEMP,\
                           acq_tpl=ACQ, DITs=temp.DIT)
+            logging.info(f"Created OB SCI-{i}")
     except Exception as e:
-        print("Skipped OB - Check")
-        print(e)
+        logging.error("Skipped - OB", exc_info=True)
+        print("ERROR: Skipped OB - Check (.log)-file")
 
 def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                  array_config: str, mode: str, outdir: str,
@@ -186,10 +194,11 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                               obs_tpls=temp.TEMP,\
                               acq_tpl=ACQ, sci_name=sci_lst[i],\
                               tag=tag_lst[i], DITs=temp.DIT)
+            logging.info(f"Created OB CAL-{i}")
 
     except Exception as e:
-        print("Skipped OB - Check")
-        print(e)
+        logging.error("Skipped - OB", exc_info=True)
+        print("ERROR: Skipped OB - Check (.log)-file")
 
 def read_yaml_into_OBs(path2file: Path, outpath: Path,
                        array_config: str, mode: str,
@@ -301,7 +310,7 @@ if __name__ == "__main__":
     cal_lst = []
     tag_lst = []
 
-    res_dict = {"AK Sco": "HIGH"}
+    res_dict = {}
 
     ob_pipeline("medium", outpath, path2file,  manual_lst=[sci_lst, cal_lst, tag_lst],\
              res_dict=res_dict, mode="gr")
