@@ -238,7 +238,6 @@ def ob_uploader(path: Path, server: str, run_data: List,
 
                 obx_files = glob(os.path.join(k, "*.obx"))
                 make_folders4OBs(p2, obx_files, mode_folder_id)
-            break
 
     return 0
 
