@@ -214,13 +214,16 @@ def ob_uploader(path: Path, server: str, run_data: List,
         run_id = get_corresponding_run(p2, *run_data)
 
     for i in top_dir:
-        night_folder_id_dict, main_folder_id_dict = {}, {}
         runs = glob(os.path.join(i, "*"))
         for j in runs:
+            night_folder_id_dict, main_folder_id_dict = {}, {}
             if len(run_data) < 3:
                 run_number = int(''.join([i for i in os.path.basename(j)\
                                           if i.isdigit()]))
                 run_id = get_corresponding_run(p2, *run_data, run_number)
+
+            print(f"Making folders and uploading OBs to run {run_number}"\
+                  f" with container id: {run_id}")
 
             nights = glob(os.path.join(j, "*"))
             for k in nights:
