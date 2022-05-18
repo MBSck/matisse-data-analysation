@@ -10,7 +10,7 @@ This file can also be imported as a module and contains the following functions:
     * set_res -
     * make_sci_obs -
     * make_cal_obs -
-    * ob_pipeline -
+    * ob_creation -
 
 Example of usage:
     >>> from automatedOBcreation import ob_pipeline
@@ -200,12 +200,14 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
         logging.error("Skipped - OB", exc_info=True)
         print("ERROR: Skipped OB - Check (.log)-file")
 
-def read_yaml_into_OBs(path2file: Path, outpath: Path,
+def read_dict_into_OBs(path2file: Path, outpath: Path,
                        array_config: str, mode: str,
+                       run_data: Optional[Dict] = None,
                        res_dict: Optional[Dict] = None,
                        standard_res: Optional[List] = None) -> None:
-    """This reads the (.yaml)-file into a format suitable for the Jozsef
-    Varga's OB creation code and subsequently makes the OBs with it
+    """This reads either the (.yaml)-file into a format suitable for the Jozsef
+    Varga's OB creation code or reads out the run dict if 'run_data' is given,
+    and subsequently makes the OBs
 
     Parameters
     ----------
@@ -223,7 +225,10 @@ def read_yaml_into_OBs(path2file: Path, outpath: Path,
         The default spectral resolutions for L- and N-band. By default it is set
         to medium for L- and low for N-band
     """
-    run_dict = load_yaml(path2file)
+    if run_data:
+        run_dict = run_data
+    else:
+        run_dict = load_yaml(path2file)
 
     for i, o in run_dict.items():
         for j, l in o.items():
@@ -242,8 +247,9 @@ def read_yaml_into_OBs(path2file: Path, outpath: Path,
             make_cal_obs(night.CAL, night.SCI, night.TAG, array_config, mode,
                          temp_path, res_dict, standard_res)
 
-def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = None,
-                manual_lst: Optional[List] = None, res_dict: Optional[Dict] = None,
+def ob_creation(array_config: str, outpath: str, path2file: Optional[Path] = None,
+                run_data: Optional[Dict] = None, manual_lst: Optional[List] = None,
+                res_dict: Optional[Dict] = None,
                 standard_res: Optional[List] = None,
                 obs_templates: Optional[List] = None,
                 acq_template = None, mode: str = "st") -> int:
@@ -255,6 +261,8 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
         The array configuration
     path2file: str, optional
         The path to the dictionary file, if exists
+    run_data; Dict, optional
+        The parsed data of the night plan
     manual_lst: List, optional
         The manual list input
     res_dict: Dict, optional
@@ -276,8 +284,7 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
             (["standalone"] if mode == "st" else ["GRA4MAT_ft_vis"])
 
     for i in mode_lst:
-
-        if all(x for x in manual_lst):
+        if manual_lst:
             sci_lst, cal_lst, tag_lst = manual_lst
             outpath = os.path.join(outpath, "manualOBs")
 
@@ -289,13 +296,14 @@ def ob_pipeline(array_config: str, outpath: str, path2file: Optional[Path] = Non
             make_cal_obs(cal_lst, sci_lst, tag_lst, array_config, i,\
                          outpath, res_dict, standard_res)
 
-        elif path2file:
+        elif path2file or run_data:
             outpath = os.path.join(outpath, i)
-            read_yaml_into_OBs(path2file, outpath, array_config, i,
-                               res_dict, standard_res)
+            read_dict_into_OBs(path2file, outpath, array_config, i,
+                               run_data, res_dict, standard_res)
 
         elif IOError:
-            raise IOError("Neither '.yaml'-file nor input list found!", -1)
+            raise IOError("Neither '.yaml'-file nor input list found or input"
+                          " dict found!", -1)
 
     return 0
 
@@ -312,5 +320,5 @@ if __name__ == "__main__":
 
     res_dict = {}
 
-    ob_pipeline("medium", outpath, path2file,  manual_lst=[sci_lst, cal_lst, tag_lst],\
-             res_dict=res_dict, mode="gr")
+    ob_creation("medium", outpath, path2file,  manual_lst=[sci_lst, cal_lst, tag_lst],\
+                res_dict=res_dict, mode="gr")
