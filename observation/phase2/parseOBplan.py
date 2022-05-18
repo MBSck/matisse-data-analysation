@@ -203,9 +203,9 @@ def get_sci_cal_tag_lst(lines: List):
 
                         # NOTE: Gets the SCI
                         if o[3] != '':
-                            sci_lst.append(o[1]+' '+o[2]+' '+o[3])
+                            sci_lst.append((o[1]+' '+o[2]+' '+o[3]).strip())
                         else:
-                            sci_lst.append(o[1]+' '+o[2])
+                            sci_lst.append((o[1]+' '+o[2]).strip())
 
     sci_lst, cal_lst, tag_lst = map(lambda x: remove_empty_lst(x),\
                                     [sci_lst, cal_lst, tag_lst])
