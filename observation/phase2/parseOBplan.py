@@ -34,6 +34,8 @@ Example of usage:
 # checking if there are integers for numbers higher than last calibrator and
 # then adding these
 
+# TODO: ...
+
 __author__ = "Marten Scheuck"
 __date__   = "2022-05-11"
 
@@ -260,7 +262,7 @@ def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
 
 if __name__ == "__main__":
     # path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/april2022/p109_MATISSE_YSO_runs_observing_plan_v0.1.txt"
-    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/may2022/p109_observing_plan_v0.4.txt"
+    path = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/P109/may2022/p109_observing_plan_v0.5.txt"
     run_dict = parse_night_plan(path, save2file=True)
     print(run_dict)
 
