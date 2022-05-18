@@ -183,20 +183,21 @@ def make_sci_obs(sci_lst: List, array_config: str, mode: str,
     if not standard_res:
         standard_res = "LOW" if array_config == "UTs" else "MED"
 
-    try:
-        for i in sci_lst:
-            if res_dict and (i in res_dict):
-                temp = SimpleNamespace(**template[res_dict[i]])
+    for i, o in enumerate(sci_lst):
+        try:
+            if res_dict and (o in res_dict):
+                temp = SimpleNamespace(**template[res_dict[o]])
             else:
                 temp = SimpleNamespace(**template[standard_res])
 
-            ob.mat_gen_ob(i, array_config, 'SCI', outdir=outdir,\
+            ob.mat_gen_ob(o, array_config, 'SCI', outdir=outdir,\
                           spectral_setups=temp.RES, obs_tpls=temp.TEMP,\
                           acq_tpl=ACQ, DITs=temp.DIT)
-            logging.info(f"Created OB SCI-{i}")
-    except Exception as e:
-        logging.error("Skipped - OB", exc_info=True)
-        print("ERROR: Skipped OB - Check (.log)-file")
+            logging.info(f"Created OB SCI-{o}-#{i}")
+
+        except Exception as e:
+            logging.error("Skipped - OB", exc_info=True)
+            print("ERROR: Skipped OB - Check (.log)-file")
 
 def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                  array_config: str, mode: str, outdir: str,
@@ -230,11 +231,10 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
     if not standard_res:
         standard_res = "LOW" if array_config == "UTs" else "MED"
 
-    try:
         # FIXME: List index range is out of bounds? -> Why?
         # NOTE: Iterates through the calibration list
-        for i, o in enumerate(cal_lst):
-            print(i, o)
+    for i, o in enumerate(cal_lst):
+        try:
             if res_dict and (sci_lst[i] in res_dict):
                 temp = SimpleNamespace(**template[res_dict[sci_lst[i]]])
             else:
@@ -243,7 +243,6 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
             # NOTE: Checks if list item is itself a list
             if isinstance(o, list):
                 for j, l in enumerate(o):
-                    print(j, l)
                     ob.mat_gen_ob(l, array_config, 'CAL', outdir=outdir,\
                                   spectral_setups=temp.RES, obs_tpls=temp.TEMP,\
                                   acq_tpl=ACQ, sci_name=sci_lst[i], \
@@ -254,11 +253,12 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
                               obs_tpls=temp.TEMP,\
                               acq_tpl=ACQ, sci_name=sci_lst[i],\
                               tag=tag_lst[i], DITs=temp.DIT)
-                logging.info(f"Created OB CAL-{i}")
 
-    except Exception as e:
-        logging.error("Skipped - OB", exc_info=True)
-        print("ERROR: Skipped OB - Check (.log)-file")
+            logging.info(f"Created OB CAL-#{i}")
+
+        except Exception as e:
+            logging.error("Skipped - OB", exc_info=True)
+            print("ERROR: Skipped OB - Check (.log)-file")
 
 def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
                        run_data: Optional[Dict] = None,
