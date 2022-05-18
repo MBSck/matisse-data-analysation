@@ -198,6 +198,7 @@ def get_sci_cal_tag_lst(lines: List):
                         if (i != len(lines)-3):
                             try:
                                 if lines[i+1][0][0].isdigit() and\
+                                   not ("cal_" in lines[i+1].split(' ')[1]) and\
                                    lines[i+2][0][0].isdigit():
                                     double_sci = True
                             except:
