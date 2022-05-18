@@ -34,6 +34,9 @@ Example of usage:
 # checking if there are integers for numbers higher than last calibrator and
 # then adding these
 
+# TODO: Think about making the parsing work differently, check what readlines
+# accept -> Make similar to loadbobx, readblock and so...
+
 # TODO: ...
 
 __author__ = "Marten Scheuck"
@@ -160,7 +163,6 @@ def get_sci_cal_tag_lst(lines: List):
 
     sci_lst, cal_lst, tag_lst  = [], [[]], [[]]
     double_sci, counter = False, 0
-    # TODO: Make CAL duplication, if two SCI share one calibrator
 
     for i, o in enumerate(lines):
         try:
@@ -214,8 +216,7 @@ def get_sci_cal_tag_lst(lines: List):
 def parse_night_plan(file: Path, run_identifier: Optional[str] = "run",
                      sub_identifier: Optional[str] = "night",
                      save2file: bool = False) -> Dict[str, List]:
-    """
-    Parses the night plan created with 'calibrator_find.pro' into the
+    """Parses the night plan created with 'calibrator_find.pro' into the
     individual runs as key of a dictionary, specified by the 'run_identifier'.
     If no match is found then it parses the whole night to 'run_identifier's
     or the 'default_key', respectively.
