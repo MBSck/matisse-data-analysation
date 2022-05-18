@@ -1,14 +1,3 @@
-import os
-import sys
-import pprint
-import p2api
-
-from glob import glob
-from pathlib import Path
-from typing import Any, Dict, List, Union, Optional
-
-import loadobx
-
 """OB Uploader
 
 This script makes the main folders for a MATISSE run in P2, i.e., the nights in
@@ -55,6 +44,20 @@ Example of usage:
 
 __author__ = "Marten Scheuck"
 __date__   = "2022-05"
+
+import os
+import sys
+import pprint
+import p2api
+
+from glob import glob
+from pathlib import Path
+from typing import Any, Dict, List, Union, Optional
+
+import loadobx
+
+# TODO: Make the folders with a different api connection (see loadobx) so they
+# are made in the right order -> Change create_folders
 
 def get_corresponding_run(p2, period: str,
                           proposal_tag: str, number: int) -> int:
