@@ -57,7 +57,7 @@ def main():
     print("-------------------------------------------------------------------")
     print("Uploading the OBs!")
     print("-------------------------------------------------------------------")
-    ob_uploader(p2, outpath, "production", run_data, "MbS", password)
+    ob_uploader(outpath, "production", run_data, "MbS", password)
     print("Uploading complete!")
 
 
