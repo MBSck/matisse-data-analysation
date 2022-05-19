@@ -179,7 +179,7 @@ def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
         The id of the container on the P2
     """
     for i in files:
-        stem = os.path.basename(i).split(".")[0]
+        stem = "_".join(os.path.basename(i).split(".")[0].split("_")[:-1])
         if "SCI" in stem:
             sci_name = " ".join([j for j in stem.split("_")[1:]])
             folder_id = create_folder(p2, sci_name, container_id)
@@ -187,7 +187,8 @@ def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
             loadobx.loadob(p2, i, folder_id)
 
             for j in files:
-                stem_search = os.path.basename(j).split(".")[0]
+                stem_search = "_".join(os.path.basename(j).\
+                                       split(".")[0].split("_")[:-1])
                 if "CAL" in stem_search:
                     sci4cal_name = " ".join(stem_search.split("_")[2:-1])
                     if sci_name == sci4cal_name:
@@ -224,6 +225,10 @@ def ob_uploader(path: Path, server: str, run_data: List,
 
     p2 = loadobx.login(username, password, server)
     top_dir = glob(os.path.join(path, "*"))
+
+    if not top_dir:
+        raise IOError("Either input path, folder structure is wrong or no files"
+                      " could be found!")
 
     # TODO: Implement if there is also a standalone setting, that the same
     # nights are used for the standalone as well
@@ -262,6 +267,7 @@ def ob_uploader(path: Path, server: str, run_data: List,
                                                main_folder_id_dict[night_name])
 
                 obx_files = glob(os.path.join(k, "*.obx"))
+                obx_files.sort(key=lambda x: os.path.basename(x).split(".")[0][-2:])
                 make_folders4OBs(p2, obx_files, mode_folder_id)
 
     return 0
@@ -271,9 +277,3 @@ if __name__ == "__main__":
     run_data = ["109", "2313"]
     ob_uploader(path, "production", run_data, "MbS")
 
-    # TODO: The containers are given in dictionaries and in a list, sort the
-    # list into the right order then put it into the reorder function
-
-#    p2 = loadobx.login("MbS", server="production")
-#    run_id = get_corresponding_run(p2, *run_data, 1)
-#    print(run_id)
