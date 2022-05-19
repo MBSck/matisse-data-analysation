@@ -13,7 +13,6 @@ The script requires that `yaml` be installed within the Python environment this
 script is run in.
 
 This file can also be imported as a module and contains the following functions:
-    * remove_empty_lst - removes empty lists nested within list
     * readout_txt - reads a (.txt)-file into its individual lines returning them
     * save_dictionary - Saves a dictionary as a (.yaml)-file
     * check_lst4elem - Checks a list for an element and returns a bool
@@ -48,19 +47,6 @@ import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Union, Optional
 
-def remove_empty_lst(input_lst: List):
-    """Removes empty lists that are nested in a list
-
-    Parameters
-    ----------
-    input_lst: List
-
-    Returns
-    -------
-    List
-        Cleaned up list
-    """
-    return [i for i in input_lst if i != []]
 
 def readout_txt(file):
     """Reads a txt into its individual lines"""
