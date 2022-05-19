@@ -1,6 +1,6 @@
 # Automated OB Creation for MATISSE
 
-> The code in this repository has been made to streamline the data reduction with the MATISSE-pipeline
+> The code in this repository has been made to streamline OB creation and upload
 
 ## Project Status
 _Is currently being worked on_
