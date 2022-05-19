@@ -56,7 +56,6 @@ from typing import Any, Dict, List, Union, Optional
 
 import loadobx
 
-
 def get_corresponding_run(p2, period: str,
                           proposal_tag: str, number: int) -> int:
     """Gets the run that corresponds to the period, proposal and the number and
@@ -107,7 +106,7 @@ def create_folder(p2, name: str, container_id: int) -> int:
     -------
     folder_id: int
     """
-    folder, folderVersion = p2.createItem("Folder", container_id, name)
+    folder, folderVersion = p2.createFolder(container_id, name)
     folder_id = folder["containerId"]
     print(f"folder: {name} created!")
     return folder_id
@@ -148,8 +147,24 @@ def check4folder(p2, container_id: int) -> bool:
     except p2api.p2api.P2Error:
         return False
 
-def generate_finding_chart_verify():
+def update_readme():
     ...
+
+def cleanup(p2, container_id: int, obx_files: List):
+    """Reorders the folders according to the observation order, then generates
+    the finding charts and verifies the OBs
+
+    p2: p2api
+    """
+    folders = p2.getItems()
+    p2.reorderItems()
+
+    for i in folders:
+        obs = p2.getItems()
+        for j in obs:
+            p2.generateFindingCharts(j)
+
+    # p2.verifyContainer(container_id)
 
 def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
     """Makes the respective folders for a list of (.obx)-files
@@ -163,12 +178,12 @@ def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
     container_id: int
         The id of the container on the P2
     """
-    container_id_dict = {}
     for i in files:
         stem = os.path.basename(i).split(".")[0]
         if "SCI" in stem:
             sci_name = " ".join([j for j in stem.split("_")[1:]])
             folder_id = create_folder(p2, sci_name, container_id)
+
             loadobx.loadob(p2, i, folder_id)
 
             for j in files:
@@ -206,18 +221,22 @@ def ob_uploader(path: Path, server: str, run_data: List,
     """
     # TODO: Make manual entry for run data possible (full_night), maybe ask for
     # prompt for run number and night name
+
     p2 = loadobx.login(username, password, server)
     top_dir = glob(os.path.join(path, "*"))
 
     # TODO: Implement if there is also a standalone setting, that the same
     # nights are used for the standalone as well
+
     if len(run_data) == 3:
         run_id = get_corresponding_run(p2, *run_data)
 
+    night_folder_id_dict, main_folder_id_dict = {}, {}
     for i in top_dir:
         runs = glob(os.path.join(i, "*"))
+        runs.sort(key=lambda x: x[-3:])
+
         for j in runs:
-            night_folder_id_dict, main_folder_id_dict = {}, {}
             if len(run_data) < 3:
                 run_number = int(''.join([i for i in os.path.basename(j)\
                                           if i.isdigit()]))
@@ -227,6 +246,8 @@ def ob_uploader(path: Path, server: str, run_data: List,
                   f" with container id: {run_id}")
 
             nights = glob(os.path.join(j, "*"))
+            nights.sort(key=lambda x: os.path.basename(x)[:6])
+
             for k in nights:
                 night_name = os.path.basename(k)
 
@@ -250,3 +271,9 @@ if __name__ == "__main__":
     run_data = ["109", "2313"]
     ob_uploader(path, "production", run_data, "MbS")
 
+    # TODO: The containers are given in dictionaries and in a list, sort the
+    # list into the right order then put it into the reorder function
+
+#    p2 = loadobx.login("MbS", server="production")
+#    run_id = get_corresponding_run(p2, *run_data, 1)
+#    print(run_id)
