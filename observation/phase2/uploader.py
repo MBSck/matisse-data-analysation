@@ -109,7 +109,7 @@ def create_folder(p2, name: str, container_id: int) -> int:
     -------
     folder_id: int
     """
-    folder, folderVersion = p2.createFolder(container_id, name)
+    folder, folderVersion = p2.createItem("Folder", container_id, name)
     folder_id = folder["containerId"]
     print(f"folder: {name} created!")
     return folder_id
