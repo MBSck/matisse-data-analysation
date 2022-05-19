@@ -70,7 +70,7 @@ Example of usage:
 
     >>> ob_creation(outpath, manual_lst=manual_lst, res_dict=res_dict, mode="gr")
     # ... Making OBs for run 1, 109.2313.001 = 0109.C-0413(A), ATs small array
-    # ... Creating folder: night 1 - May 25, and filling it with OBs
+    # ... Creating folder: 'night1_May25', and filling it with OBs
     # ... SCI HD 142527         15:56:41.888  -42:19:23.248   4.8      9.8   5.0   8.3
 """
 
@@ -83,6 +83,7 @@ import time
 import logging
 
 from pathlib import Path
+from glob import glob
 from types import SimpleNamespace
 from typing import Any, Dict, List, Union, Optional
 
@@ -229,7 +230,17 @@ def make_sci_obs(sci_lst: List, array_config: str, mode: str,
             ob.mat_gen_ob(o, array_config, 'SCI', outdir=outdir,\
                           spectral_setups=temp.RES, obs_tpls=temp.TEMP,\
                           acq_tpl=ACQ, DITs=temp.DIT)
-            logging.info(f"Created OB SCI-{o}-#{i}")
+
+            # Rename the file to account for sorting with 'glob' in upload
+            list_of_files = glob(os.path.join(outdir, "*.obx"))
+            latest_file = max(list_of_files, key=os.path.getctime)
+            latest_file_new_name = os.path.basename(latest_file).split(".")[0]\
+                    + f"_{i}.obx"
+            latest_file_new_name = os.path.join(os.path.dirname(latest_file),
+                                                latest_file_new_name)
+            os.rename(latest_file, latest_file_new_name)
+
+            logging.info(f"Created OB SCI-{os.path.basename(latest_file_new_name)}-#{i}")
 
         except Exception as e:
             logging.error("Skipped - OB", exc_info=True)
