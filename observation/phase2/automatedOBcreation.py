@@ -123,6 +123,7 @@ UT_DICT_GRA4MAT = {"ACQ": ob.acq_ft_tpl,
 TEMPLATE_RES_DICT = {"standalone": {"UTs": UT_DICT_STANDALONE},
                      "GRA4MAT_ft_vis": {"UTs": UT_DICT_GRA4MAT,
                                         "ATs": AT_DICT_GRA4MAT}}
+
 def load_yaml(file_path):
     """Loads a '.yaml'-file into a dictionary"""
     with open(file_path, "r") as fy:
@@ -146,11 +147,11 @@ def get_night_name_and_date(night_key: str) -> str:
     night = night_key.split(":")[0].strip()
     date = night_key.split(":")[1].split(",")[0].strip()
 
-    if "night" in night.split(",")[0]:
-        night = night_key.split(",")[0].strip()
-        date = night_key.split(",")[1].split(",")[0].strip()
+    if len(night.split()) > 2:
+        night, date = night.split(",")[:2]
 
-    return night + " - " + date if date else night
+    return "_".join([''.join(night.split()), ''.join(date.split())])\
+            if date != '' else ''.join(night.split())
 
 
 def get_array(run_name: Optional[str] = None) -> str:
@@ -327,7 +328,10 @@ def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
     for i, o in run_dict.items():
         print(f"Making OBs for {i}")
         logging.info(f"OBs for {i}")
-        run_name = i.split(",")[0].strip()
+
+        run_name = ''.join(i.split(",")[0].strip().split())
+
+        logging.info(f"Creating folder: '{run_name}'")
 
         array_config = get_array(i)
         for j, l in o.items():
@@ -337,8 +341,8 @@ def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
             if not os.path.exists(temp_path):
                 os.makedirs(temp_path)
 
-            print(f"Creating folder: {night_name}, and filling it with OBs")
-            logging.info(f"Creating folder: {night_name}, and filling it with OBs")
+            print(f"Creating folder: '{night_name}', and filling it with OBs")
+            logging.info(f"Creating folder: '{night_name}', and filling it with OBs")
 
             # NOTE: To not get a timeout from the databases
             time.sleep(1)
