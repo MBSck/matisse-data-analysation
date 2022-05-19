@@ -75,8 +75,6 @@ import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for N-band as well
 # TODO: Check how to act if H_mag error occurs
-# FIXME: Fix the list range error?! -> This makes wrong SCI-CAL combinations ->
-# High priority of fixing!!!!!
 
 # Logging configuration
 
@@ -84,7 +82,6 @@ if os.path.exists("automatedOBcreation.log"):
     os.system("rm -rf autmatedOBcreation.log")
 logging.basicConfig(filename='automatedOBcreation.log', filemode='w',
                     format='%(asctime)s - %(message)s', level=logging.INFO)
-
 
 # Dicts for the template and resolution configuration
 
@@ -135,7 +132,6 @@ def get_array(run_name: Optional[str] = None) -> str:
 
     if run_name:
         if "UTs" in run_name:
-            print(run_name)
             return "UTs"
         elif ("ATs" in run_name) or (at_config in run_name):
             if "small" in run_name:
@@ -144,7 +140,6 @@ def get_array(run_name: Optional[str] = None) -> str:
                 return "medium"
             elif "large" in run_name:
                 return "large"
-            print(run_name)
         else:
             user_inp = int(input("No configuration can be found, please input"\
                              " ('UTs': 1; 'small': 2, 'medium': 3, 'large: 4): "))
@@ -231,8 +226,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
     if not standard_res:
         standard_res = "LOW" if array_config == "UTs" else "MED"
 
-        # FIXME: List index range is out of bounds? -> Why?
-        # NOTE: Iterates through the calibration list
+    # NOTE: Iterates through the calibration list
     for i, o in enumerate(cal_lst):
         try:
             if res_dict and (sci_lst[i] in res_dict):
@@ -377,7 +371,6 @@ def ob_creation(outpath: str, path2file: Optional[Path] = None,
 
 if __name__ == "__main__":
     path2file = "night_plan.yaml"
-
     outdir = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/phase2/obs/"
 
     sci_lst = [""]
@@ -388,3 +381,4 @@ if __name__ == "__main__":
     res_dict = {}
 
     ob_creation(outdir, path2file=path2file, res_dict=res_dict, mode="gr")
+
