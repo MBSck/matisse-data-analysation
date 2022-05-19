@@ -56,8 +56,6 @@ from typing import Any, Dict, List, Union, Optional
 
 import loadobx
 
-# TODO: Make the folders with a different api connection (see loadobx) so they
-# are made in the right order -> Change create_folders
 
 def get_corresponding_run(p2, period: str,
                           proposal_tag: str, number: int) -> int:
