@@ -11,52 +11,67 @@ DISCLAIMER: Standalone only works for the UTs at the moment and for ATs it
 
 This file can also be imported as a module and contains the following functions:
 
-    * load_yaml - Loads a (.yaml)-file into a dictionary (compatible with
-    (.json))
+    * load_yaml - Loads a (.yaml)-file into a dictionary (compatible/superset
+    with/of (.json)-format/file)
+    * get_night_name_and_date - Quality of life function that gets the night's
+    name and date and names
     * get_array - Automatically gets the array config if possible and if not
     prompts the user to input it
     * make_sci_obs - Makes the SCI-OBs
     * make_cal_obs - Makes the CAL-OBs
     * read_dict_into_OBs - Reads either a (.yaml)-file or a Dict into a format
-    for OB creation
+    suitable for OB creation
     * ob_creation - The main loop for OB creation
 
 Example of usage:
+
     >>> from automatedOBcreation import ob_pipeline
 
-    # Script needs either manual_lst, path2file (to the parsed night plan) in
-    # (.yaml)-file format or run_data (the parsed night plan without it being
-    # saved)
+    Script needs either manual_lst, path2file (to the parsed night plan) in
+    (.yaml)-file format or run_data (the parsed night plan without it being
+    saved)
 
     >>> path2file = "night_plan.yaml"
 
-    # or
+    or
 
     >>> from parseOBplan import parse_night_plan
     >>> run_data = parse_night_plan(...)
 
-    # Calibration lists accept sublists (with more than one item)
-    # but also single items, same for tag_lst
+    Calibration lists accept sublists (with more than one item)
+    but also single items, same for tag_lst
 
     >>> sci_lst = ["AS 209", "VV Ser"]
     >>> cal_lst = [["HD 142567", "HD 467893"], ["HD 142567"]]
     >>> tag_lst = [["LN", "N"], "L"]
+    >>> manual_lst = [sci_lst, cal_lst, tag_lst]
 
-    # Specifies the paths, where the '.obx'-files are saved to, name of run can
-    # be changed to actual one
+    Specifies the paths, where the (.obx)-files are saved to, name of run can
+    be changed to actual one
 
     >>> outdir = "..."
 
-    # Specifies the res_dict. Can be left empty. Changes only L-band res at the
-    # moment resolutions are 'LOW', 'MED', 'HIGH'
+    Specifies the 'res_dict'. Can be left empty. Changes only L-band res at
+    the moment.
+    Resolutions are 'LOW', 'MED', 'HIGH'
 
     >>> res_dict = {"AS 209": "MED"}
 
-    # The main OB creation
+    The main OB creation
+    Either with 'path2file' (saved (.yaml)-file)
 
-    >>> ob_creation(outpath, path2file, run_data=run_data,
-                    manual_lst=[sci_lst, cal_lst, tag_lst],
-                    res_dict=res_dict, mode="gr")
+    >>> ob_creation(outpath, path2file=path2file, res_dict=res_dict, mode="gr")
+
+    Or with 'run_data' (parsed (.yaml)-dictionary)
+
+    >>> ob_creation(outpath, run_data=run_data, res_dict=res_dict, mode="gr")
+
+    Or with 'manual_lst' (List input by hand)
+
+    >>> ob_creation(outpath, manual_lst=manual_lst, res_dict=res_dict, mode="gr")
+    # ... Making OBs for run 1, 109.2313.001 = 0109.C-0413(A), ATs small array
+    # ... Creating folder: night 1 - May 25, and filling it with OBs
+    # ... SCI HD 142527         15:56:41.888  -42:19:23.248   4.8      9.8   5.0   8.3
 """
 
 __author__ = "Marten Scheuck"
@@ -112,6 +127,31 @@ def load_yaml(file_path):
     """Loads a '.yaml'-file into a dictionary"""
     with open(file_path, "r") as fy:
         return yaml.safe_load(fy)
+
+def get_night_name_and_date(night_key: str) -> str:
+    """Automatically gets the night's date if it is included in the
+    dictionary
+
+    Parameters
+    ----------
+    night_key: str
+        The dictionaries key that describes a night
+
+    Returns
+    -------
+    night_str: str
+        If night date in night then of the format <night>_<night_date> if not
+        then <night>
+    """
+    night = night_key.split(":")[0].strip()
+    date = night_key.split(":")[1].split(",")[0].strip()
+
+    if "night" in night.split(",")[0]:
+        night = night_key.split(",")[0].strip()
+        date = night_key.split(",")[1].split(",")[0].strip()
+
+    return night + " - " + date if date else night
+
 
 def get_array(run_name: Optional[str] = None) -> str:
     """Fetches the array configuration from the name of the run. And if no run
@@ -287,18 +327,22 @@ def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
     for i, o in run_dict.items():
         print(f"Making OBs for {i}")
         logging.info(f"OBs for {i}")
+        run_name = i.split(",")[0].strip()
 
         array_config = get_array(i)
         for j, l in o.items():
-            temp_path = os.path.join(outpath,\
-                                     i.split(",")[0].replace(' ', ''),\
-                                     j.split(":")[0].replace(' ', ''))
+            night_name = get_night_name_and_date(j)
+            temp_path = os.path.join(outpath, run_name, night_name)
 
             if not os.path.exists(temp_path):
                 os.makedirs(temp_path)
 
+            print(f"Creating folder: {night_name}, and filling it with OBs")
+            logging.info(f"Creating folder: {night_name}, and filling it with OBs")
+
             # NOTE: To not get a timeout from the databases
             time.sleep(1)
+
             night = SimpleNamespace(**l)
             make_sci_obs(night.SCI, array_config, mode, temp_path, res_dict,
                          standard_res)
@@ -350,7 +394,6 @@ def ob_creation(outpath: str, path2file: Optional[Path] = None,
                 os.makedirs(outpath)
 
             array_config = get_array()
-            print(array_config)
 
             make_sci_obs(sci_lst, array_config, i, outpath, res_dict,
                          standard_res)
