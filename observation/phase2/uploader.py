@@ -56,7 +56,8 @@ from typing import Any, Dict, List, Union, Optional
 
 import loadobx
 
-# TODO: Make readme template and additional per night
+# TODO: Make readme template and add additional per night, then upload it
+# FIXME: Make generateFindingCharts work and verification as well
 # TODO: Add complete hour count for folders that have been made
 # -> FIXME: Need fix of folder creation first
 # BUG: Folder sorting sometimes doesn't work? -> Check if that persists?
