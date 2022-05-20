@@ -90,7 +90,12 @@ from typing import Any, Dict, List, Union, Optional
 import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for N-band as well
-# TODO: Check how to act if H_mag error occurs
+# FIXME: Check back with Jozsef and or how to act if H_mag error occurs
+
+# FIXME: Two folders are created if SCI OB exists twice, remove that by making
+# a set or something in automated OB creation
+
+# TODO: Make sorting that automatically sorts the CALs and SCI in a correct way
 
 # Logging configuration
 
