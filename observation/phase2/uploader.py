@@ -56,6 +56,13 @@ from typing import Any, Dict, List, Union, Optional
 
 import loadobx
 
+# TODO: Make readme template and additional per night
+# TODO: Add complete hour count for folders that have been made
+# -> FIXME: Need fix of folder creation first
+# BUG: Folder sorting sometimes doesn't work? -> Check if that persists?
+
+README_TEMPLATE = ...
+
 def get_corresponding_run(p2, period: str,
                           proposal_tag: str, number: int) -> int:
     """Gets the run that corresponds to the period, proposal and the number and
@@ -150,21 +157,25 @@ def check4folder(p2, container_id: int) -> bool:
 def update_readme():
     ...
 
-def cleanup(p2, container_id: int, obx_files: List):
-    """Reorders the folders according to the observation order, then generates
-    the finding charts and verifies the OBs
+def generate_charts_and_verify(p2, container_id: int):
+    """Generates the finding charts and then verifies all OBs in the container
 
     p2: p2api
+    container_id: int
     """
-    folders = p2.getItems()
-    p2.reorderItems()
+    folders = p2.getItems(container_id)
 
-    for i in folders:
-        obs = p2.getItems()
-        for j in obs:
-            p2.generateFindingCharts(j)
+    for i in folders[0]:
+        obx_files = p2.getItems(i["containerId"])
 
-    # p2.verifyContainer(container_id)
+        for j in obx_files[0]:
+            p2.generateFindingChart(j["obId"])
+            print(f"Finding chart created for OB {j['name']}!")
+
+            p2.verifyOB(j["obId"])
+            print(f"OB {j['name']} verified!")
+
+    p2.verifyContainer(container_id, True)
 
 def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
     """Makes the respective folders for a list of (.obx)-files
@@ -187,52 +198,30 @@ def make_folders4OBs(p2, files: List[Path], container_id: int) -> None:
             loadobx.loadob(p2, i, folder_id)
 
             for j in files:
-                stem_search = "_".join(os.path.basename(j).\
-                                       split(".")[0].split("_")[:-1])
+                stem_search = os.path.basename(j).split(".")[0]
+
                 if "CAL" in stem_search:
                     sci4cal_name = " ".join(stem_search.split("_")[2:-1])
                     if sci_name == sci4cal_name:
                         loadobx.loadob(p2, j, folder_id)
 
-
-def ob_uploader(path: Path, server: str, run_data: List,
-                username: str, password: Optional[str] = None) -> int:
-    """Creates folders on the P2 and subsequently uploades the OBs to the P2
+def make_folders_and_upload(p2, top_dir: List, run_data: List):
+    """This checks if run is specified or given by the folder names and then
+    makes the same folders on the P2 and additional folders (e.g., for the
+    'main_targets' and 'backup_targets' as well as for all the SCI-OBs. It then
+    uploads the SCI- and CAL-OBs to the P2 as well
 
     Parameters
     ----------
-    path: Path
-        The path to the ob-files of a certain run.
-    server: str
-        The enviroment to which the (.obx)-file is uploaded, 'demo' for testing,
-        'production' for paranal and 'production_lasilla' for la silla
+    p2: p2api
+    top_dir: List
+        List containing either 'GRA4MAT_ft_vis'-, 'standalone'-folder or both
     run_data: List
         The data that is used to get the runId. The input needs to be in the
         form of a list [run_period: str, run_proposal: str, run_number: int].
         If the list does not contain the run_number, the script looks through
         the folders and fetches it automatically (e.g., run1, ...)
-    username: str
-        The username for P2
-    password: str, optional
-        The password for P2, if not given then prompt asking for it is called
-
-    Returns
-    -------
-    error_code: int
     """
-    # TODO: Make manual entry for run data possible (full_night), maybe ask for
-    # prompt for run number and night name
-
-    p2 = loadobx.login(username, password, server)
-    top_dir = glob(os.path.join(path, "*"))
-
-    if not top_dir:
-        raise IOError("Either input path, folder structure is wrong or no files"
-                      " could be found!")
-
-    # TODO: Implement if there is also a standalone setting, that the same
-    # nights are used for the standalone as well
-
     if len(run_data) == 3:
         run_id = get_corresponding_run(p2, *run_data)
 
@@ -268,7 +257,52 @@ def ob_uploader(path: Path, server: str, run_data: List,
 
                 obx_files = glob(os.path.join(k, "*.obx"))
                 obx_files.sort(key=lambda x: os.path.basename(x).split(".")[0][-2:])
+
                 make_folders4OBs(p2, obx_files, mode_folder_id)
+                # generate_charts_and_verify(p2, mode_folder_id)
+                # print(f"Container: {os.path.basename(i)} of {night_name} verified!")
+
+def ob_uploader(path: Path, server: str, run_data: List,
+                username: str, password: Optional[str] = None) -> int:
+    """Creates folders on the P2 and subsequently uploades the OBs to the P2
+
+    Parameters
+    ----------
+    path: Path
+        The path to the top most folder (containing GRA4MAT_ft_vis or
+        standalone)
+    server: str
+        The enviroment to which the (.obx)-file is uploaded, 'demo' for testing,
+        'production' for paranal and 'production_lasilla' for la silla
+    run_data: List
+        The data that is used to get the runId. The input needs to be in the
+        form of a list [run_period: str, run_proposal: str, run_number: int].
+        If the list does not contain the run_number, the script looks through
+        the folders and fetches it automatically (e.g., run1, ...)
+    username: str
+        The username for P2
+    password: str, optional
+        The password for P2, if not given then prompt asking for it is called
+
+    Returns
+    -------
+    error_code: int
+    """
+    # TODO: Make manual entry for run data possible (full_night), maybe ask for
+    # prompt for run number and night name
+
+    p2 = loadobx.login(username, password, server)
+    top_dir = glob(os.path.join(path, "*"))
+
+    if not top_dir:
+        raise IOError("Either input path, folder structure is wrong or no files"
+                      " could be found!")
+
+    # TODO: Implement if there is also a standalone setting, that the same
+    # nights are used for the standalone as well
+
+    make_folders_and_upload(p2, top_dir, run_data)
+    print("Upload done!")
 
     return 0
 
