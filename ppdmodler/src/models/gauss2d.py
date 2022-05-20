@@ -9,7 +9,6 @@ from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
         mas2rad, get_px_scaling
 
-from src.functionality.fourier import FFT
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -59,9 +58,9 @@ class Gauss2D(Model):
         try:
             fwhm = theta[0]
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of"
-                               " the form [fwhm]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of"
+                          " the form [fwhm]")
         if sampling is None:
             sampling = px_size
 
@@ -97,9 +96,9 @@ class Gauss2D(Model):
         try:
             fwhm = mas2rad(theta[0])
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be"
-                               " of the form [fwhm]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be"
+                          " of the form [fwhm]")
 
         self._sampling = sampling
         B, self._axis_vis  = set_uvcoords(sampling, wavelength=wavelength, uvcoords=uvcoords)

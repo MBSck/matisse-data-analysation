@@ -69,9 +69,9 @@ class Ring(Model):
         try:
             axis_ratio, pos_angle = theta
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of"
-                               " the form [axis_ratio, pos_angle]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of"
+                          " the form [axis_ratio, pos_angle]")
 
         if inner_radius:
             self._inner_r = self.r_sub = inner_radius
@@ -143,9 +143,9 @@ class Ring(Model):
             r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
             q, T_0 = theta[2:]
         except Exception as e:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of the"
-                               " form [r_0, r_max, q, T_0]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of the"
+                          " form [r_0, r_max, q, T_0]")
 
         self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)

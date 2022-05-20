@@ -55,11 +55,11 @@ class CompoundModel(Model):
                 max_radius += ring_outer_radius
             self.amplitudes = [[c, s]]
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of"
-                               " the form [axis_ratio, pos_angle, c, s,"
-                               " ring_inner_radius, ring_outer_radius,"
-                               " inner_radius]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of"
+                          " the form [axis_ratio, pos_angle, c, s,"
+                          " ring_inner_radius, ring_outer_radius,"
+                          " inner_radius]")
 
         if sampling is None:
             self._sampling = sampling = px_size

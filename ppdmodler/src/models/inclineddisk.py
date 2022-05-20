@@ -72,10 +72,10 @@ class InclinedDisk(Model):
                 r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
                 pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[2:])
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of"
-                               " the form [r_0], or [r_0, pos_angle_ellipsis,"
-                               " pos_angle_axis, inc_angle]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of"
+                          " the form [r_0], or [r_0, pos_angle_ellipsis,"
+                          " pos_angle_axis, inc_angle]")
 
         self._size, self._sampling = size, sampling
 
@@ -188,10 +188,10 @@ class InclinedDisk(Model):
             q, T_0 = theta[3:5]
             pos_angle_ellipsis, pos_angle_axis, inc_angle = map(lambda x: np.radians(x), theta[~2:])
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                               " Check input arguments, theta must be of"
-                               " the form [r_0, r_max, q, T_0, pos_angle_ellipsis,"
-                               " pos_angle_axis, inc_angle]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must be of"
+                          " the form [r_0, r_max, q, T_0, pos_angle_ellipsis,"
+                          " pos_angle_axis, inc_angle]")
 
         self._sampling, self._wavelength = sampling, wavelength
 
