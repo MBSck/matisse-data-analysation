@@ -306,7 +306,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
             xr, yr = x*np.cos(pos_angle)+y*np.sin(pos_angle), \
                     (y*np.cos(pos_angle)-x*np.sin(pos_angle))/axis_ratio
             radius = np.sqrt(xr**2+yr**2)
-            axis, phi = [xr, yr], np.arctan2(xr, yr)
+            axis, phi = [xr, yr], np.arctan2(xr/yr)
         else:
             radius = np.sqrt(x**2+y**2)
             axis, phi = [x, y], np.arctan(x/y)
