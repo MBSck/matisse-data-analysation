@@ -303,8 +303,8 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
                                    " arguments, ellipsis_angles must be of the"
                                    " form [axis_ratio, pos_angle]")
 
-            xr, yr = x*np.sin(pos_angle)+y*np.cos(pos_angle), \
-                    (x*np.cos(pos_angle)-y*np.sin(pos_angle))/axis_ratio
+            xr, yr = x*np.cos(pos_angle)+y*np.sin(pos_angle), \
+                    (y*np.cos(pos_angle)-x*np.sin(pos_angle))/axis_ratio
             radius = np.sqrt(xr**2+yr**2)
             axis, phi = [xr, yr], np.arctan2(xr, yr)
         else:
@@ -350,12 +350,12 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
     -------
     baselines: ArrayLike
         The baselines for the uvcoords
-    B: ArrayLike
-        The axis used to calculate the baslines
+    uvcoords: ArrayLike
+        The axis used to calculate the baselines
     """
     with np.errstate(divide='ignore'):
         if uvcoords is None:
-            axis = np.linspace(-150, 150, sampling)
+            axis = np.linspace(-200, 200, sampling)
 
             # Star overhead sin(theta_0)=1 position
             u, v = axis, axis[:, np.newaxis]
@@ -367,23 +367,30 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
 
         if angles is not None:
             try:
-                ellipsis_angle, pos_angle, inc_angle = angles
+                if len(angles) == 1:
+                    pos_angle = angles
+                    ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
+                            v*np.cos(pos_angle)-u*np.sin(pos_angle)
+                    B = np.sqrt(ur**2+vr**2)*wavelength
+                else:
+                    axis_ratio, pos_angle, inc_angle = angles
+
+                    ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
+                            (v*np.cos(pos_angle)-u*np.sin(pos_angle))/axis_ratio
+                    B = np.sqrt(ur**2+vr**2*np.cos(inc_angle)**2)*wavelength
+
+                axis = [ur, vr]
             except:
-                raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
-                                   " arguments, ellipsis_angles must be of the form"
-                                   " [ellipsis_angle, pos_angle, inc_angle]")
+                raise IOError(f"{inspect.stack()[0][3]}(): Check input"
+                              " arguments, ellipsis_angles must be of the form"
+                              " either [pos_angle] or "
+                              " [ellipsis_angle, pos_angle, inc_angle]")
 
-            # The ellipsis of the projected baselines
-            a, b = u*np.sin(ellipsis_angle), v*np.cos(ellipsis_angle)
-
-            # Projected baselines with the rotation by the positional angle of the disk semi-major axis theta
-            ath, bth = a*np.sin(pos_angle)+b*np.cos(pos_angle), \
-                    a*np.cos(pos_angle)-b*np.sin(pos_angle)
-            B = np.sqrt(ath**2+bth**2*np.cos(inc_angle)**2)
         else:
-            B = np.sqrt(u**2+v**2)/wavelength
+            B = np.sqrt(u**2+v**2)*wavelength
+            axis = [u, v]
 
-        return B, uvcoords
+        return B, axis
 
 def stellar_radius_pc(T_eff: int, L_star: int):
     """Calculates the stellar radius from its attributes and converts it from
