@@ -13,8 +13,11 @@ from functools import wraps
 from src.functionality.constant import *
 
 # TODO: Check linspace in set_size for accuracy? -> Don't use sampling
+
 # TODO: Make progress bar into a decorator and also keep the time of the
 # process and show the max time
+
+# FIXME: Check all basic functions for accuracy and compare to literature
 
 # Functions
 
@@ -51,23 +54,6 @@ def timeit(func):
         print(f"{func.__name__} execution took: {et-st} sec")
         return result
     return timed_func
-
-def delta_fct(x: Union[int, float], y: Union[int, float]) -> int:
-    """Dirac Delta measure
-
-    Parameters
-    ----------
-    x: int | float
-        An x value
-    y: int | float
-        An y value
-
-    Returns
-    -------
-    int
-        1 if 'x == y' or 0 else
-    """
-    return 1 if x == y else 0
 
 def orbit_au2arc(orbit_radius: Union[int, float],
                  distance: Union[int, float]):
@@ -178,33 +164,6 @@ def correspond_uv2scale(scaling: float, roll: int, uvcoords: np.ndarray) -> floa
     xcoord, ycoord = [roll+np.round(i[0]/scaling).astype(int) for i in uvcoords], \
             [roll+np.round(i[1]/scaling).astype(int) for i in uvcoords]
     return xcoord, ycoord
-
-def get_distance(axis: np.ndarray, uvcoords: np.ndarray) -> np.ndarray:
-    """Calculates the norm for a point. Takes the freq and checks both the
-    u- and v-coords against it.
-    Works only for models/image that have the same length in both dimensions.
-
-    The indices of the output list evaluate to the indices of the input list
-
-    Parameters
-    ----------
-    axis: np.ndarray
-        The axis of which the distance is to be calculated
-    uvcoords: np.ndarray
-        The uvcoords that should be cross referenced
-
-    Returns
-    -------
-    np.ndarray
-        The indices of the closest matching points
-    """
-    # This makes a list of all the distances in the shape (size_img_array, uv_coords)
-    distance_lst = [[np.sqrt((j-i)**2) for j in axis] for i in uvcoords]
-
-    # This gets the indices of the elements closest to the uv-coords
-    # TODO: Maybe make more efficient with numpy instead of list comprehension
-    indices_lst = [[j for j, o in enumerate(i) if o == np.min(np.array(i))] for i in distance_lst]
-    return np.ndarray.flatten(np.array(indices_lst))
 
 def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: np.array,
                         dis: bool = False, intpol: bool = False) -> List:
@@ -475,7 +434,6 @@ def temperature_gradient(radius: float, r_0: Union[int, float],
         The temperature at a certain radius
     """
     # q is 0.5 for flared irradiated disks and 0.75 for standard viscuous disks
-    # Ignore zero division errors for now
     with np.errstate(divide='ignore'):
         return T_0*(radius/r_0)**(-q)
 
@@ -504,40 +462,29 @@ def plancks_law_nu(T: Union[float, np.ndarray],
 
         return factor*(1/(np.exp(exponent)-1))
 
-    def do_fit():
-        """Does automatic gauss fits"""
-        # Fits the data
-        scaling_rad2arc = 206265
+def do_fit():
+    """Does automatic gauss fits"""
+    # Fits the data
+    scaling_rad2arc = 206265
 
-        # Gaussian fit
-        fwhm = 1/scaling_rad2arc/1000           # radians
+    # Gaussian fit
+    fwhm = 1/scaling_rad2arc/1000           # radians
 
-        # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
-        xvals, yvals = self.baseline_distances, self.mean_bin_vis2
-        pars, cov = curve_fit(f=gaussian, xdata=xvals, ydata=yvals, p0=[fwhm], bounds=(-np.inf, np.inf))
-        # xvals = np.linspace(50, 150)/3.6e-6
-        # fitted_model= np.square(gaussian(xvals, fwhm))
-        ax.plot(xvals, gaussian(xvals, pars), label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
+    # np.linspace(np.min(spat_freq), np.max(spat_freq), 25)
+    xvals, yvals = self.baseline_distances, self.mean_bin_vis2
+    pars, cov = curve_fit(f=gaussian, xdata=xvals, ydata=yvals, p0=[fwhm], bounds=(-np.inf, np.inf))
+    # xvals = np.linspace(50, 150)/3.6e-6
+    # fitted_model= np.square(gaussian(xvals, fwhm))
+    ax.plot(xvals, gaussian(xvals, pars), label='Gaussian %.1f"'%(fwhm*scaling_rad2arc*1000))
 
-        # Airy-disk fit
-        fwhm = 3/scaling_rad2arc/1000           # radians
-        fitted_model = np.square(airy(xvals, fwhm))
-        ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
-        ax.set_ylim([0, 0.175])
-        ax.legend(loc='best')
+    # Airy-disk fit
+    fwhm = 3/scaling_rad2arc/1000           # radians
+    fitted_model = np.square(airy(xvals, fwhm))
+    ax.plot(xvals/1e6, fitted_model*0.15, label='Airy Disk %.1f"'%(fwhm*scaling_rad2arc*1000))
+    ax.set_ylim([0, 0.175])
+    ax.legend(loc='best')
 
 
 if __name__ == "__main__":
-    # get_px_scaling([i for i in range(0, 10)], 1e-5)
-    print(sublimation_radius(1500, 19, 140))
-    # plt.imshow(temp)
-    # plt.show()
-
-    # print(radius)
-    # print(spectral_rad := plancks_law_nu(radius, 0.55, sub_r, 1500, 8e-6))
-    # print(flux_jy := sr2mas(1.3)*spectral_rad*1e26)
-    # print(flux_jy[size//2][size//2])
-    # plt.imshow(flux_jy)
-    # plt.show()
     ...
 
