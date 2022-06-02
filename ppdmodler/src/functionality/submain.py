@@ -20,27 +20,19 @@ def main():
 
     uvcoords = readout.get_uvcoords()
 
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
 
     cp = CompoundModel(1500, 7900, 19, 140, wavelength)
 
-    cp_model = cp.eval_model([0.2, 45, 1., 1.], 10, 129)
-    cp_flux = cp.get_flux(np.inf, 0.7)
+    cp_model, cp_flux = cp.eval_model([0.2, 45, 1., 1., 3., 0.04, 0.7], 10, 129)
     ax1.imshow(cp_flux)
     ax1.set_title("Temperature gradient")
 
     # TODO: Check the interpolation of this and plot it over the datapoints
     fft = FFT(cp_flux, wavelength, cp.pixel_scale, 4)
-    amp, phase = fft.get_amp_phase(True)
-    print(amp[np.where(fft.interpolate_uv2fft2(uvcoords, True)[0])])
+    amp, phase = fft.get_amp_phase(corr_flux=True)
     ax2.imshow(amp)
     ax2.set_title("FFT of Temperature gradient")
-
-    cp_tot_flux = cp.get_total_flux(np.inf, 0.7)
-    fft = FFT(cp_model, wavelength, cp.pixel_scale, 4)
-    amp2, phase2 = fft.get_amp_phase(False)
-    ax3.imshow(amp2*cp_tot_flux)
-    ax3.set_title("FFT of Object Plane * Total Flux")
 
     plt.show()
 
@@ -62,9 +54,11 @@ def test_chi_sq():
     return decoded
 
 if __name__ == "__main__":
-    data = straigth((0.5, 2))[1]
-    print(decoded := test_chi_sq())
-    plt.plot(*straigth((0.5, 2)))
-    plt.plot(*straigth(decoded))
-    plt.show()
+#    data = straigth((0.5, 2))[1]
+#    print(decoded := test_chi_sq())
+#    plt.plot(*straigth((0.5, 2)))
+#    plt.plot(*straigth(decoded))
+#    plt.show()
+
+    main()
 

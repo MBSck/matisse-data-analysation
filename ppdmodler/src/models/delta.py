@@ -64,9 +64,9 @@ class Delta(Model):
         try:
             flux = float(theta[0])
         except:
-            raise RuntimeError(f"{self.name}.{inspect.stack()[0][3]}():"
-                                " Check input arguments, theta must"
-                                " be of the form [flux]")
+            raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
+                          " Check input arguments, theta must"
+                          " be of the form [flux]")
 
         self._sampling = self._size = sampling
 
@@ -74,12 +74,8 @@ class Delta(Model):
 
 if __name__ == "__main__":
     d = Delta(1500, 7900, 19, 140, 8e-6)
-    # d_model = d.eval_model([1, 10], 128)
-    # plt.imshow(d_model)
-    # plt.show()
-
     d_model = d.eval_model(10, 128)
-    print(d.stellar_flux)
+
     plt.imshow(d_model)
     plt.show()
 

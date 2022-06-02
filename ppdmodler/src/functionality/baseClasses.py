@@ -42,6 +42,7 @@ class Model(metaclass=ABCMeta):
 
     @property
     def pixel_scale(self):
+        """Calculates the pixel scale for max per px"""
         return self._mas_size/self._sampling
 
     @property

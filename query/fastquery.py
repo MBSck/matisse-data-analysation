@@ -75,9 +75,9 @@ def query(obj_name: str, header_name: str, catalog: str, match_radius: float = 5
     return result[0][header_name]
 
 if __name__ == "__main__":
-    star = "Elia 2-27"
+    star = "HD_100546"
+
     # TODO: Add function that automatically gets that information, checks for
     # errors if some value cannot be gotten and tries the other databases
-    print(query(star, "W1mag", "wise"))
-    print(query(star, "W3mag", "wise"))
+    print(query(star, "med-Lflux", "mdfc"))
 

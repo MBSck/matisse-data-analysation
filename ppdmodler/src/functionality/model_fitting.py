@@ -440,11 +440,10 @@ if __name__ == "__main__":
     # work
     # Initial sets the theta
     # initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
-    initial = np.array([0.2, 180., 1., 1., 3., 2., 1., 0.01, 0.7])
-    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.], [3., 10.], [0., 10.],
-              [0., 10.], [0., 1.], [0., 1.]]
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER",
-              "R_OUTER", "R_MAX", "TAU", "Q"]
+    initial = np.array([0.2, 180., 1., 1., 3., 0.01, 0.7])
+    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.],
+              [2., 10.], [0., 1.], [0., 1.]]
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
@@ -456,7 +455,7 @@ if __name__ == "__main__":
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=30, zero_padding_order=3)
+                    sampling=129, wl_ind=37, zero_padding_order=3)
 
     # Set the mcmc parameters and the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=25, niter_burn=2500,

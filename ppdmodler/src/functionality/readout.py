@@ -6,8 +6,6 @@ from scipy.interpolate import CubicSpline
 from astropy.io import fits
 from typing import Any, Dict, List, Union, Optional
 
-from src.functionality.utilities import get_distance
-
 def read_single_dish_txt2np(file, wl_axis):
     """Reads x, y '.txt'-file intwo 2 numpy arrays"""
     file_data = np.loadtxt(file)
@@ -165,6 +163,8 @@ class ReadoutFits:
 if __name__ == "__main__":
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T06_12_59.rb/averaged/Final_CAL.fits"
     readout = ReadoutFits(path)
-    u, v = readout.get_t3phi_uvcoords()
-    print(u, v)
-    print(np.sqrt(u**2+v**2))
+    uc, vc = readout.get_t3phi_uvcoords()
+    print(uc, vc)
+    print(np.sqrt(uc**2+vc**2))
+    u = readout.get_uvcoords()
+    print(u)

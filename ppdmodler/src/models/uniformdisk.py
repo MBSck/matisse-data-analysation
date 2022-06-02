@@ -8,6 +8,7 @@ from scipy.special import j1
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords, mas2rad
+from src.functionality.fourier import FFT
 
 
 class UniformDisk(Model):
@@ -22,47 +23,51 @@ class UniformDisk(Model):
     eval_vis2():
         Evaluates the visibilities of the model
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
+        super().__init__(T_sub, T_eff, L_star, distance, wavelength)
         self.name = "Uniform Disk"
 
-    def eval_model(self, theta: List, size: int,
-                   sampling: Optional[int] = None, centre: Optional[int] = None) -> np.ndarray:
+    def eval_model(self, theta: List, mas_size: int,
+                   px_size: int, sampling: Optional[int] = None) -> np.ndarray:
         """Evaluates the model
 
         Parameters
         ----------
-        diameter: int
-            The diameter of the sphere
-        size: int
+        theta: List
+            The list of the input parameters (diameter, axis_ratio, pos_angle)
+        mas_size: int
+            The field of view in mas
+        px_size: int
             The size of the model image
-        sampling: int | None
+        sampling: int, optional
             The sampling of the object-plane
-        centre: int | None
-            The centre of the model image
 
         Returns
         --------
-        model: np.array[float]
+        model: np.ndarray
 
         See also
         --------
         set_size()
         """
         try:
-            diameter = theta[0]
+            diameter, axis_ratio, pos_angle = theta
         except:
             raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
                           " Check input arguments, theta must be of"
-                          " the form [diameter]")
+                          " the form [diameter, axis_ratio, pos_angle]")
 
-        self._size, self._sampling = size, sampling
-        radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling)
+        if not sampling:
+            sampling = px_size
+
+        self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
+        radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
+                                                     [axis_ratio, pos_angle])
 
         self._radius = radius.copy()
 
         radius[radius > diameter/2] = 0.
-        radius[radius != 0.] = 4/(np.pi*diameter**2)
+        radius[np.where(radius != 0)] = 4/(np.pi*diameter**2)
         self._radius_range = np.where(radius != 0)
 
         return radius
@@ -104,11 +109,37 @@ class UniformDisk(Model):
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
-    u = UniformDisk()
+    wavelength, sampling, mas_fov  = 10e-6, 129, 10
+    u = UniformDisk(1500, 7900, 19, 140, wavelength)
 
-    u_model = u.eval_model([4], 256)
-    u_flux = u.get_flux(0.5, 0.5, 1500, 19, 140, 8e-6)
-    print(u_flux)
-    plt.imshow(u_model)
+    u_model = u.eval_model([4, 1, 180], mas_fov, sampling)
+    fft = FFT(u_model, wavelength, u.pixel_scale, 3)
+    amp, phase = fft.get_amp_phase()
+
+    ft_ax = fft.dim//2*fft.fftscaling2m
+    ft_lambda = fft.fftaxis_Mlambda_end
+
+    fig, axarr = plt.subplots(1, 3, figsize=(25, 7))
+    ax, bx, cx = axarr.flatten()
+
+    ax.imshow(u_model, extent=[-mas_fov, mas_fov, -mas_fov, mas_fov])
+    bx.imshow(amp, extent=[-ft_ax, ft_ax, -ft_ax, ft_ax])
+    cx.imshow(amp, extent=[-ft_lambda, ft_lambda, -ft_lambda, ft_lambda])
+
+    ax.set_title("Model image, Object plane")
+    bx.set_title("FFT of Model")
+    cx.set_title("FFT of Model")
+
+    ax.set_xlabel("RA [mas]")
+    ax.set_ylabel("DEC [mas]")
+    bx.set_xlabel("u [m]")
+    bx.set_ylabel("v [m]")
+    cx.set_xlabel(r"u [M$\lambda$]")
+    cx.set_ylabel(r"v [M$\lambda$]")
+
+    ax.axis([-5, 5, -5, 5])
+    bx.axis([-300, 300, -300, 300])
+    cx.axis([-70, 70, -70, 70])
+
     plt.show()
 
