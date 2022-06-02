@@ -90,7 +90,10 @@ from typing import Any, Dict, List, Union, Optional
 import MATISSE_create_OB_2 as ob
 
 # TODO: Make this work for N-band as well
-# FIXME: Check back with Jozsef and or how to act if H_mag error occurs
+# FIXME: Check back with Jozsef and or how to act if H_mag error occurs, or
+# other script related errors
+
+# TODO: Implement standard resolution
 
 # FIXME: Two folders are created if SCI OB exists twice, remove that by making
 # a set or something in automated OB creation
@@ -180,7 +183,7 @@ def get_array(run_name: Optional[str] = None) -> str:
     if run_name:
         if "UTs" in run_name:
             return "UTs"
-        elif ("ATs" in run_name) or (at_config in run_name):
+        elif ("ATs" in run_name) or any([i in run_name for i in at_config]):
             if "small" in run_name:
                 return "small"
             elif "medium" in run_name:
@@ -280,7 +283,7 @@ def make_cal_obs(cal_lst: List, sci_lst: List, tag_lst: List,
     template = TEMPLATE_RES_DICT[mode][array_key]
     ACQ = template["ACQ"]
 
-    if not standard_res:
+    if standard_res is None:
         standard_res = "LOW" if array_config == "UTs" else "MED"
 
     # NOTE: Iterates through the calibration list
@@ -351,7 +354,11 @@ def read_dict_into_OBs(path2file: Path, outpath: Path, mode: str,
 
         array_config = get_array(i)
         for j, l in o.items():
-            night_name = get_night_name_and_date(j)
+            if "full" in j:
+                night_name = j
+            else:
+                night_name = get_night_name_and_date(j)
+
             temp_path = os.path.join(outpath, run_name, night_name)
 
             if not os.path.exists(temp_path):
@@ -436,12 +443,15 @@ if __name__ == "__main__":
     path2file = "night_plan.yaml"
     outdir = "/Users/scheuck/Documents/PhD/matisse_stuff/observation/phase2/obs/"
 
-    sci_lst = [""]
-    cal_lst = [""]
-    tag_lst = [""]
+    sci_lst = ["HD172555"]
+    cal_lst = ["ome pav"]
+    tag_lst = ["LN"]
     manual_lst = [sci_lst, cal_lst, tag_lst]
 
     res_dict = {}
 
-    ob_creation(outdir, path2file=path2file, res_dict=res_dict, mode="gr")
+#    ob_creation(outdir, path2file=path2file,
+#                res_dict=res_dict, mode="gr", standard_res="LOW")
+    ob_creation(outdir, manual_lst=manual_lst,
+                res_dict=res_dict, mode="gr", standard_res="LOW")
 
