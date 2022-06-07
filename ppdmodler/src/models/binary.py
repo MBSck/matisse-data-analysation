@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        mas2rad, get_px_scaling
+        mas2rad
 
 from src.functionality.fourier import FFT
 
@@ -124,33 +124,25 @@ if __name__ == "__main__":
     amp, phase = fft.get_amp_phase()
     vis = binary.eval_vis([5, 2.5, -15, -0, 10, 20], wavelength, sampling)
     vis_norm = abs(vis)/abs((np.fft.ifftshift(vis))[0][0])
-    fig, axarr = plt.subplots(2, 3)
-    ax, bx, cx = axarr[0].flatten()
-    dx, ex, fx  = axarr[1].flatten()
-    x_end = fft.fftaxis_m_end
+    fig, axarr = plt.subplots(2, 4)
+    ax, bx, cx, dx = axarr[0].flatten()
+    ax2, bx2, cx2, dx2 = axarr[1].flatten()
 
-    ax.imshow(amp, extent=[x_end, -x_end, x_end, -x_end], origin="lower")
-    ax.set_title("Num. calc. Visibilities (FFT)")
-    ax.axis([0, 100, 0, 100])
-    ax.set_xlabel("u [m]")
-    bx.imshow(vis_norm, extent=[200, -200, 200, -200], origin="lower")
-    bx.axis([0, 100, 0, 100])
-    bx.set_title("Ana. calc. Visibilities")
-    bx.set_xlabel("u [m]")
-    cx.imshow(phase, extent=[x_end, -x_end, x_end, -x_end], origin="lower")
-    cx.axis([0, 100, 0, 100])
-    cx.set_title("Num. calc. Phase (FFT)")
-    cx.set_xlabel("u [m]")
-    dx.imshow(np.angle(vis, deg=True), extent=[200, -200, 200, -200],
-              origin="lower")
-    dx.axis([0, 100, 0, 100])
-    dx.set_title("Ana. calc. Phase")
-    dx.set_xlabel("u [m]")
-    ex.imshow(model, extent=[mas_size//2, -mas_size//2, mas_size//2,
-                             -mas_size//2], origin="lower")
-    ex.axis([-10, 10, -10, 10])
-    ex.set_title("Model image, before FFT")
-    ex.set_xlabel("DEC [mas]")
-    fig.tight_layout()
-    plt.savefig("Binary.png")
+    matplot_axis = [fig, ax, bx, cx, dx, ax2, bx2]
+
+    bx2.imshow(vis_norm, extent=[-200, 200, -200, 200])
+    cx2.imshow(np.angle(vis, deg=True), extent=[-200, 200, -200, 200])
+
+    bx2.set_title("Ana. calc. Visibilities")
+    bx2.set_xlabel("u [m]")
+    bx2.set_ylabel("v [m]")
+
+    cx2.set_title("Ana. calc. Phase")
+    cx2.set_xlabel("u [m]")
+    cx2.set_ylabel("v [m]")
+
+    bx2.axis([-50, 50, -50, 50])
+    cx2.axis([-50, 50, -50, 50])
+
+    fft.plot_amp_phase(matplot_axis, zoom=50, plt_save=True)
 

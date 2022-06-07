@@ -12,12 +12,10 @@ from functools import wraps
 
 from src.functionality.constant import *
 
-# TODO: Check linspace in set_size for accuracy? -> Don't use sampling
-
 # TODO: Make progress bar into a decorator and also keep the time of the
 # process and show the max time
 
-# FIXME: Check all basic functions for accuracy and compare to literature
+# TODO: Finish the fit function, but maybe implement it in the plotter instead?
 
 # Functions
 
@@ -127,73 +125,8 @@ def sr2mas(mas_size: float, sampling: int):
     """
     return (mas_size/(sampling*3600e3*180/np.pi))**2
 
-def get_px_scaling(ax: np.ndarray, wavelength: float) -> float:
-    """Gets the model's scaling from its sampling rate/size the wavelength and
-    the array's dimensionalities into 1/radians.
-
-    Parameters
-    ----------
-    ax: np.ndarray
-        The axis from which the scaling is to be computed. For FFT it is
-        np.fft.fftfreq and for analytical model, set_uvcoords
-
-    Return
-    ------
-    float
-        The px to meter scaling
-    """
-    return np.diff(ax)[0]*wavelength
-
-def correspond_uv2scale(scaling: float, roll: int, uvcoords: np.ndarray) -> float:
-    """Calculates the axis scaling from the axis of an input image/model and
-    returns it in meters baseline per pixel. Returns the uv-coords
-
-    Parameters
-    ----------
-    scaling: float
-        The scaling factor the uv-coords should be corresponded to
-
-    uvcoords: np.array
-        The real uvcoords
-
-    Returns
-    -------
-    uvcoords: np.ndarray
-        The rescaled uv-coords
-    """
-    xcoord, ycoord = [roll+np.round(i[0]/scaling).astype(int) for i in uvcoords], \
-            [roll+np.round(i[1]/scaling).astype(int) for i in uvcoords]
-    return xcoord, ycoord
-
-def correspond_uv2model(model_vis: np.ndarray, model_axis: np.ndarray,uvcoords: np.array,
-                        dis: bool = False, intpol: bool = False) -> List:
-    """This gets the indicies of rescaled given uvcoords to a image/model with
-    either euclidean distance or interpolation and returns their vis2 values
-
-    Parameters
-    ----------
-    uvcoords: np.array
-        The to the image's size rescaled uvcoords
-    dis: bool
-        If enabled, corresponds via euclidean distance
-    intpol: bool
-        If enable, corresponds via interpolationg
-
-    Returns
-    -------
-    np.array
-        Values for the vis2
-    """
-    if dis:
-        u_ind, v_ind = get_distance(model_axis, [i[0] for i in uvcoords]), \
-                get_distance(model_axis, [i[1] for i in uvcoords])
-        uv_ind =  zip(u_ind, v_ind)
-    if intpol:
-        ...
-
-    return [model_vis[i[0], i[1]] for i in uv_ind], list(uv_ind)
-
 def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
+                         modulation_angle: float,
                          amplitudes: List[List] = [[1, 1]],
                          order: Optional[int] = 1) -> Union[float, np.ndarray]:
     """Azimuthal modulation of an object
@@ -211,19 +144,20 @@ def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
     -------
     azimuthal_modulation: float | np.ndarray
     """
+    # TODO: Implement Modulation field like Jozsef?
     total_mod = 0
     for i in range(0, order):
         c, s = amplitudes[i]
-        total_mod += (c*np.cos((i+1)*polar_angle)+s*np.sin((i+1)*polar_angle))
+        total_mod += (c*np.cos((i+1)*polar_angle-modulation_angle) + \
+                      s*np.sin((i+1)*polar_angle-modulation_angle))
 
     modulation = np.array(1+total_mod)
     modulation[modulation < 0] = 0.
     return modulation
 
-def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
-             incline_params: List[float] = []) -> np.array:
-    """
-    Sets the size of the model and its centre. Returns the polar coordinates
+def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
+             incline_params: Optional[List[float]] = None) -> np.array:
+    """Sets the size of the model and its centre. Returns the polar coordinates
 
     Parameters
     ----------
@@ -245,7 +179,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
         The x-axis used to calculate the radius
     """
     with np.errstate(divide='ignore'):
-        if sampling == 0:
+        if sampling is None:
             sampling = px_size
 
         fov_scale = mas_size/sampling
@@ -253,22 +187,25 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = 0,
         x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
         y = x[:, np.newaxis]
 
-        if len(incline_params) > 0:
+        if incline_params:
             try:
-                axis_ratio, pos_angle = incline_params[0],\
+                axis_ratio, pos_angle = incline_params[0], \
                         np.radians(incline_params[1])
             except:
-                raise RuntimeError(f"{inspect.stack()[0][3]}(): Check input"
-                                   " arguments, ellipsis_angles must be of the"
-                                   " form [axis_ratio, pos_angle]")
+                raise IOError(f"{inspect.stack()[0][3]}(): Check input"
+                              " arguments, ellipsis_angles must be of the"
+                              " form [axis_ratio, pos_angle]")
 
-            xr, yr = x*np.cos(pos_angle)+y*np.sin(pos_angle), \
-                    (y*np.cos(pos_angle)-x*np.sin(pos_angle))/axis_ratio
+            if axis_ratio < 1.:
+                raise ValueError("The value of the axis_ratio cannot be < 1.0")
+
+            xr, yr = -x*np.cos(pos_angle)+y*np.sin(pos_angle), \
+                    (x*np.sin(pos_angle)+y*np.cos(pos_angle))/axis_ratio
             radius = np.sqrt(xr**2+yr**2)
-            axis, phi = [xr, yr], np.arctan2(xr/yr)
+            axis, phi = [xr, yr], np.arctan2(xr, yr)
         else:
             radius = np.sqrt(x**2+y**2)
-            axis, phi = [x, y], np.arctan(x/y)
+            axis, phi = [x, y], np.arctan(x, y)
 
         return radius, axis, phi
 
@@ -290,17 +227,20 @@ def zoom_array(array: np.ndarray, bounds: List) -> np.ndarray :
     min_ind, max_ind = bounds
     return array[min_ind:max_ind, min_ind:max_ind]
 
-def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
-                 uvcoords: np.ndarray = None) -> np.array:
+def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
+                 angles: List[float] = None, uvcoords: np.ndarray = None) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
     ----------
-    sampling: int | float
-        The sampling of the (u,v)-plane
     wavelength: float
         The wavelength the (u,v)-plane is sampled at
-    angles: List[float]
+    sampling: int
+        The pixel sampling
+    size: int, optional
+        Sets the range of the (u,v)-plane in meters, with size being the
+        longest baseline
+    angles: List[float], optional
         A list of the three angles [ellipsis_angle, pos_angle inc_angle]
     uvcoords: List[float], optional
         If uv-coords are given, then the visibilities are calculated for
@@ -314,13 +254,13 @@ def set_uvcoords(sampling: int, wavelength: float, angles: List[float] = None,
     """
     with np.errstate(divide='ignore'):
         if uvcoords is None:
-            axis = np.linspace(-200, 200, sampling)
+            axis = np.linspace(-size, size, sampling)
 
             # Star overhead sin(theta_0)=1 position
-            u, v = axis, axis[:, np.newaxis]
+            u, v = axis/wavelength, axis[:, np.newaxis]/wavelength
 
         else:
-            axis = uvcoords
+            axis = uvcoords/wavelength
             u, v = np.array([i[0] for i in uvcoords]), \
                     np.array([i[1] for i in uvcoords])
 

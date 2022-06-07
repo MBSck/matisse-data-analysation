@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import corner
 
 from src.functionality.readout import ReadoutFits
-from src.functionality.utilities import set_uvcoords, correspond_uv2model
+from src.functionality.utilities import set_uvcoords
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
 from src.models import Gauss2D, CompoundModel
 from src.functionality.fourier import FFT
@@ -54,11 +54,11 @@ def test_chi_sq():
     return decoded
 
 if __name__ == "__main__":
-#    data = straigth((0.5, 2))[1]
-#    print(decoded := test_chi_sq())
-#    plt.plot(*straigth((0.5, 2)))
-#    plt.plot(*straigth(decoded))
-#    plt.show()
+    data = straigth((0.5, 2))[1]
+    print(decoded := test_chi_sq())
+    plt.plot(*straigth((0.5, 2)), color="b")
+    plt.plot(*straigth(decoded), color="r")
+    plt.show()
 
-    main()
+#    main()
 

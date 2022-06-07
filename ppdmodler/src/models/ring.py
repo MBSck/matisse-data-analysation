@@ -10,7 +10,7 @@ from src.functionality.baseClasses import Model
 from src.functionality.constant import I
 from src.functionality.fourier import FFT
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        delta_fct, mas2rad, trunc, azimuthal_modulation, get_px_scaling
+        mas2rad, trunc, azimuthal_modulation
 
 # TODO: Make the addition of the visibilities work properly, think of OOP
 # abilities
@@ -45,10 +45,6 @@ class Ring(Model):
 
         Parameters
         ----------
-        r_0: int | float
-            The radius of the ring
-        r_max: int | float, optional
-            The radius if the disk if it is not None in theta
         axis_ratio: float, optional
         pos_angle: int | float, optional
         px_size: int
@@ -75,6 +71,8 @@ class Ring(Model):
 
         if inner_radius:
             self._inner_r = self.r_sub = inner_radius
+        if outer_radius:
+            outer_radius = outer_radius
 
         if sampling is None:
             self._sampling = sampling = px_size
@@ -166,42 +164,12 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
-    # NOTE: There is a discrepancy between the model and the ASPRO model of
-    # about 10m, possibly due to numerical effects?
-    wavelength, mas_fov, sampling, width  = 10e-6, 10, 129, 1.05
+    wavelength, mas_fov, sampling, width  = 1.65e-6, 10, 513, 0.10
+
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([1, 140], mas_fov, sampling,\
-                           inner_radius=1., outer_radius=width*r.r_sub)
+    r_model = r.eval_model([1, 0], mas_fov, sampling,\
+                           inner_radius=1., outer_radius=1+width)
     r_flux = r.get_flux(np.inf, 0.7)
-    r_tot_flux = r.get_total_flux(np.inf, 0.7)
-    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(20, 5))
-    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=2)
-    ft = fft.pipeline()
-    amp, phase = fft.get_amp_phase(True)
-    ft_ax = fft.fftaxis_m_end
-    ft_lambda = fft.fftaxis_Mlambda_end
-    print(ft_ax, "scaling of the FFT to meters")
-    print(fft.fftfreq)
-    print(r.T_sub, "sublimation temperature")
-    print(r.r_sub, "sublimation radius")
-    print(r.r_sub*width-r.r_sub, "width of the ring in mas")
-    ax.imshow(r_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    bx.imshow(r_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    cx.imshow(amp, extent=[ft_ax, -ft_ax, -ft_ax, ft_ax])
-    dx.imshow(amp, extent=[ft_lambda, -ft_lambda, -ft_lambda, ft_lambda])
-
-    ax.set_title("Model image, Object plane")
-    bx.set_title("Temperature gradient")
-    cx.set_title("Fourier transform of object plane (normed). vis")
-    dx.set_title("Fourier transform of object plane (normed, zoomed). vis")
-
-    ax.set_xlabel("RA [mas]")
-    ax.set_ylabel("DEC [mas]")
-    bx.set_xlabel("RA [mas]")
-    bx.set_ylabel("DEC [mas]")
-    cx.set_xlabel("u [m]")
-    cx.set_ylabel("v [m]")
-    dx.set_xlabel(r"u [M$\lambda$]")
-    dx.set_ylabel(r"v [m$\lambda$]")
-    plt.show()
+    fft = FFT(r_flux, wavelength, r.pixel_scale, zero_padding_order=3)
+    fft.plot_amp_phase(corr_flux=False, zoom=130, plt_save=True)
 

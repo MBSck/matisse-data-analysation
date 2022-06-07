@@ -109,37 +109,10 @@ class UniformDisk(Model):
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_fov  = 10e-6, 129, 10
+    wavelength, sampling, mas_fov  = 1.65e-6, 513, 10
     u = UniformDisk(1500, 7900, 19, 140, wavelength)
 
-    u_model = u.eval_model([4, 1, 180], mas_fov, sampling)
+    u_model = u.eval_model([4, 1.5, 135], mas_fov, sampling)
     fft = FFT(u_model, wavelength, u.pixel_scale, 3)
-    amp, phase = fft.get_amp_phase()
-
-    ft_ax = fft.dim//2*fft.fftscaling2m
-    ft_lambda = fft.fftaxis_Mlambda_end
-
-    fig, axarr = plt.subplots(1, 3, figsize=(25, 7))
-    ax, bx, cx = axarr.flatten()
-
-    ax.imshow(u_model, extent=[-mas_fov, mas_fov, -mas_fov, mas_fov])
-    bx.imshow(amp, extent=[-ft_ax, ft_ax, -ft_ax, ft_ax])
-    cx.imshow(amp, extent=[-ft_lambda, ft_lambda, -ft_lambda, ft_lambda])
-
-    ax.set_title("Model image, Object plane")
-    bx.set_title("FFT of Model")
-    cx.set_title("FFT of Model")
-
-    ax.set_xlabel("RA [mas]")
-    ax.set_ylabel("DEC [mas]")
-    bx.set_xlabel("u [m]")
-    bx.set_ylabel("v [m]")
-    cx.set_xlabel(r"u [M$\lambda$]")
-    cx.set_ylabel(r"v [M$\lambda$]")
-
-    ax.axis([-5, 5, -5, 5])
-    bx.axis([-300, 300, -300, 300])
-    cx.axis([-70, 70, -70, 70])
-
-    plt.show()
+    fft.plot_amp_phase(corr_flux=False, zoom=120, plt_save=True)
 

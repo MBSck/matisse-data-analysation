@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
-        mas2rad, get_px_scaling
+        mas2rad
 
 
 class Gauss2D(Model):

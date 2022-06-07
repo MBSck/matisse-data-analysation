@@ -12,10 +12,10 @@ from scipy.interpolate import interpn
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
-from src.functionality.utilities import timeit, get_px_scaling, zoom_array,\
-        mas2rad
+from src.functionality.utilities import timeit, zoom_array, mas2rad
 
-# TODO: Add all class attributes to the documentation
+# FIXME: The scaling of the meters seems to be off for uniform disk
+# and ring as well
 
 class FFT:
     """A collection and build up on the of the FFT-functionality given by numpy
@@ -57,8 +57,9 @@ class FFT:
     """
     def __init__(self, model: np.array, wavelength: float, pixel_scale: float,
                  zero_padding_order: Optional[int] = 1) -> None:
-        self.model = model
+        self.model = self.unpadded_model = model
         self.model_unpadded_dim = self.model.shape[0]
+        self.model_unpadded_centre = self.model_unpadded_dim//2
 
         self.wl = wavelength
         self.pixel_scale = mas2rad(pixel_scale)
@@ -91,7 +92,7 @@ class FFT:
     @property
     def fftscaling2m(self):
         """Fetches the FFT's scaling in meters"""
-        return get_px_scaling(np.roll(self.fftfreq, self.dim//2), self.wl)
+        return np.diff(np.fft.fftshift(self.fftfreq))[0]*self.wl
 
     @property
     def fftscaling2Mlambda(self):
@@ -101,12 +102,12 @@ class FFT:
     @property
     def fftaxis_m_end(self):
         """Fetches the endpoint of the FFT's axis in meters"""
-        return self.fftscaling2m*self.dim//2
+        return self.fftscaling2m*self.model_centre
 
     @property
     def fftaxis_Mlambda_end(self):
         """Fetches the endpoint of the FFT's axis in mega lambdas"""
-        return self.fftscaling2Mlambda*self.dim//2
+        return self.fftscaling2Mlambda*self.model_centre
 
     @property
     def fftaxis_m(self):
@@ -120,7 +121,7 @@ class FFT:
 
     @property
     def zero_padding(self):
-        """Zero pads the model image"""
+        """The new pixel size to be had after zero padding"""
         return 2**int(math.log(self.model_unpadded_dim-1, 2)\
                       +self.zero_padding_order)+1
 
@@ -157,8 +158,10 @@ class FFT:
 
         Returns
         -------
-        np.ndarray
-            The interpolated FFT
+        amp: np.ndarray
+            The interpolated amplitudes
+        cphases: np.ndarray
+            The interpolated closure phases
         """
         grid = (self.fftaxis_m, self.fftaxis_m)
         real_corr = interpn(grid, np.real(self.ft), uvcoords, method='linear',
@@ -169,35 +172,21 @@ class FFT:
 
         ucphase, vcphase = uvcoords_cphase
         real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None)
+                                 bounds_error=False, fill_value=None, period=180)
         imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None)
+                                 bounds_error=False, fill_value=None, period=180)
         cphases = sum(np.angle(real_cphase+1j*imag_cphase, deg=True))
-
-        # print(ft_intp_cphase)
-
-        # x = self.model_centre+np.round(ucphase/self.fftscaling2m).astype("int")
-        # y = self.model_centre+np.round(vcphase/self.fftscaling2m).astype("int")
-
-        # cphases = sum(np.angle(self.ft, True)[y, x])
-
-        # BUG: There are two different values for the interpolatio? Which is
-        # correct?
-
-        # NOTE: Wrap phases to [-180, 180]
-        # cphases = np.degrees((np.radians(cphases)+np.pi) % (2*np.pi) - np.pi)
-        # print(phases)
 
         if corr_flux:
             return np.abs(ft_intp_corr), cphases
         return np.abs(ft_intp_corr)/np.abs(self.ft_center), cphases
 
-    def get_amp_phase(self, corr_flux: bool = False) -> [np.ndarray, np.ndarray]:
+    def get_amp_phase(self, corr_flux: Optional[bool] = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT
 
         Parameters
         ----------
-        corr_flux: bool
+        corr_flux: bool, optional
             If the input image is a temperature gradient model then set this to
             'True' and the output will be the correlated fluxes
 
@@ -209,8 +198,12 @@ class FFT:
             The phase
         """
         if corr_flux:
-            return np.abs(self.ft), np.angle(self.ft, deg=True)
-        return np.abs(self.ft)/np.abs(self.ft_center), np.angle(self.ft, deg=True)
+            amp, phase = np.abs(self.ft), np.angle(self.ft, deg=True)
+        else:
+            amp, phase  = np.abs(self.ft)/np.abs(self.ft_center),\
+                    np.angle(self.ft, deg=True)
+
+        return amp, phase
 
     def do_fft2(self) -> np.array:
         """Does the 2D-FFT and returns the 2D-FFT and shifts the centre to the
@@ -219,11 +212,10 @@ class FFT:
         Returns
         --------
         ft: np.ndarray
-        ft_raw: np.ndarray
         """
-        ft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(self.model)))
-        self.ft_center = ft[self.model_centre, self.model_centre]
-        return ft
+        raw_ft = np.fft.fft2(np.fft.ifftshift(self.model))
+        self.ft_center = raw_ft[0][0]
+        return np.fft.fftshift(raw_ft)
 
     def pipeline(self) -> np.ndarray:
         """Combines various functions and executes them
@@ -235,6 +227,82 @@ class FFT:
         """
         self.model = self.zero_pad_model()
         return self.do_fft2()
+
+    def plot_amp_phase(self, matplot_axis: Optional[List] = [],
+                       zoom: Optional[int] = 500,
+                       corr_flux: Optional[bool] = True,
+                       interpolate: Optional[bool] = False,
+                       plt_save: Optional[bool] = False) -> None:
+        """This plots the input model for the FFT as well as the resulting
+        amplitudes and phases for units of both [m] and [Mlambda]
+
+        Parameters
+        ----------
+        matplot_axis: List, optional
+            The axis of matplotlib
+        zoom: bool, optional
+            The zoom for the (u,v)-coordinates in [m], the [Mlambda] component
+            will be automatically calculated to fit
+        corr_flux: bool, optional
+            If the amplitudes will be normed or not
+        interpolate: bool, optional
+            If toggled then the interpolation will be overplotted
+        plt_save: bool, optional
+            Saves the plot if toggled on
+        """
+        if matplot_axis:
+            fig, ax, bx, cx = matplot_axis
+        else:
+            fig, axarr = plt.subplots(1, 3, figsize=(15, 5))
+            ax, bx, cx = axarr.flatten()
+
+        fov_scale = int((self.pixel_scale/mas2rad())*self.model_unpadded_dim)
+        zoom_Mlambda = zoom/(self.wl*1e6)
+
+        if corr_flux:
+            vmax = np.sort(self.unpadded_model.flatten())[::-1][1]
+        else:
+            vmax = None
+
+        amp, phase = self.get_amp_phase(corr_flux)
+        ax.imshow(self.unpadded_model, vmax=vmax,
+                  extent=[-fov_scale, fov_scale, -fov_scale, fov_scale])
+        cbx = bx.imshow(amp, extent=[-self.fftaxis_m_end,
+                               self.fftaxis_m_end, self.fftaxis_Mlambda_end,
+                                 -self.fftaxis_Mlambda_end],
+                  aspect=self.wl*1e6)
+        ccx = cx.imshow(phase, extent=[-self.fftaxis_m_end,
+                                 self.fftaxis_m_end, self.fftaxis_Mlambda_end,
+                                 -self.fftaxis_Mlambda_end],
+                  aspect=self.wl*1e6)
+
+
+        label_vis = "Flux [Jy]" if corr_flux else "vis"
+        fig.colorbar(cbx, fraction=0.046, pad=0.04, ax=bx, label=label_vis)
+        fig.colorbar(ccx, fraction=0.046, pad=0.04, ax=cx, label="Phase [°]")
+
+        ax.set_title(f"Model image at {self.wl}, Object plane")
+        bx.set_title("Amplitude of FFT")
+        cx.set_title("Closure phase of FFT")
+
+        ax.set_xlabel("RA [mas]")
+        ax.set_ylabel("DEC [mas]")
+
+        bx.set_xlabel("u [m]")
+        bx.set_ylabel(r"v [M$\lambda$]")
+
+        cx.set_xlabel("u [m]")
+        cx.set_ylabel(r"v [M$\lambda$]")
+
+        bx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
+        cx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
+
+        fig.tight_layout()
+
+        if plt_save:
+            plt.savefig(f"{self.wl}_FFT_plot.png")
+        else:
+            plt.show()
 
 
 if __name__ == "__main__":
