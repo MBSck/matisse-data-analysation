@@ -14,25 +14,11 @@ from src.functionality.fourier import FFT
 
 
 def main():
-    path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
+    path = 
     readout = ReadoutFits(path)
     wavelength = 8e-6
 
     uvcoords = readout.get_uvcoords()
-
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-
-    cp = CompoundModel(1500, 7900, 19, 140, wavelength)
-
-    cp_model, cp_flux = cp.eval_model([0.2, 45, 1., 1., 3., 0.04, 0.7], 10, 129)
-    ax1.imshow(cp_flux)
-    ax1.set_title("Temperature gradient")
-
-    # TODO: Check the interpolation of this and plot it over the datapoints
-    fft = FFT(cp_flux, wavelength, cp.pixel_scale, 4)
-    amp, phase = fft.get_amp_phase(corr_flux=True)
-    ax2.imshow(amp)
-    ax2.set_title("FFT of Temperature gradient")
 
     plt.show()
 

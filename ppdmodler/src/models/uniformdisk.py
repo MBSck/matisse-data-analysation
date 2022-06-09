@@ -114,5 +114,5 @@ if __name__ == "__main__":
 
     u_model = u.eval_model([4, 1.5, 135], mas_fov, sampling)
     fft = FFT(u_model, wavelength, u.pixel_scale, 3)
-    fft.plot_amp_phase(corr_flux=False, zoom=120, plt_save=True)
+    fft.plot_amp_phase(corr_flux=False, zoom=120, plt_save=False)
 

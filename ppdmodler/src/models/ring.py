@@ -164,12 +164,12 @@ class Ring(Model):
 
 
 if __name__ == "__main__":
-    wavelength, mas_fov, sampling, width  = 1.65e-6, 10, 513, 0.10
+    wavelength, mas_fov, sampling, width  = 3.5e-6, 10, 513, 0.10
 
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([1, 0], mas_fov, sampling,\
+    r_model = r.eval_model([1.5, 135], mas_fov, sampling,\
                            inner_radius=1., outer_radius=1+width)
     r_flux = r.get_flux(np.inf, 0.7)
     fft = FFT(r_flux, wavelength, r.pixel_scale, zero_padding_order=3)
-    fft.plot_amp_phase(corr_flux=False, zoom=130, plt_save=True)
+    fft.plot_amp_phase(corr_flux=False, zoom=300, plt_save=False)
 
