@@ -18,8 +18,7 @@ from src.models import CompoundModel
 from src.functionality.fourier import FFT
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
-from src.functionality.utilities import correspond_uv2scale, \
-        azimuthal_modulation, get_px_scaling, chi_sq
+from src.functionality.utilities import chi_sq
 
 # Interesting stuff -> Change p0, how it gets made and more
 
@@ -183,8 +182,9 @@ class ModelFitting:
 
         self.realbaselines = np.insert(np.sqrt(self.u**2+self.v**2), 0, 0.)
         self.u_t3phi, self.v_t3phi = self.t3phi_uvcoords
-        self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)[2]
 
+        # TODO: Check if plotting should be in effect for longest baselines
+        self.t3phi_baselines = np.sqrt(self.u_t3phi**2+self.v_t3phi**2)[2]
         self.out_path = out_path
 
     def pipeline(self) -> None:
@@ -310,13 +310,14 @@ class ModelFitting:
 
     def model4fit_numerical(self, theta: np.ndarray) -> np.ndarray:
         """The model image, that is fourier transformed for the fitting process"""
-        model_img, model_flux = self.model_init.eval_model(theta, self.pixel_size, self.sampling)
-        total_flux = np.sum(model_flux)
+        model_flux = self.model_init.eval_model(theta, self.pixel_size, self.sampling)
+        tot_flux = np.sum(model_flux)
 
         fft = FFT(model_flux, self.wavelength, self.model_init.pixel_scale,
                  self.zero_padding_order)
-        amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords, True)
-        return amp, phase, total_flux
+        amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords,
+                                             corr_flux=self.vis, vis2=self.vis2)
+        return amp, phase, tot_flux
 
     def get_best_fit(self, sampler) -> np.ndarray:
         """Fetches the best fit values from the sampler"""
@@ -331,11 +332,10 @@ class ModelFitting:
         fig, (ax, bx, cx) = plt.subplots(1, 3, figsize=(20, 10))
 
         model = self.model(*self.bb_params, self.wavelength)
-        datamod, cphasemod, self.total_flux_fit = self.model4fit_numerical(self.theta_max)
+        datamod, cphasemod, tot_flux = self.model4fit_numerical(self.theta_max)
         self.datamod, self.cphasemod = datamod, cphasemod
-        model_img, model_flux = model.eval_model(self.theta_max, self.pixel_size,
-                                                 4097)
-        self.datamod = np.insert(self.datamod, 0, self.total_flux_fit)
+        model_img = model.eval_model(self.theta_max, self.pixel_size, 4097)
+        self.datamod = np.insert(self.datamod, 0, tot_flux)
 
         # Correspond the best fit to the uv coords
         print("Best fit corr. fluxes:")
@@ -348,10 +348,11 @@ class ModelFitting:
         print("Real cphase")
         print(self.realcphase)
         print("--------------------------------------------------------------")
-        print("Real flux:", self.realflux, "- Best fit flux:", self.total_flux_fit)
+        print("Real flux:", self.realflux, "- Best fit flux:", tot_flux)
         print("--------------------------------------------------------------")
         print("Theta max:")
         print(self.theta_max)
+
         # # Takes a slice of the model and shows vis2-baselines
         # size_model = len(best_fit_model)
         # u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
@@ -360,7 +361,7 @@ class ModelFitting:
         # yvis_curve = best_fit_model[centre]
 
         # Combines the plots and gives descriptions to the axes
-        ax.imshow(model_flux, vmax=model._max_sub_flux,\
+        ax.imshow(model_img, vmax=model._max_sub_flux,\
                   extent=[self.pixel_size//2, -self.pixel_size//2,\
                          -self.pixel_size//2, self.pixel_size//2])
         ax.set_title(fr"{self.model_init.name}: Temperature gradient, at {self.wavelength*1e6:.2f}$\mu$m")
@@ -436,33 +437,32 @@ class ModelFitting:
 
 
 if __name__ == "__main__":
-    # TODO: make the code work for the compound model make the compound model
-    # work
     # Initial sets the theta
-    # initial = np.array([0.6, 180, 1., 1., 8., 0.1, 0.7])
-    initial = np.array([0.2, 180., 1., 1., 3., 0.01, 0.7])
-    priors = [[0., 1.], [0, 360], [0., 2.], [0., 2.],
-              [2., 10.], [0., 1.], [0., 1.]]
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "R_INNER", "TAU", "Q"]
+    initial = np.array([1.5, 135, 1., 1., 100., 3., 5., 0.01, 0.7])
+    priors = [[1., 2.], [0, 180], [0., 2.], [0., 2.], [0., 180.], [1., 10.],
+              [1., 10.], [0., 1.], [0., 1.]]
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "MOD_ANGLE", "R_INNER",
+              "R_OUTER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
-    # f = "../../assets/Final_CAL.fits"
     f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
     out_path = "../../assets"
+
     # sws is for L-band flux; timmi2 for the N-band flux
     flux_file = "../../assets/HD_142666_timmi2.txt"
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=37, zero_padding_order=3)
+                    sampling=129, wl_ind=38, zero_padding_order=3, vis2=False)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=25, niter_burn=2500,
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=2500,
                               niter=5000)
 
     # This calls the MCMC fitting
-    fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels, numerical=True,
-                vis=True, modulation=True, bb_params=bb_params, out_path=out_path)
+    fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels,
+                           numerical=True, vis=True, modulation=True,
+                           bb_params=bb_params, out_path=out_path)
     fitting.pipeline()
 

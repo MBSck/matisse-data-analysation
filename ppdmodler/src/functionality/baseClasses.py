@@ -30,6 +30,7 @@ class Model(metaclass=ABCMeta):
         self._axis_mod, self._axis_vis = [], []
         self._phi = []
         self._inner_r = 0
+        self._max_sub_flux = None
 
         self.T_sub, self.T_eff, self.L_star, self.d, self.wl = T_sub, T_eff, \
                 L_star, distance, wavelength

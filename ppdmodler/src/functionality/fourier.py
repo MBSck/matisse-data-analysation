@@ -143,7 +143,8 @@ class FFT:
 
     def interpolate_uv2fft2(self, uvcoords: np.ndarray,
                             uvcoords_cphase: np.ndarray,
-                            corr_flux: bool = False) -> np.ndarray:
+                            corr_flux: Optional[bool] = False,
+                            vis2: Optional[bool] = False) -> np.ndarray:
         """Interpolate the uvcoordinates to the grid of the FFT
 
         Parameters
@@ -152,9 +153,12 @@ class FFT:
             The uv-coords for the correlated fluxes
         uvcoords_cphase: np.ndarray
             The uv-coords for the closure phases
-        corr_flux: bool
+        corr_flux: bool, optional
             If the input image is a temperature gradient model then set this to
             'True' and the output will be the correlated fluxes
+        vis2: bool, optional
+            Will take the complex conjugate if toggled. Only works if
+            'corr_flux' is 'False'
 
         Returns
         -------
@@ -176,11 +180,12 @@ class FFT:
                                  bounds_error=False, fill_value=None)
         cphases = sum(np.angle(real_cphase+1j*imag_cphase, deg=True))
 
-        print(np.angle(ft_intp_corr, deg=True), cphases)
-
         if corr_flux:
-            return np.abs(ft_intp_corr), cphases
-        return np.abs(ft_intp_corr)/np.abs(self.ft_center), cphases
+            amp = np.abs(ft_intp_corr)
+        else:
+            amp = np.abs(ft_intp_corr)/np.abs(self.ft_center)
+
+        return amp, cphases
 
     def get_amp_phase(self, corr_flux: Optional[bool] = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT
