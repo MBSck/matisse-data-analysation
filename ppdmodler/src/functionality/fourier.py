@@ -170,12 +170,13 @@ class FFT:
                                  bounds_error=False, fill_value=None)
         ft_intp_corr = real_corr+1j*imag_corr
 
-        ucphase, vcphase = uvcoords_cphase
         real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None, period=180)
+                                 bounds_error=False, fill_value=None)
         imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None, period=180)
+                                 bounds_error=False, fill_value=None)
         cphases = sum(np.angle(real_cphase+1j*imag_cphase, deg=True))
+
+        print(np.angle(ft_intp_corr, deg=True), cphases)
 
         if corr_flux:
             return np.abs(ft_intp_corr), cphases
@@ -231,7 +232,7 @@ class FFT:
     def plot_amp_phase(self, matplot_axis: Optional[List] = [],
                        zoom: Optional[int] = 500,
                        corr_flux: Optional[bool] = True,
-                       interpolate: Optional[bool] = False,
+                       uvcoords_lst: Optional[List] = [],
                        plt_save: Optional[bool] = False) -> None:
         """This plots the input model for the FFT as well as the resulting
         amplitudes and phases for units of both [m] and [Mlambda]
@@ -245,8 +246,9 @@ class FFT:
             will be automatically calculated to fit
         corr_flux: bool, optional
             If the amplitudes will be normed or not
-        interpolate: bool, optional
-            If toggled then the interpolation will be overplotted
+        uvcoords_lst: List, optional
+            If not empty then the interpolation will be overplotted with the
+            given (u,v)-coordinates
         plt_save: bool, optional
             Saves the plot if toggled on
         """
@@ -293,6 +295,19 @@ class FFT:
 
         cx.set_xlabel("u [m]")
         cx.set_ylabel(r"v [M$\lambda$]")
+
+        if uvcoords_lst:
+            uvcoords, uvcoords_cphase = uvcoords_lst
+            amp, cphase = self.interpolate_uv2fft2(uvcoords, uvcoords_cphase,
+                                                   corr_flux=True)
+
+            uvcoords = np.array([[i[0], i[1]/(self.wl*1e6)] for i in uvcoords])
+            uvcoords_cphase = np.array([[i[0], i[1]/(self.wl*1e6)] for i in uvcoords])
+
+            uvcoords, uvcoords_cphase = map(lambda x: np.around(x),
+                                            uvcoords_lst)
+            bx.scatter(uvcoords, amp)
+            cx.scatter(uvcoords_cphase, cphase)
 
         bx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
         cx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
