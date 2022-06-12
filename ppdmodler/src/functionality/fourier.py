@@ -4,18 +4,20 @@
 # FFT: https://numpy.org/doc/stable/reference/routines.fft.html
 
 import time
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
+from numpy.fft import fft2, fftshift, ifftshift, fftfreq
 from scipy.interpolate import interpn
 from pathlib import Path
 from typing import Any, List, Dict, Optional, Union
 
 from src.functionality.utilities import timeit, zoom_array, mas2rad
 
-# FIXME: The scaling of the meters seems to be off for uniform disk
-# and ring as well
+# FIXME: There seems to be some problem with the phases of the FFT but not the
+# amps
+
+# TODO: Think of how to implement the odd centre point after fixing the phases
 
 class FFT:
     """A collection and build up on the of the FFT-functionality given by numpy
@@ -65,7 +67,7 @@ class FFT:
         self.pixel_scale = mas2rad(pixel_scale)
         self.zero_padding_order = zero_padding_order
 
-        self.ft = self.pipeline()
+        self.ft = self.do_fft2()
 
     @property
     def model_shape(self):
@@ -83,16 +85,16 @@ class FFT:
         return self.dim//2
 
     @property
-    def fftfreq(self):
+    def freq_axis(self):
         """Fetches the FFT's frequency axis, scaled according to the
         pixel_scale (determined by the sampling and the FOV) as well as the
         zero padding factor"""
-        return np.fft.fftfreq(self.zero_padding, self.pixel_scale)
+        return fftshift(fftfreq(self.zero_padding, self.pixel_scale))
 
     @property
     def fftscaling2m(self):
         """Fetches the FFT's scaling in meters"""
-        return np.diff(np.fft.fftshift(self.fftfreq))[0]*self.wl
+        return np.diff(self.freq_axis)[0]*self.wl
 
     @property
     def fftscaling2Mlambda(self):
@@ -102,28 +104,29 @@ class FFT:
     @property
     def fftaxis_m_end(self):
         """Fetches the endpoint of the FFT's axis in meters"""
-        return self.fftscaling2m*self.model_centre
+        return self.fftscaling2m*(self.model_centre-1)
 
     @property
     def fftaxis_Mlambda_end(self):
         """Fetches the endpoint of the FFT's axis in mega lambdas"""
-        return self.fftscaling2Mlambda*self.model_centre
+        return self.fftscaling2Mlambda*(self.model_centre-1)
 
     @property
     def fftaxis_m(self):
         """Gets the FFT's axis's in meters"""
-        return np.linspace(-self.fftaxis_m_end, self.fftaxis_m_end, self.dim)
+        return np.linspace(-self.fftaxis_m_end, self.fftaxis_m_end,
+                           self.dim, endpoint=False)
 
     @property
     def fftaxis_Mlambda(self):
         """Gets the FFT's axis's endpoints in mega lambdas"""
-        return np.linspace(-self.fftaxis_Mlambda_end, self.fftaxis_Mlambda_end, self.dim)
+        return np.linspace(-self.fftaxis_Mlambda_end, self.fftaxis_Mlambda_end,
+                           self.dim, endpoint=False)
 
     @property
     def zero_padding(self):
         """The new pixel size to be had after zero padding"""
-        return 2**int(math.log(self.model_unpadded_dim-1, 2)\
-                      +self.zero_padding_order)+1
+        return 2**int(np.log2(self.model_unpadded_dim)+self.zero_padding_order)
 
     def zero_pad_model(self):
         """This adds zero padding to the model image before it is transformed
@@ -135,7 +138,7 @@ class FFT:
         padded_image = np.zeros((self.zero_padding, self.zero_padding))
         self.pad_centre = padded_image.shape[0]//2
         self.mod_min, self.mod_max = self.pad_centre-self.model_centre,\
-                self.pad_centre+self.model_centre+1
+                self.pad_centre+self.model_centre
 
         padded_image[self.mod_min:self.mod_max,
                      self.mod_min:self.mod_max] = self.model
@@ -206,7 +209,7 @@ class FFT:
         if corr_flux:
             amp, phase = np.abs(self.ft), np.angle(self.ft, deg=True)
         else:
-            amp, phase  = np.abs(self.ft)/np.abs(self.ft_center),\
+            amp, phase  = np.abs(self.ft)/np.abs(self.ft_centre),\
                     np.angle(self.ft, deg=True)
 
         return amp, phase
@@ -219,20 +222,11 @@ class FFT:
         --------
         ft: np.ndarray
         """
-        raw_ft = np.fft.fft2(np.fft.ifftshift(self.model))
-        self.ft_center = raw_ft[0][0]
-        return np.fft.fftshift(raw_ft)
-
-    def pipeline(self) -> np.ndarray:
-        """Combines various functions and executes them
-
-        Returns
-        -------
-        ft: np.ndarray
-            The FFT of the model image
-        """
         self.model = self.zero_pad_model()
-        return self.do_fft2()
+        self.raw_fft = fft2(ifftshift(self.model))
+        self.ft_centre = self.raw_fft[0][0]
+        return fftshift(self.raw_fft)
+
 
     def plot_amp_phase(self, matplot_axis: Optional[List] = [],
                        zoom: Optional[int] = 500,
@@ -290,7 +284,7 @@ class FFT:
 
         ax.set_title(f"Model image at {self.wl}, Object plane")
         bx.set_title("Amplitude of FFT")
-        cx.set_title("Closure phase of FFT")
+        cx.set_title("Phase of FFT")
 
         ax.set_xlabel("RA [mas]")
         ax.set_ylabel("DEC [mas]")
