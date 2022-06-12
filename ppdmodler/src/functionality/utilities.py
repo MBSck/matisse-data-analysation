@@ -146,16 +146,16 @@ def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
     """
     # TODO: Implement Modulation field like Jozsef?
     total_mod = 0
-    for i in range(0, order):
+    for i in range(order):
         c, s = amplitudes[i]
-        total_mod += (c*np.cos((i+1)*polar_angle-modulation_angle) + \
-                      s*np.sin((i+1)*polar_angle-modulation_angle))
+        total_mod += (c*np.cos((i+1)*(polar_angle-modulation_angle)) + \
+                      s*np.sin((i+1)*(polar_angle-modulation_angle)))
 
     modulation = np.array(1+total_mod)
     modulation[modulation < 0] = 0.
     return modulation
 
-def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
+def set_size(mas_size: int, size: int, sampling: Optional[int] = None,
              incline_params: Optional[List[float]] = None) -> np.array:
     """Sets the size of the model and its centre. Returns the polar coordinates
 
@@ -163,11 +163,11 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
     ----------
     mas_size: int
         Sets the size of the image [mas]
-    px_size: int
-        Sets the size [px] of the model image and implicitly the x-, y-axis.
+    size: int
+        Sets the range of the model image and implicitly the x-, y-axis.
         Size change for simple models functions like zero-padding
     sampling: int, optional
-        The sampling of the object-plane
+        The pixel sampling
     incline_params: List[float], optional
         A list of the inclination parameters [axis_ratio, pos_angle] [mas, rad]
 
@@ -179,12 +179,12 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
         The x-axis used to calculate the radius
     """
     with np.errstate(divide='ignore'):
+        fov_scale = mas_size/size
+
         if sampling is None:
-            sampling = px_size
+            sampling = size
 
-        fov_scale = mas_size/sampling
-
-        x = np.linspace(-px_size//2, px_size//2, sampling)*fov_scale
+        x = np.linspace(-size//2, size//2, sampling, endpoint=False)*fov_scale
         y = x[:, np.newaxis]
 
         if incline_params:
@@ -205,7 +205,7 @@ def set_size(mas_size: int, px_size: int, sampling: Optional[int] = None,
             axis, phi = [xr, yr], np.arctan2(xr, yr)
         else:
             radius = np.sqrt(x**2+y**2)
-            axis, phi = [x, y], np.arctan(x, y)
+            axis, phi = [x, y], np.arctan2(x, y)
 
         return radius, axis, phi
 
@@ -426,5 +426,4 @@ def do_fit():
 
 
 if __name__ == "__main__":
-    ...
-
+    radius, axis, phi = set_size(10, 2**6, 2**8)
