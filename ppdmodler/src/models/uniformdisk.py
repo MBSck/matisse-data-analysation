@@ -64,16 +64,17 @@ class UniformDisk(Model):
         radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
                                                      [axis_ratio, pos_angle])
 
-        self._radius = radius.copy()
+        image = np.zeros((px_size, px_size))
+        image[radius < diameter//2] = 1.
 
-        radius[radius > diameter/2] = 0.
-        radius[np.where(radius != 0)] = 4/(np.pi*diameter**2)
-        self._radius_range = np.where(radius != 0)
+        self._radius = image.copy()
+        self._radius_range = radius < diameter//2
 
-        return radius
+        return image
 
     def eval_vis(self, theta: List, sampling: int, wavelength:
-                 float, uvcoords: np.ndarray = None) -> np.ndarray:
+                 float, size: Optional[int] = 200,
+                 uvcoords: np.ndarray = None) -> np.ndarray:
         """Evaluates the visibilities of the model
 
         Parameters
@@ -97,22 +98,34 @@ class UniformDisk(Model):
         set_uvcoords()
         """
         try:
-            diameter = theta
+            diameter = mas2rad(theta[0])
         except:
             raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
                           " Check input arguments, theta must be of"
                           " the form [diameter]")
 
         self._sampling, self._wavelength = sampling, wavelength
-        B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)
+        B, self._axis_vis = set_uvcoords(wavelength, sampling, size,
+                                         uvcoords=uvcoords, B=False)
 
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_fov  = 1.65e-6, 513, 10
+    wavelength, sampling, mas_fov, size  = 1.65e-6, 2**8, 10, 200
+    size_Mlambda = size/(wavelength*1e6)
     u = UniformDisk(1500, 7900, 19, 140, wavelength)
 
-    u_model = u.eval_model([4, 1.5, 135], mas_fov, sampling)
+    u_model = u.eval_model([4, 1., 0], mas_fov, sampling)
     fft = FFT(u_model, wavelength, u.pixel_scale, 3)
-    fft.plot_amp_phase(corr_flux=False, zoom=120, plt_save=False)
+
+    u_vis = u.eval_vis([4.], 2**8, wavelength, size)
+    fig, axarr = plt.subplots(2, 3)
+    dx, fx, ex = axarr[1].flatten()
+    dx.imshow(abs(u_vis), extent=[-size, size, -size_Mlambda, size_Mlambda],
+              aspect=wavelength*1e6)
+    fx.imshow(np.angle(u_vis, deg=True), extent=[-size, size,
+                                                 -size_Mlambda, size_Mlambda],
+             aspect=wavelength*1e6)
+    fft.plot_amp_phase([fig, *axarr[0].flatten()], corr_flux=False,
+                       zoom=200, plt_save=False)
 
