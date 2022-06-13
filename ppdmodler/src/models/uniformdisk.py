@@ -44,7 +44,8 @@ class UniformDisk(Model):
 
         Returns
         --------
-        model: np.ndarray
+        image: np.ndarray
+            The image of the model
 
         See also
         --------
