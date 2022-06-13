@@ -228,7 +228,8 @@ def zoom_array(array: np.ndarray, bounds: List) -> np.ndarray :
     return array[min_ind:max_ind, min_ind:max_ind]
 
 def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
-                 angles: List[float] = None, uvcoords: np.ndarray = None) -> np.array:
+                 angles: List[float] = None, uvcoords: np.ndarray = None,
+                 B: Optional[bool] = True) -> np.array:
     """Sets the uv coords for visibility modelling
 
     Parameters
@@ -244,6 +245,8 @@ def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
         A list of the three angles [ellipsis_angle, pos_angle inc_angle]
     uvcoords: List[float], optional
         If uv-coords are given, then the visibilities are calculated for
+    B: bool, optional
+        Returns the baseline vector if toggled true, else the r vector
 
     Returns
     -------
@@ -270,13 +273,15 @@ def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
                     pos_angle = angles
                     ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
                             v*np.cos(pos_angle)-u*np.sin(pos_angle)
-                    B = np.sqrt(ur**2+vr**2)*wavelength
+                    r = np.sqrt(ur**2+vr**2)
+                    B_vec = r*wavelength if B else r
                 else:
                     axis_ratio, pos_angle, inc_angle = angles
 
                     ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
                             (v*np.cos(pos_angle)-u*np.sin(pos_angle))/axis_ratio
-                    B = np.sqrt(ur**2+vr**2*np.cos(inc_angle)**2)*wavelength
+                    r = np.sqrt(ur**2+vr**2*np.cos(inc_angle)**2)
+                    B_vec = r*wavelength if B else r
 
                 axis = [ur, vr]
             except:
@@ -286,10 +291,11 @@ def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
                               " [ellipsis_angle, pos_angle, inc_angle]")
 
         else:
-            B = np.sqrt(u**2+v**2)*wavelength
+            r = np.sqrt(u**2+v**2)
+            B_vec = r*_wavelength if B else r
             axis = [u, v]
 
-        return B, axis
+        return B_vec, axis
 
 def stellar_radius_pc(T_eff: int, L_star: int):
     """Calculates the stellar radius from its attributes and converts it from
