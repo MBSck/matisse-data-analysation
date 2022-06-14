@@ -47,13 +47,17 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            if len(theta) < 8:
+            if len(theta) == 7:
                 axis_ratio, pa, c, s, sub_radius, tau, q = theta
+                ring_inner_radius, ring_outer_radius = None, None
+                mod_angle = 0.
+            elif len(theta) == 8:
+                axis_ratio, pa, c, s, mod_angle, sub_radius, tau, q = theta
+                ring_inner_radius, ring_outer_radius = None, None
             else:
                 axis_ratio, pa, c, s, mod_angle, ring_inner_radius,\
                         ring_outer_radius, tau, q = theta
-            self.amplitudes = [[c, s]]
-            ring_outer_radius += ring_inner_radius
+                ring_outer_radius += ring_inner_radius
         except:
             raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
                           " Check input arguments, theta must be of"
@@ -65,15 +69,16 @@ class CompoundModel(Model):
             self._sampling = sampling = px_size
 
         self._size, self._mas_size = px_size, mas_size
+        self.amplitudes = [[c, s]]
 
         image = self.r.eval_model([axis_ratio, pa], mas_size, px_size,
                                   sampling, inner_radius=ring_inner_radius,
                                   outer_radius=ring_outer_radius)
 
         flux = self.r.get_flux(tau, q)
+        flux *= azimuthal_modulation(self.r._phi, mod_angle, self.amplitudes)
         self._max_sub_flux = np.max(flux)
 
-        flux *= azimuthal_modulation(self.r._phi, mod_angle, self.amplitudes)
         flux[sampling//2, sampling//2] = self.d.stellar_flux
 
         return flux
@@ -83,10 +88,9 @@ class CompoundModel(Model):
 
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_size = 10e-6, 513, 50
+    wavelength, sampling, mas_size = 10e-6, 512, 50
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod, c_flux = c.eval_model([0.6, 45, 1, 1, 4., 0.04, 0.7], mas_size,
-                                 sampling)
+    c_flux = c.eval_model([1.5, 135, 1, 1, 4., 0.4, 0.7], mas_size, sampling)
     fft = FFT(c_flux, wavelength, c.pixel_scale, 3)
     amp, phase = fft.get_amp_phase()
 

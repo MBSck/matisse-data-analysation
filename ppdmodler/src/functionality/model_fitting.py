@@ -438,11 +438,11 @@ class ModelFitting:
 
 if __name__ == "__main__":
     # Initial sets the theta
-    initial = np.array([1.5, 135, 1., 1., 100., 3., 5., 0.01, 0.7])
+    initial = np.array([1.5, 135, 1., 1., 100., 3., 0.01, 0.7])
     priors = [[1., 2.], [0, 180], [0., 2.], [0., 2.], [0., 180.], [1., 10.],
-              [1., 10.], [0., 1.], [0., 1.]]
+              [0., 1.], [0., 1.]]
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "MOD_ANGLE", "R_INNER",
-              "R_OUTER", "TAU", "Q"]
+              "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from

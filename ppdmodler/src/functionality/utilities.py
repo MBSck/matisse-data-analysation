@@ -146,13 +146,16 @@ def azimuthal_modulation(polar_angle: Union[float, np.ndarray],
     """
     # TODO: Implement Modulation field like Jozsef?
     total_mod = 0
+    modulation_angle = np.radians(modulation_angle)
+
     for i in range(order):
         c, s = amplitudes[i]
         total_mod += (c*np.cos((i+1)*(polar_angle-modulation_angle)) + \
                       s*np.sin((i+1)*(polar_angle-modulation_angle)))
 
-    modulation = np.array(1+total_mod)
+    modulation = np.array(1 + total_mod)
     modulation[modulation < 0] = 0.
+
     return modulation
 
 def set_size(mas_size: int, size: int, sampling: Optional[int] = None,
