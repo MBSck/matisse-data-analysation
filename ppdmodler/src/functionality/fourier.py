@@ -64,7 +64,7 @@ class FFT:
         self.model_unpadded_centre = self.model_unpadded_dim//2
 
         self.wl = wavelength
-        self.pixel_scale = mas2rad(pixel_scale)
+        self.pixel_scale = pixel_scale
         self.zero_padding_order = zero_padding_order
 
         self.ft = self.do_fft2()
@@ -94,7 +94,7 @@ class FFT:
     @property
     def fftscaling2m(self):
         """Fetches the FFT's scaling in meters"""
-        return np.diff(self.freq_axis)[0]*self.wl
+        return np.diff(self.freq_axis)[0]/mas2rad()*self.wl
 
     @property
     def fftscaling2Mlambda(self):
@@ -104,12 +104,12 @@ class FFT:
     @property
     def fftaxis_m_end(self):
         """Fetches the endpoint of the FFT's axis in meters"""
-        return self.fftscaling2m*(self.model_centre-1)
+        return self.fftscaling2m*self.model_centre
 
     @property
     def fftaxis_Mlambda_end(self):
         """Fetches the endpoint of the FFT's axis in mega lambdas"""
-        return self.fftscaling2Mlambda*(self.model_centre-1)
+        return self.fftscaling2Mlambda*self.model_centre
 
     @property
     def fftaxis_m(self):
@@ -171,22 +171,28 @@ class FFT:
             The interpolated closure phases
         """
         grid = (self.fftaxis_m, self.fftaxis_m)
-        real_corr = interpn(grid, np.real(self.ft), uvcoords, method='linear',
-                                 bounds_error=False, fill_value=None)
-        imag_corr = interpn(grid, np.imag(self.ft), uvcoords, method='linear',
-                                 bounds_error=False, fill_value=None)
-        ft_intp_corr = real_corr+1j*imag_corr
 
-        real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None)
-        imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase, method='linear',
-                                 bounds_error=False, fill_value=None)
-        cphases = sum(np.angle(real_cphase+1j*imag_cphase, deg=True))
+        real_corr = interpn(grid, np.real(self.ft), uvcoords,
+                            method='linear', bounds_error=False,
+                            fill_value=None)
+        imag_corr = interpn(grid, np.imag(self.ft), uvcoords,
+                            method='linear', bounds_error=False,
+                            fill_value=None)
 
-        if corr_flux:
-            amp = np.abs(ft_intp_corr)
-        else:
-            amp = np.abs(ft_intp_corr)/np.abs(self.ft_center)
+        amp = np.abs(real_corr + 1j*imag_corr)
+
+        real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase,
+                              method='linear', bounds_error=False,
+                              fill_value=None)
+        imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase,
+                              method='linear', bounds_error=False,
+                              fill_value=None)
+
+        cphases = sum(np.angle(real_cphase + 1j*imag_cphase, deg=True))
+        cphases =  np.degrees((np.radians(temp) + np.pi) % (2*np.pi) - np.pi)
+
+        if not corr_flux:
+            amp /= np.abs(self.ft_center)
 
         return amp, cphases
 
@@ -232,7 +238,7 @@ class FFT:
                        zoom: Optional[int] = 500,
                        corr_flux: Optional[bool] = True,
                        uvcoords_lst: Optional[List] = [],
-                       plt_save: Optional[bool] = False) -> None:
+                       plt_save: Optional[bool] = False) -> np.ndarray:
         """This plots the input model for the FFT as well as the resulting
         amplitudes and phases for units of both [m] and [Mlambda]
 
@@ -250,6 +256,12 @@ class FFT:
             given (u,v)-coordinates
         plt_save: bool, optional
             Saves the plot if toggled on
+
+
+        Returns
+        -------
+        np.ndarray
+            The zoomed axis of the plot
         """
         if matplot_axis:
             fig, ax, bx, cx = matplot_axis
@@ -266,16 +278,18 @@ class FFT:
             vmax = None
 
         amp, phase = self.get_amp_phase(corr_flux)
-        ax.imshow(self.unpadded_model, vmax=vmax,
+        ax.imshow(self.unpadded_model, vmax=vmax, interpolation="None",
                   extent=[-fov_scale, fov_scale, -fov_scale, fov_scale])
         cbx = bx.imshow(amp, extent=[-self.fftaxis_m_end,
-                               self.fftaxis_m_end, self.fftaxis_Mlambda_end,
-                                 -self.fftaxis_Mlambda_end],
-                  aspect=self.wl*1e6)
+                                     self.fftaxis_m_end-1,
+                                     -self.fftaxis_Mlambda_end,
+                                     self.fftaxis_Mlambda_end-1],
+                        interpolation="None", aspect=self.wl*1e6)
         ccx = cx.imshow(phase, extent=[-self.fftaxis_m_end,
-                                 self.fftaxis_m_end, self.fftaxis_Mlambda_end,
-                                 -self.fftaxis_Mlambda_end],
-                  aspect=self.wl*1e6)
+                                       self.fftaxis_m_end-1,
+                                       -self.fftaxis_Mlambda_end,
+                                       self.fftaxis_Mlambda_end-1],
+                        interpolation="None", aspect=self.wl*1e6)
 
 
         label_vis = "Flux [Jy]" if corr_flux else "vis"
