@@ -98,7 +98,7 @@ class Ring(Model):
         if self._radius is None:
             self._radius = radius.copy()
         else:
-            self._radius += radis.copy()
+            self._radius += radius.copy()
 
         return image
 
