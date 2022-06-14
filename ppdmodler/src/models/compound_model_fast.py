@@ -8,6 +8,7 @@ from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, azimuthal_modulation, mas2rad
 from src.models import Delta, Ring
 
+from src.functionality.fourier import FFT
 
 class CompoundModel(Model):
     """Infinitesimal thin ring model. Can be both cirular or an ellipsoid, i.e.
@@ -46,14 +47,13 @@ class CompoundModel(Model):
         set_size()
         """
         try:
-            if len(theta) < 4:
-                axis_ratio, pa, c, s, tau, q = theta
+            if len(theta) < 8:
+                axis_ratio, pa, c, s, sub_radius, tau, q = theta
             else:
-                axis_ratio, pa, c, s, ring_inner_radius,\
-                        ring_outer_radius, max_radius, tau, q = theta
-                ring_outer_radius += ring_inner_radius
-                max_radius += ring_outer_radius
+                axis_ratio, pa, c, s, mod_angle, ring_inner_radius,\
+                        ring_outer_radius, tau, q = theta
             self.amplitudes = [[c, s]]
+            ring_outer_radius += ring_inner_radius
         except:
             raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
                           " Check input arguments, theta must be of"
@@ -67,34 +67,28 @@ class CompoundModel(Model):
         self._size, self._mas_size = px_size, mas_size
 
         image = self.r.eval_model([axis_ratio, pa], mas_size, px_size,
-                                   sampling, inner_radius=max_radius)
-        flux = self.r.get_flux(tau, q)
-        temp_flux = flux.copy()
-
-        self._max_sub_flux = np.max(flux)
-
-        self.r._radius = None
-        image += self.r.eval_model([axis_ratio, pa], mas_size, px_size,
                                   sampling, inner_radius=ring_inner_radius,
                                   outer_radius=ring_outer_radius)
-        flux += self.r.get_flux(tau, q)
-        flux *= azimuthal_modulation(self.r._phi, self.amplitudes)
 
+        flux = self.r.get_flux(tau, q)
+        self._max_sub_flux = np.max(flux)
+
+        flux *= azimuthal_modulation(self.r._phi, mod_angle, self.amplitudes)
         flux[sampling//2, sampling//2] = self.d.stellar_flux
-        self._max_obj = np.max(image)
 
-        return image, flux
+        return flux
 
     def eval_vis():
         pass
 
 
 if __name__ == "__main__":
+    wavelength, sampling, mas_size = 10e-6, 513, 50
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
-    c_mod, c_flux = c.eval_model([5.96207646e-02, 1.79327163e+02, 1.99972039e+00, 9.66528092e-01,
- 5.84245342e-01, 3.97704978e+00, 2.31893470e+00, 6.23039738e-02,
-                                  7.89946005e-01], 20, 4097)
-    print(np.sum(c_flux))
-    plt.imshow(c_flux, vmax=c._max_sub_flux)
-    plt.show()
+    c_mod, c_flux = c.eval_model([0.6, 45, 1, 1, 4., 0.04, 0.7], mas_size,
+                                 sampling)
+    fft = FFT(c_flux, wavelength, c.pixel_scale, 3)
+    amp, phase = fft.get_amp_phase()
+
+    fft.plot_amp_phase()
 

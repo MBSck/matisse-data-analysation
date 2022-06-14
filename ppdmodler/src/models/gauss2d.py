@@ -9,6 +9,8 @@ from src.functionality.baseClasses import Model
 from src.functionality.utilities import timeit, set_size, set_uvcoords,\
         mas2rad
 
+from src.functionality.fourier import FFT
+
 
 class Gauss2D(Model):
     """Two dimensional Gauss model, FFT is also Gauss
@@ -65,12 +67,14 @@ class Gauss2D(Model):
             sampling = px_size
 
         self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
-        self._radius, self._axis_mod, self._phi  = set_size(mas_size, px_size, sampling)
+        self._radius, self._axis_mod, self._phi  = set_size(mas_size, px_size,
+                                                            sampling)
 
         return (1/(np.sqrt(np.pi/(4*np.log(2)))*fwhm))*np.exp((-4*np.log(2)*self._radius**2)/fwhm**2)
 
     def eval_vis(self, theta: np.ndarray, sampling: int,
-                 wavelength: float, uvcoords: np.ndarray = None) -> np.array:
+                 wavelength: float, size: Optional[int] = 200,
+                 uvcoords: Optional[np.ndarray] = None) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
@@ -81,6 +85,8 @@ class Gauss2D(Model):
             The sampling wavelength
         sampling: int, optional
             The sampling of the uv-plane
+        size: int
+            The size of the (u,v)-axis
         uvcoords: List[float], optional
             If uv-coords are given, then the visibilities are calculated for
             precisely these.
@@ -101,42 +107,15 @@ class Gauss2D(Model):
                           " of the form [fwhm]")
 
         self._sampling = sampling
-        B, self._axis_vis  = set_uvcoords(sampling, wavelength=wavelength, uvcoords=uvcoords)
+        B, self._axis_vis  = set_uvcoords(wavelength, sampling, size,
+                                          uvcoords=uvcoords)
 
         return np.exp(-(np.pi*fwhm*B)**2/(4*np.log(2)))
 
 if __name__ == "__main__":
-    wavelength, mas_fov, sampling = 8e-6, 10, 129
+    wavelength, mas_fov, size, sampling = 8e-6, 100, 2**8, 2**10
     g = Gauss2D(1500, 7900, 19, 140, wavelength)
-    g_model = g.eval_model([2.5], mas_fov, sampling)
-    print(g.pixel_scale)
-    g_flux = g.get_flux(np.inf, 0.7)
-    g_tot_flux = g.get_total_flux(np.inf, 0.7)
-    fig, (ax, bx, cx, dx) = plt.subplots(1, 4, figsize=(30, 5))
-    fft = FFT(g_model, wavelength, g.pixel_scale, zero_padding_order=4)
-    ft, amp2, phase = fft.pipeline()
-    print(amp2[fft.model_unpadded_centre, fft.model_unpadded_centre], "0th element")
-    ax.imshow(g_model, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    bx.imshow(g_flux, extent=[mas_fov, -mas_fov, -mas_fov, mas_fov])
-    print(fft.fftaxis_m)
-    ft_axis = fft.fftaxis_m
-    ft_axis_Mlambda = fft.fftaxis_Mlambda
-    cx.imshow(amp2, extent=[ft_axis, -ft_axis, -ft_axis, ft_axis])
-    dx.imshow(amp2, extent=[ft_axis_Mlambda, -ft_axis_Mlambda,\
-                           -ft_axis_Mlambda, ft_axis_Mlambda])
-
-    ax.set_title("Model image, Object plane")
-    bx.set_title("Temperature gradient")
-    cx.set_title("Fourier transform of object plane (normed). vis")
-    dx.set_title("Fourier transform of object plane (normed, zoomed). vis")
-
-    ax.set_xlabel("RA [mas]")
-    ax.set_ylabel("DEC [mas]")
-    bx.set_xlabel("RA [mas]")
-    bx.set_ylabel("DEC [mas]")
-    cx.set_xlabel("u [m]")
-    cx.set_ylabel("v [m]")
-    dx.set_xlabel(r"u [M$\lambda$]")
-    dx.set_ylabel(r"v [m$\lambda$]")
-    plt.show()
+    g_model = g.eval_model([2.5], mas_fov, size, sampling)
+    fft = FFT(g_model, wavelength, g.pixel_scale, 3)
+    fft.plot_amp_phase(corr_flux=True, zoom=1000, plt_save=False)
 

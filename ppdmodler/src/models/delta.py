@@ -6,7 +6,9 @@ import inspect
 from typing import Any, Dict, List, Union, Optional
 
 from src.functionality.baseClasses import Model
-from src.functionality.utilities import timeit, sublimation_radius, set_size
+from src.functionality.utilities import set_size
+
+from src.functionality.fourier import FFT
 
 
 # TODO: Implement flux for centre of picture
@@ -73,9 +75,9 @@ class Delta(Model):
         return flux*np.ones((sampling, sampling))
 
 if __name__ == "__main__":
+    wavelength = 8e-6
     d = Delta(1500, 7900, 19, 140, 8e-6)
-    d_model = d.eval_model(10, 128)
-
-    plt.imshow(d_model)
-    plt.show()
+    d_model = d.eval_model(10, 129)
+    fft = FFT(d_model, wavelength, d.pixel_scale, 3)
+    fft.plot_amp_phase()
 

@@ -25,7 +25,7 @@ class Model(metaclass=ABCMeta):
     """
     def __init__(self, T_sub, T_eff, L_star, distance, wavelength):
         self.name = ""
-        self._radius, self._radius_range = None, None
+        self._radius  = None
         self._size, self._sampling, self._mas_size = 0, 0, 0
         self._axis_mod, self._axis_vis = [], []
         self._phi = []

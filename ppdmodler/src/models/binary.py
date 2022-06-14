@@ -55,7 +55,6 @@ class Binary(Model):
 
         centre = px_size//2
         separation = np.sqrt((x1-x2)**2+(y1-y2)**2)*self.pixel_scale
-        print(separation, "numerical separation")
 
         self._radius[centre+y1, centre+x1] = flux1
         self._radius[centre+y2, centre+x2] = flux2
@@ -100,13 +99,9 @@ class Binary(Model):
                           " the form [flux1, flux2, separation]")
 
         sep_vec = np.array([x1-x2, y1-y2])
-        print(sep_vec*self.pixel_scale,
-              np.sqrt(sep_vec[0]**2+sep_vec[1]**2)*self.pixel_scale,
-              "analytical separation")
-
         x1, y1, x2, y2 = map(lambda x: mas2rad(x*self.pixel_scale), [x1, y1, x2, y2])
 
-        B, self._axis_vis = set_uvcoords(wavelength, sampling, size)
+        B, self._axis_vis = set_uvcoords(wavelength, sampling, size, B=True)
 
         global axis1, axis2
         u, v = axis1, axis2 = self._axis_vis
@@ -117,32 +112,37 @@ class Binary(Model):
 
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_size = 1.55e-6, 257, 100
+    wavelength, sampling, mas_size, size = 1.55e-6, 256, 100, 35
+    size_Mlambda = size/(wavelength*1e6)
     binary = Binary(1500, 7900, 19, 140, wavelength)
     model = binary.eval_model([5, 2.5, 15, 0, -10, -20], mas_size, sampling)
     fft = FFT(model, wavelength, binary.pixel_scale, zero_padding_order=4)
-    amp, phase = fft.get_amp_phase()
-    vis = binary.eval_vis([5, 2.5, -15, -0, 10, 20], wavelength, sampling)
+
+    # FIXME: The phase information is the wrong way around -> Check
+    vis = binary.eval_vis([5, 2.5, 15, 0, -10, -20], wavelength,
+                          sampling, size)
     vis_norm = abs(vis)/abs((np.fft.ifftshift(vis))[0][0])
-    fig, axarr = plt.subplots(2, 4)
-    ax, bx, cx, dx = axarr[0].flatten()
-    ax2, bx2, cx2, dx2 = axarr[1].flatten()
 
-    matplot_axis = [fig, ax, bx, cx, dx, ax2, bx2]
+    fig, axarr = plt.subplots(2, 3)
+    ax, bx, cx = axarr[0].flatten()
+    ax2, bx2, cx2 = axarr[1].flatten()
 
-    bx2.imshow(vis_norm, extent=[-200, 200, -200, 200])
-    cx2.imshow(np.angle(vis, deg=True), extent=[-200, 200, -200, 200])
+    matplot_axis = [fig, ax, bx, cx]
 
-    bx2.set_title("Ana. calc. Visibilities")
+    ax2.imshow(vis_norm, extent=[-size, size,
+                                 -size_Mlambda, size_Mlambda],
+              aspect=wavelength*1e6)
+    bx2.imshow(np.angle(vis, deg=True), extent=[-size, size,
+                                                -size_Mlambda, size_Mlambda],
+              aspect=wavelength*1e6)
+
+    ax2.set_title("Ana. calc. Visibilities")
+    ax2.set_xlabel("u [m]")
+    ax2.set_ylabel(r"v [M$\lambda$]")
+
+    bx2.set_title("Ana. calc. Phase")
     bx2.set_xlabel("u [m]")
-    bx2.set_ylabel("v [m]")
+    bx2.set_ylabel(r"v [M$\lambda$]")
 
-    cx2.set_title("Ana. calc. Phase")
-    cx2.set_xlabel("u [m]")
-    cx2.set_ylabel("v [m]")
-
-    bx2.axis([-50, 50, -50, 50])
-    cx2.axis([-50, 50, -50, 50])
-
-    fft.plot_amp_phase(matplot_axis, zoom=50, plt_save=True)
+    fft.plot_amp_phase(matplot_axis, corr_flux=False, zoom=size, plt_save=False)
 

@@ -62,14 +62,12 @@ class UniformDisk(Model):
             sampling = px_size
 
         self._size, self._sampling, self._mas_size = px_size, sampling, mas_size
-        radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
+        self._radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
                                                      [axis_ratio, pos_angle])
 
-        image = np.zeros((px_size, px_size))
-        image[radius < diameter//2] = 1.
-
-        self._radius = image.copy()
-        self._radius_range = radius < diameter//2
+        image = np.zeros((sampling, sampling))
+        image[self._radius < diameter//2] = 1.
+        self._radius[image == 0] = 0
 
         return image
 
@@ -108,7 +106,6 @@ class UniformDisk(Model):
         self._sampling, self._wavelength = sampling, wavelength
         B, self._axis_vis = set_uvcoords(wavelength, sampling, size,
                                          uvcoords=uvcoords, B=False)
-
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
@@ -117,7 +114,7 @@ if __name__ == "__main__":
     u = UniformDisk(1500, 7900, 19, 140, wavelength)
 
     u_model = u.eval_model([4, 1., 0], mas_fov, sampling)
-    fft = FFT(u_model, wavelength, u.pixel_scale, 3)
+    fft = FFT(u_model, wavelength, u.pixel_scale, 4)
 
     u_vis = u.eval_vis([4.], 2**8, wavelength, size)
     fig, axarr = plt.subplots(2, 3)

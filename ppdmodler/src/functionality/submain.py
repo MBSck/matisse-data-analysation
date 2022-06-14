@@ -6,7 +6,7 @@ import corner
 from src.functionality.readout import ReadoutFits
 from src.functionality.utilities import set_uvcoords
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
-from src.models import Gauss2D, CompoundModel
+from src.models import Gauss2D, CompoundModel, UniformDisk
 from src.functionality.fourier import FFT
 
 # Shows the full np.arrays, takes ages to print the arrays
@@ -14,13 +14,11 @@ from src.functionality.fourier import FFT
 
 
 def main():
-    path = 
-    readout = ReadoutFits(path)
     wavelength = 8e-6
-
-    uvcoords = readout.get_uvcoords()
-
-    plt.show()
+    u = UniformDisk(1500, 4900, 19, 140, wavelength)
+    u_mod = u.eval_model([4., 1.5, 135], 100, 513)
+    fft = FFT(u_mod, wavelength, u.pixel_scale, 3)
+    fft.plot_amp_phase(zoom=10000)
 
 def straigth(x):
     xcoords = np.linspace(0, 100)
@@ -40,11 +38,11 @@ def test_chi_sq():
     return decoded
 
 if __name__ == "__main__":
-    data = straigth((0.5, 2))[1]
-    print(decoded := test_chi_sq())
-    plt.plot(*straigth((0.5, 2)), color="b")
-    plt.plot(*straigth(decoded), color="r")
-    plt.show()
+#    data = straigth((0.5, 2))[1]
+#    print(decoded := test_chi_sq())
+#    plt.plot(*straigth((0.5, 2)), color="b")
+#    plt.plot(*straigth(decoded), color="r")
+#    plt.show()
 
-#    main()
+    main()
 

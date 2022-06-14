@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 
 from src.functionality.readout import ReadoutFits
 from src.functionality.fourier import FFT
-from src.functionality.utilities import trunc, azimuthal_modulation, \
-        get_px_scaling
-from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk
+from src.functionality.utilities import trunc, azimuthal_modulation
+from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk, UniformDisk
 
 # Shows the full np.arrays, takes ages to print the arrays
 # np.set_printoptions(threshold=sys.maxsize)
@@ -84,16 +83,18 @@ def main():
     wavelength, pixel_size = 9.5e-6, 10
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     readout = ReadoutFits(path)
+
     uv = readout.get_uvcoords()
-    r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([0.2, 40], pixel_size, 129)
-    r_tot_flux = r.get_total_flux(np.inf, 0.7)
-    r_flux = r.get_flux(np.inf, 0.7)
-    fft = FFT(r_model, wavelength, r.pixel_scale, zero_padding_order=4)
-    ft = fft.pipeline()
-    ft = fft.interpolate_uv2fft2(ft, uv)
-    amp, phase = fft.get_amp_phase(ft)
-    print(amp*r_tot_flux, phase)
+    cphase_uv = readout.get_t3phi_uvcoords()
+    print(uv, "uv", cphase_uv, "cphase_uv")
+
+#    wavelength, sampling, mas_fov  = 1.65e-6, 513, 10
+#    u = UniformDisk(1500, 7900, 19, 140, wavelength)
+#
+#    u_model = u.eval_model([4, 1.5, 135], mas_fov, sampling)
+#    fft = FFT(u_model, wavelength, u.pixel_scale, 3)
+#    fft.plot_amp_phase(corr_flux=False, zoom=120,
+#                       plt_save=False, uvcoords_lst=[uv, cphase_uv])
 
 if __name__ == "__main__":
     main()

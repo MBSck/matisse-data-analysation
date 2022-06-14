@@ -69,107 +69,97 @@ class Ring(Model):
                           " Check input arguments, theta must be of"
                           " the form [axis_ratio, pos_angle]")
 
-        if inner_radius:
-            self._inner_r = self.r_sub = inner_radius
-        if outer_radius:
-            outer_radius = outer_radius
-
         if sampling is None:
             self._sampling = sampling = px_size
         else:
             self._sampling = sampling
 
+        image = np.zeros((sampling, sampling))
+
+        if inner_radius:
+            self._inner_r = self.r_sub = inner_radius
+        if outer_radius:
+            outer_radius = outer_radius
+
         self._size, self._mas_size = px_size, mas_size
-        radius, self._axis_mod, self._phi = set_size(mas_size, px_size,\
-                                                     sampling,\
+        radius, self._axis_mod, self._phi = set_size(mas_size, px_size, sampling,
                                                      [axis_ratio, pos_angle])
 
         if inner_radius:
-            radius[radius < inner_radius] = 0.
+            image[radius > inner_radius] = 1.
         else:
-            radius[radius < self.r_sub] = 0.
+            image[radius > self.r_sub] = 1.
 
         if outer_radius:
-            radius[radius > outer_radius] = 0.
+            image[radius > outer_radius] = 0.
+
+        radius[image == 0.] = 0.
 
         if self._radius is None:
             self._radius = radius.copy()
         else:
-            self._radius += radius.copy()
+            self._radius += radis.copy()
 
-        if inner_radius:
-            radius[np.where(radius != 0)] = 1/(2*np.pi*inner_radius)
-        else:
-            radius[np.where(radius != 0)] = 1/(2*np.pi*self.r_sub)
-        return radius
+        return image
 
-    def eval_vis(self, theta: List, sampling: int, wavelength: float, uvcoords:
-                 np.ndarray = None, do_flux: bool = False) -> np.array:
+    def eval_vis(self, theta: List, sampling: int,
+                 wavelength: float, size: Optional[int] = 200,
+                 incline_params: Optional[List] = [],
+                 uvcoords: np.ndarray = None) -> np.array:
         """Evaluates the visibilities of the model
 
         Parameters
         ----------
-        r_0: int | float
-            The minimum radius of the ring, input in mas
-            mas
         r_max: int | float
             The radius of the ring,  input in mas
-        q: float
-            The temperature gradient
-        T_0: int
-            The temperature at the minimum radias
-        wavelength: float
-            The sampling wavelength
         sampling: int
-            The sampling of the uv-plane
-        do_flux: bool
-            Parameter that determines if flux is added to the ring and also
-            returned
+            The pixel sampling
+        wavelength: float
+            The wavelength
+        size: int, optional
+            The size of the (u,v)-plane
+        incline_params: List, optional
+            A list containing the [pos_angle, axis_ratio, inc_angle]
+        uvcoords: np.ndarray, optional
 
         Returns
         -------
-        visibility: np.array
-            The visibilities
-        flux: np.array
-            The flux. Will only get returned if 'do_flux=True'
+        fft: np.array
+            The analytical FFT of a ring
 
         See also
         --------
         set_uvcoords()
         """
         try:
-            r_0, r_max = map(lambda x: mas2rad(x), theta[:2])
-            q, T_0 = theta[2:]
+            r_max = mas2rad(theta[0])
         except Exception as e:
             raise IOError(f"{self.name}.{inspect.stack()[0][3]}():"
                           " Check input arguments, theta must be of the"
-                          " form [r_0, r_max, q, T_0]")
+                          " form [r_max]")
 
         self._sampling, self._wavelength = sampling, wavelength
-        B, self._axis_vis = set_uvcoords(sampling, wavelength, uvcoords)
+        B, self._axis_vis = set_uvcoords(wavelength, sampling, size,
+                                         uvcoords=uvcoords, B=False)
 
-        # Realtive brightness distribution
-        rel_brightness = self.eval_model(sampling, r_max)*blackbody_spec(r_max, q, r_0, T_0, wavelength)
-
-        visibility = j0(2*np.pi*r_max*B)
-        # TODO: Make way to get the individual fluxes from this funciotn
-        # TODO: Remember to add up for the individual x, y and not sum them up,
-        # should solve the problem
-
-        x, u = np.linspace(0, sampling, sampling), np.linspace(-150, 150, sampling)/wavelength
-        y, v = x[:, np.newaxis], u[:, np.newaxis]/wavelength
-
-        return visibility*blackbody_spec(r_max, q, r_0, T_0, wavelength)*np.exp(2*I*np.pi*(u*x+v*y)),\
-                rel_brightness
-
+        return j0(2*np.pi*r_max*B)
 
 if __name__ == "__main__":
-    wavelength, mas_fov, sampling, width  = 3.5e-6, 10, 513, 0.10
+    wavelength, mas_fov, sampling, width, size  = 3.5e-6, 10, 2**8, 0.05, 500
+    size_Mlambda = size/(wavelength*1e6)
 
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([1.5, 135], mas_fov, sampling,\
+    r_model = r.eval_model([1., 135], mas_fov, sampling,\
                            inner_radius=1., outer_radius=1+width)
-    r_flux = r.get_flux(np.inf, 0.7)
-    fft = FFT(r_flux, wavelength, r.pixel_scale, zero_padding_order=3)
-    fft.plot_amp_phase(corr_flux=False, zoom=300, plt_save=False)
+    r_vis = r.eval_vis([1.], sampling, wavelength, size)
+    fig, axarr = plt.subplots(2, 3)
+    dx, fx, ex = axarr[1].flatten()
+    dx.imshow(abs(r_vis), extent=[-size, size, -size_Mlambda, size_Mlambda],
+              aspect=wavelength*1e6)
+    fx.imshow(np.angle(r_vis, deg=True), extent=[-size, size,
+                                                 -size_Mlambda, size_Mlambda],
+             aspect=wavelength*1e6)
+    fft = FFT(r_model, wavelength, r.pixel_scale, 4)
+    fft.plot_amp_phase([fig, *axarr[0].flatten()], corr_flux=False,
+                       zoom=size, plt_save=False)
 
