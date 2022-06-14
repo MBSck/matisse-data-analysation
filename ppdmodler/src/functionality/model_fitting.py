@@ -454,7 +454,7 @@ if __name__ == "__main__":
 
     # Set the data, the wavelength has to be the fourth argument [3]
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
-                    sampling=129, wl_ind=38, zero_padding_order=3, vis2=False)
+                    sampling=128, wl_ind=38, zero_padding_order=3, vis2=False)
 
     # Set the mcmc parameters and the data to be fitted.
     mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=100,

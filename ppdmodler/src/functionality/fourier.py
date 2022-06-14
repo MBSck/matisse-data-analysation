@@ -189,7 +189,7 @@ class FFT:
                               fill_value=None)
 
         cphases = sum(np.angle(real_cphase + 1j*imag_cphase, deg=True))
-        cphases =  np.degrees((np.radians(temp) + np.pi) % (2*np.pi) - np.pi)
+        cphases = np.degrees((np.radians(cphases) + np.pi) % (2*np.pi) - np.pi)
 
         if not corr_flux:
             amp /= np.abs(self.ft_center)
