@@ -178,36 +178,39 @@ def set_size(mas_size: int, size: int, sampling: Optional[int] = None,
     xc: np.ndarray
         The x-axis used to calculate the radius
     """
-    with np.errstate(divide='ignore'):
-        fov_scale = mas_size/size
+    fov_scale = mas_size/size
 
-        if sampling is None:
-            sampling = size
+    if sampling is None:
+        sampling = size
 
-        x = np.linspace(-size//2, size//2, sampling, endpoint=False)*fov_scale
-        y = x[:, np.newaxis]
+    x = np.linspace(-size//2, size//2, sampling, endpoint=False)*fov_scale
+    y = x[:, np.newaxis]
 
-        if incline_params:
-            try:
-                axis_ratio, pos_angle = incline_params[0], \
-                        np.radians(incline_params[1])
-            except:
-                raise IOError(f"{inspect.stack()[0][3]}(): Check input"
-                              " arguments, ellipsis_angles must be of the"
-                              " form [axis_ratio, pos_angle]")
+    if incline_params:
+        try:
+            axis_ratio, pos_angle = incline_params
+        except:
+            raise IOError(f"{inspect.stack()[0][3]}(): Check input"
+                          " arguments, ellipsis_angles must be of the"
+                          " form [axis_ratio, pos_angle]")
 
-            if axis_ratio < 1.:
-                raise ValueError("The value of the axis_ratio cannot be < 1.0")
+        if axis_ratio < 1.:
+            raise ValueError("The axis_ratio cannot be < 1.")
 
-            xr, yr = -x*np.cos(pos_angle)+y*np.sin(pos_angle), \
-                    (x*np.sin(pos_angle)+y*np.cos(pos_angle))/axis_ratio
-            radius = np.sqrt(xr**2+yr**2)
-            axis, phi = [xr, yr], np.arctan2(xr, yr)
-        else:
-            radius = np.sqrt(x**2+y**2)
-            axis, phi = [x, y], np.arctan2(x, y)
+        if (pos_angle < 0) or (pos_angle > 180):
+            raise ValueError("The positional angle must be between [0, 180]")
 
-        return radius, axis, phi
+        pos_angle = np.radians(pos_angle)
+
+        xr, yr = x*np.cos(pos_angle)+y*np.sin(pos_angle), \
+                (-x*np.sin(pos_angle)+y*np.cos(pos_angle))/axis_ratio
+        radius = np.sqrt(xr**2+yr**2)
+        axis, phi = [xr, yr], np.arctan2(xr, yr)
+    else:
+        radius = np.sqrt(x**2+y**2)
+        axis, phi = [x, y], np.arctan2(x, y)
+
+    return radius, axis, phi
 
 def zoom_array(array: np.ndarray, bounds: List) -> np.ndarray :
     """Zooms in on an image by cutting of the zero-padding
@@ -255,47 +258,47 @@ def set_uvcoords(wavelength: float, sampling: int, size: Optional[int] = 200,
     uvcoords: ArrayLike
         The axis used to calculate the baselines
     """
-    with np.errstate(divide='ignore'):
-        if uvcoords is None:
-            axis = np.linspace(-size, size, sampling)
+    if uvcoords is None:
+        axis = np.linspace(-size, size, sampling, endpoint=False)
 
-            # Star overhead sin(theta_0)=1 position
-            u, v = axis/wavelength, axis[:, np.newaxis]/wavelength
+        # Star overhead sin(theta_0)=1 position
+        u, v = axis/wavelength, axis[:, np.newaxis]/wavelength
 
-        else:
-            axis = uvcoords/wavelength
-            u, v = np.array([i[0] for i in uvcoords]), \
-                    np.array([i[1] for i in uvcoords])
+    else:
+        axis = uvcoords/wavelength
+        u, v = np.array([i[0] for i in uvcoords]), \
+                np.array([i[1] for i in uvcoords])
 
-        if angles is not None:
-            try:
-                if len(angles) == 1:
-                    pos_angle = angles
-                    ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
-                            v*np.cos(pos_angle)-u*np.sin(pos_angle)
-                    r = np.sqrt(ur**2+vr**2)
-                    B_vec = r*wavelength if B else r
-                else:
-                    axis_ratio, pos_angle, inc_angle = angles
+    if angles is not None:
+        try:
+            if len(angles) == 1:
+                pos_angle = np.radians(angles[0])
+                ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
+                        v*np.cos(pos_angle)-u*np.sin(pos_angle)
+                r = np.sqrt(ur**2+vr**2)
+                B_vec = r*wavelength if B else r
+            else:
+                axis_ratio = angles[0]
+                pos_angle, inc_angle = map(lambda x: np.radians(x), angles[1:])
 
-                    ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
-                            (v*np.cos(pos_angle)-u*np.sin(pos_angle))/axis_ratio
-                    r = np.sqrt(ur**2+vr**2*np.cos(inc_angle)**2)
-                    B_vec = r*wavelength if B else r
+                ur, vr = u*np.cos(pos_angle)+v*np.sin(pos_angle), \
+                        (v*np.cos(pos_angle)-u*np.sin(pos_angle))/axis_ratio
+                r = np.sqrt(ur**2+vr**2*np.cos(inc_angle)**2)
+                B_vec = r*wavelength if B else r
 
-                axis = [ur, vr]
-            except:
-                raise IOError(f"{inspect.stack()[0][3]}(): Check input"
-                              " arguments, ellipsis_angles must be of the form"
-                              " either [pos_angle] or "
-                              " [ellipsis_angle, pos_angle, inc_angle]")
+            axis = [ur, vr]
+        except:
+            raise IOError(f"{inspect.stack()[0][3]}(): Check input"
+                          " arguments, ellipsis_angles must be of the form"
+                          " either [pos_angle] or "
+                          " [ellipsis_angle, pos_angle, inc_angle]")
 
-        else:
-            r = np.sqrt(u**2+v**2)
-            B_vec = r*_wavelength if B else r
-            axis = [u, v]
+    else:
+        r = np.sqrt(u**2+v**2)
+        B_vec = r*wavelength if B else r
+        axis = [u, v]
 
-        return B_vec, axis
+    return B_vec, axis
 
 def stellar_radius_pc(T_eff: int, L_star: int):
     """Calculates the stellar radius from its attributes and converts it from
