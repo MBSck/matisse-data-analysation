@@ -446,7 +446,7 @@ if __name__ == "__main__":
     bb_params = [1500, 7900, 19, 140]
 
     # File to read data from
-    f = "../../assets/HD_142666_2019-05-14T05_28_03_N_TARGET_FINALCAL_INT.fits"
+    f = "../../assets/Final_CAL.fits"
     out_path = "../../assets"
 
     # sws is for L-band flux; timmi2 for the N-band flux
@@ -457,8 +457,8 @@ if __name__ == "__main__":
                     sampling=129, wl_ind=38, zero_padding_order=3, vis2=False)
 
     # Set the mcmc parameters and the data to be fitted.
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=2500,
-                              niter=5000)
+    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=100,
+                              niter=250)
 
     # This calls the MCMC fitting
     fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels,
