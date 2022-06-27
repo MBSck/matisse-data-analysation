@@ -152,10 +152,10 @@ def set_data(fits_file: Path, pixel_size: int,
     uvcoords = readout.get_uvcoords()
     u, v = readout.get_split_uvcoords()
     t3phi_uvcoords = readout.get_t3phi_uvcoords()
-    data = (vis, viserr, cphase, cphaseerr, flux, fluxerr, vis2)
+    data = (vis, viserr, cphase, cphaseerr, flux, fluxerr)
 
     return (data, pixel_size, sampling, wavelength, uvcoords,
-            u, v, zero_padding_order, t3phi_uvcoords)
+            u, v, zero_padding_order, t3phi_uvcoords, vis2)
 
 def set_mc_params(initial: np.ndarray, nwalkers: int,
                   niter_burn: int, niter: int) -> List:
@@ -223,7 +223,6 @@ class ModelFitting:
         print(self.initial)
         print("--------------------------------------------------------------")
 
-        self.p0_full = self.optimise_inital_theta()
         self.p0 = [np.array(self.initial) +\
                    1e-1*np.random.randn(self.nd) for i in range(self.nw)]
 
@@ -356,9 +355,9 @@ class ModelFitting:
 
         fft = FFT(model_flux, self.wavelength, self.model_init.pixel_scale,
                  self.zero_padding_order)
-        amp, phase = fft.get_uv2fft2(self.uvcoords, self.t3phi_uvcoords,
-                                     corr_flux=self.vis, vis2=self.vis2,
-                                     intp=self.intp)
+        amp, phase, xycoords = fft.get_uv2fft2(self.uvcoords, self.t3phi_uvcoords,
+                                               corr_flux=self.vis, vis2=self.vis2,
+                                               intp=self.intp)
         return amp, phase, tot_flux
 
     def get_best_fit(self, sampler) -> np.ndarray:
@@ -459,7 +458,7 @@ if __name__ == "__main__":
     mc_params = set_mc_params(initial=initial, nwalkers=100, niter_burn=250,
                               niter=500)
     fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels,
-                           numerical=True, vis=True, modulation=True,
+                           numerical=True, modulation=True,
                            bb_params=bb_params, out_path=out_path,
                            intp=False)
     fitting.pipeline()
