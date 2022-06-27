@@ -187,10 +187,12 @@ class ModelFitting:
     def __init__(self, model, data: List, mc_params: List[float],
                  priors: List[List[float]], labels: List[str],
                  numerical: bool = True, modulation: bool = False,
-                 bb_params: List = None, out_path: Path = None) -> None:
+                 bb_params: List = None, out_path: Path = None,
+                 intp: Optional[bool] = False) -> None:
         self.priors, self.labels = priors, labels
         self.bb_params = bb_params
         self.model = model
+        self.intp = intp
 
         self.modulation = modulation
 
@@ -354,8 +356,9 @@ class ModelFitting:
 
         fft = FFT(model_flux, self.wavelength, self.model_init.pixel_scale,
                  self.zero_padding_order)
-        amp, phase = fft.interpolate_uv2fft2(self.uvcoords, self.t3phi_uvcoords,
-                                             corr_flux=self.vis, vis2=self.vis2)
+        amp, phase = fft.get_uv2fft2(self.uvcoords, self.t3phi_uvcoords,
+                                     corr_flux=self.vis, vis2=self.vis2,
+                                     intp=self.intp)
         return amp, phase, tot_flux
 
     def get_best_fit(self, sampler) -> np.ndarray:
@@ -453,10 +456,11 @@ if __name__ == "__main__":
 
     data = set_data(fits_file=f, flux_file=flux_file, pixel_size=100,
                     sampling=128, wl_ind=38, zero_padding_order=3, vis2=False)
-    mc_params = set_mc_params(initial=initial, nwalkers=50, niter_burn=100,
-                              niter=250)
+    mc_params = set_mc_params(initial=initial, nwalkers=100, niter_burn=250,
+                              niter=500)
     fitting = ModelFitting(CompoundModel, data, mc_params, priors, labels,
                            numerical=True, vis=True, modulation=True,
-                           bb_params=bb_params, out_path=out_path)
+                           bb_params=bb_params, out_path=out_path,
+                           intp=False)
     fitting.pipeline()
 
