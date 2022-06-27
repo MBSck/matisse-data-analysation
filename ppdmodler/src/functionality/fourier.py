@@ -223,8 +223,14 @@ class FFT:
                 for x, y in zip(x_c[i], o):
                     cphases_lst[i].append(cphases[y, x])
 
+            u_c, v_c = np.round(uvcoords_cphase)
+            xy_c = []
+            for i, o in enumerate(u_c):
+                for x, y in zip(o, v_c[i]):
+                    xy_c.append([x, y])
+
             cphases = np.array(cphases_lst)
-            xy_coords = [np.round(uvcoords), np.round(uvcoords_cphase)]
+            xy_coords = [np.round(uvcoords), np.array(xy_c)]
 
         cphases = sum(cphases)
         cphases = np.degrees((np.radians(cphases) + np.pi) % (2*np.pi) - np.pi)
@@ -357,6 +363,7 @@ class FFT:
         if uvcoords_lst:
             uvcoords, uvcoords_cphase = uvcoords_lst
             u, v = np.split(uvcoords, 2, axis=1)
+            print(uvcoords_cphase)
             u_c, v_c = np.split(uvcoords_cphase, 2, axis=1)
             v, v_c = map(lambda x: x/(self.wl*1e6), [v, v_c])
 
