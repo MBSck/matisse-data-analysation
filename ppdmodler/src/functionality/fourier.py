@@ -144,10 +144,9 @@ class FFT:
                      self.mod_min:self.mod_max] = self.model
         return padded_image
 
-    def interpolate_uv2fft2(self, uvcoords: np.ndarray,
-                            uvcoords_cphase: np.ndarray,
-                            corr_flux: Optional[bool] = False,
-                            vis2: Optional[bool] = False) -> np.ndarray:
+    def get_uv2fft2(self, uvcoords: np.ndarray, uvcoords_cphase: np.ndarray,
+                intp: Optional[bool] = True, corr_flux: Optional[bool] = False,
+                vis2: Optional[bool] = False) -> np.ndarray:
         """Interpolate the uvcoordinates to the grid of the FFT
 
         Parameters
@@ -156,6 +155,8 @@ class FFT:
             The uv-coords for the correlated fluxes
         uvcoords_cphase: np.ndarray
             The uv-coords for the closure phases
+        intp: bool, optional
+            Decides if coordinates are interpolated on the grid or rounded
         corr_flux: bool, optional
             If the input image is a temperature gradient model then set this to
             'True' and the output will be the correlated fluxes
@@ -169,32 +170,65 @@ class FFT:
             The interpolated amplitudes
         cphases: np.ndarray
             The interpolated closure phases
+        xy_coords: List
+            This list contains the indices for overplotting the uv-coordinates
+            of the visibilitites/correlated fluxes as well as the
+            uv-coordinates for the closure phases to overplot on the phase plot
         """
-        grid = (self.fftaxis_m, self.fftaxis_m)
+        if intp:
+            grid = (self.fftaxis_m, self.fftaxis_m)
 
-        real_corr = interpn(grid, np.real(self.ft), uvcoords,
-                            method='linear', bounds_error=False,
-                            fill_value=None)
-        imag_corr = interpn(grid, np.imag(self.ft), uvcoords,
-                            method='linear', bounds_error=False,
-                            fill_value=None)
+            real_corr = interpn(grid, np.real(self.ft), uvcoords,
+                                method='linear', bounds_error=False,
+                                fill_value=None)
+            imag_corr = interpn(grid, np.imag(self.ft), uvcoords,
+                                method='linear', bounds_error=False,
+                                fill_value=None)
 
-        amp = np.abs(real_corr + 1j*imag_corr)
+            amp = np.abs(real_corr + 1j*imag_corr)
 
-        real_cphase = interpn(grid, np.real(self.ft), uvcoords_cphase,
-                              method='linear', bounds_error=False,
-                              fill_value=None)
-        imag_cphase = interpn(grid, np.imag(self.ft), uvcoords_cphase,
-                              method='linear', bounds_error=False,
-                              fill_value=None)
+            real_phase = interpn(grid, np.real(self.ft), uvcoords_cphase,
+                                  method='linear', bounds_error=False,
+                                  fill_value=None)
+            imag_phase = interpn(grid, np.imag(self.ft), uvcoords_cphase,
+                                  method='linear', bounds_error=False,
+                                  fill_value=None)
+            cphases = np.angle(real_phase + 1j*imag_phase, deg=True)
+            xy_coords = [uvcoords, uvcoords_cphase]
 
-        cphases = sum(np.angle(real_cphase + 1j*imag_cphase, deg=True))
+        else:
+            xy_vis = []
+            for uv in uvcoords:
+                x, y = map(lambda x: self.model_centre +\
+                           np.round(x/self.fftscaling2m).astype(int), uv)
+                xy_vis.append([y, x])
+
+            xy_vis = np.array(xy_vis)
+            amp = np.abs(self.ft)[xy_vis]
+            print(xy_vis, amp)
+
+            xy_cphase = []
+            x_c, y_c = map(lambda x: self.model_centre +\
+                       np.round(x/self.fftscaling2m).astype(int), uvcoords_cphase)
+
+            for i, o in enumerate(y_c):
+                for x, y in zip(x_c[i], o):
+                    xy_cphase.append([y, x])
+
+            xy_cphase = np.array(xy_cphase)
+            cphases = np.angle(self.ft, deg=True)[xy_cphase]
+
+            xy_coords = [np.flip(xy_vis, 1), np.flip(xy_cphase, 1)]
+
+        cphases = sum(cphases)
         cphases = np.degrees((np.radians(cphases) + np.pi) % (2*np.pi) - np.pi)
 
         if not corr_flux:
-            amp /= np.abs(self.ft_center)
+            amp /= np.abs(self.ft_centre)
+            if vis2:
+                amp = amp*np.conjugate(amp)
 
-        return amp, cphases
+        return amp, cphases, xy_coords
 
     def get_amp_phase(self, corr_flux: Optional[bool] = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT
