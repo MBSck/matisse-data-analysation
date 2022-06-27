@@ -194,7 +194,14 @@ class FFT:
                                   method='linear', bounds_error=False,
                                   fill_value=None)
             cphases = np.angle(real_phase + 1j*imag_phase, deg=True)
-            xy_coords = [uvcoords, uvcoords_cphase]
+
+            u_c, v_c = uvcoords_cphase
+            xy_c = []
+            for i, o in enumerate(u_c):
+                for x, y in zip(o, v_c[i]):
+                    xy_c.append([x, y])
+
+            xy_coords = [np.flip(uvcoords, axis=1), np.array(xy_c)]
 
         else:
             xy_vis = []
@@ -205,7 +212,6 @@ class FFT:
 
             xy_vis = np.array(xy_vis)
             amp = np.abs(self.ft)[xy_vis]
-            print(xy_vis, amp)
 
             xy_cphase = []
             x_c, y_c = map(lambda x: self.model_centre +\
@@ -218,7 +224,7 @@ class FFT:
             xy_cphase = np.array(xy_cphase)
             cphases = np.angle(self.ft, deg=True)[xy_cphase]
 
-            xy_coords = [np.flip(xy_vis, 1), np.flip(xy_cphase, 1)]
+            xy_coords = [np.flip(xy_vis, axis=1), np.flip(xy_cphase, axis=1)]
 
         cphases = sum(cphases)
         cphases = np.degrees((np.radians(cphases) + np.pi) % (2*np.pi) - np.pi)
@@ -345,16 +351,12 @@ class FFT:
 
         if uvcoords_lst:
             uvcoords, uvcoords_cphase = uvcoords_lst
-            amp, cphase = self.interpolate_uv2fft2(uvcoords, uvcoords_cphase,
-                                                   corr_flux=True)
+            u, v = np.split(uvcoords, 2, axis=1)
+            u_c, v_c = np.split(uvcoords_cphase, 2, axis=1)
+            v, v_c = map(lambda x: x/(self.wl*1e6), [v, v_c])
 
-            uvcoords = np.array([[i[0], i[1]/(self.wl*1e6)] for i in uvcoords])
-            uvcoords_cphase = np.array([[i[0], i[1]/(self.wl*1e6)] for i in uvcoords])
-
-            uvcoords, uvcoords_cphase = map(lambda x: np.around(x),
-                                            uvcoords_lst)
-            bx.scatter(uvcoords, amp)
-            cx.scatter(uvcoords_cphase, cphase)
+            bx.scatter(u, v, color="r")
+            cx.scatter(u_c, v_c, color="r")
 
         bx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
         cx.axis([-zoom, zoom, -zoom_Mlambda, zoom_Mlambda])
