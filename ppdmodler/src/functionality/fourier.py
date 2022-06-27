@@ -201,30 +201,30 @@ class FFT:
                 for x, y in zip(o, v_c[i]):
                     xy_c.append([x, y])
 
-            xy_coords = [np.flip(uvcoords, axis=1), np.array(xy_c)]
+            xy_coords = [uvcoords, np.array(xy_c)]
 
         else:
-            xy_vis = []
+            amp_lst = []
+            amp, phase = self.get_amp_phase(corr_flux=True)
             for uv in uvcoords:
                 x, y = map(lambda x: self.model_centre +\
                            np.round(x/self.fftscaling2m).astype(int), uv)
-                xy_vis.append([y, x])
+                amp_lst.append(amp[y, x])
 
-            xy_vis = np.array(xy_vis)
-            amp = np.abs(self.ft)[xy_vis]
+            amp = np.array(amp_lst)
 
-            xy_cphase = []
+            cphases_lst = []
+            cphases = np.angle(self.ft, deg=True)
             x_c, y_c = map(lambda x: self.model_centre +\
                        np.round(x/self.fftscaling2m).astype(int), uvcoords_cphase)
 
             for i, o in enumerate(y_c):
+                cphases_lst.append([])
                 for x, y in zip(x_c[i], o):
-                    xy_cphase.append([y, x])
+                    cphases_lst[i].append(cphases[y, x])
 
-            xy_cphase = np.array(xy_cphase)
-            cphases = np.angle(self.ft, deg=True)[xy_cphase]
-
-            xy_coords = [np.flip(xy_vis, axis=1), np.flip(xy_cphase, axis=1)]
+            cphases = np.array(cphases_lst)
+            xy_coords = [np.round(uvcoords), np.round(uvcoords_cphase)]
 
         cphases = sum(cphases)
         cphases = np.degrees((np.radians(cphases) + np.pi) % (2*np.pi) - np.pi)
@@ -232,11 +232,12 @@ class FFT:
         if not corr_flux:
             amp /= np.abs(self.ft_centre)
             if vis2:
-                amp = amp*np.conjugate(amp)
+                amp *= np.conjugate(amp)
 
         return amp, cphases, xy_coords
 
-    def get_amp_phase(self, corr_flux: Optional[bool] = False) -> [np.ndarray, np.ndarray]:
+    def get_amp_phase(self, corr_flux: Optional[bool] = False,
+                      vis2: Optional[bool] = False) -> [np.ndarray, np.ndarray]:
         """Gets the amplitude and the phase of the FFT
 
         Parameters
@@ -244,6 +245,9 @@ class FFT:
         corr_flux: bool, optional
             If the input image is a temperature gradient model then set this to
             'True' and the output will be the correlated fluxes
+        vis2: bool, optional
+            Will take the complex conjugate if toggled. Only works if
+            'corr_flux' is 'False'
 
         Returns
         --------
@@ -257,6 +261,8 @@ class FFT:
         else:
             amp, phase  = np.abs(self.ft)/np.abs(self.ft_centre),\
                     np.angle(self.ft, deg=True)
+            if vis2:
+                amp *= np.conjugate(amp)
 
         return amp, phase
 
@@ -272,7 +278,6 @@ class FFT:
         self.raw_fft = fft2(ifftshift(self.model))
         self.ft_centre = self.raw_fft[0][0]
         return fftshift(self.raw_fft)
-
 
     def plot_amp_phase(self, matplot_axis: Optional[List] = [],
                        zoom: Optional[int] = 500,
@@ -309,7 +314,7 @@ class FFT:
             fig, axarr = plt.subplots(1, 3, figsize=(15, 5))
             ax, bx, cx = axarr.flatten()
 
-        fov_scale = int((self.pixel_scale/mas2rad())*self.model_unpadded_dim)
+        fov_scale = self.pixel_scale*self.model_unpadded_dim
         zoom_Mlambda = zoom/(self.wl*1e6)
 
         if corr_flux:
