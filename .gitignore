@@ -15,6 +15,10 @@ ppdmodler/ppdmodler.egg-info/
 ppdmodler/src/ppdmodler.egg-info/
 
 # Ignored files
+ppdmodler/assets/*.png
+ppdmodler/src/functionality/*.png
+ppdmodler/src/models/*.png
+
 dataReduction/avg_oifits.py
 dataReduction/mat_reduce_all_drs.py
 dataReduction/show_allred.py
