@@ -61,7 +61,6 @@ class Binary(Model):
 
         return self._radius
 
-
     def eval_vis(self, theta: List, wavelength: float,
                  sampling: int, size: Optional[int] = 200,
                  uvcoords: np.ndarray = None) -> np.array:
@@ -105,8 +104,8 @@ class Binary(Model):
 
         global axis1, axis2
         u, v = axis1, axis2 = self._axis_vis
-        flux1_contribution = flux1*np.exp(2*np.pi*1j*(u*x1+v*y1))
-        flux2_contribution = flux2*np.exp(2*np.pi*1j*(u*x2+v*y2))
+        flux1_contribution = flux1*np.exp(2*np.pi*-1j*(u*x1+v*y1))
+        flux2_contribution = flux2*np.exp(2*np.pi*-1j*(u*x2+v*y2))
 
         return flux1_contribution + flux2_contribution
 
@@ -144,5 +143,6 @@ if __name__ == "__main__":
     bx2.set_xlabel("u [m]")
     bx2.set_ylabel(r"v [M$\lambda$]")
 
-    fft.plot_amp_phase(matplot_axis, corr_flux=False, zoom=size, plt_save=False)
+    fft.plot_amp_phase(matplot_axis, corr_flux=False,
+                       zoom=size, plt_save=False)
 

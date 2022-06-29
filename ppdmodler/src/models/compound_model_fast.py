@@ -88,11 +88,12 @@ class CompoundModel(Model):
 
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_size = 10e-6, 512, 50
+    wavelength, sampling, mas_size = 10e-6, 2**8, 50
     c = CompoundModel(1500, 7900, 19, 140, 8e-6)
     c_flux = c.eval_model([1.5, 135, 1, 1, 4., 0.4, 0.7], mas_size, sampling)
     fft = FFT(c_flux, wavelength, c.pixel_scale, 3)
-    amp, phase = fft.get_amp_phase()
-
-    fft.plot_amp_phase()
+    print(fft.fftaxis_m_end)
+    print(fft.fftaxis_m)
+    print((fft.fftaxis_m, fft.fftaxis_m))
+    # fft.plot_amp_phase(zoom=5000)
 

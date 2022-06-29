@@ -145,11 +145,11 @@ class Ring(Model):
         return j0(2*np.pi*r_max*B)
 
 if __name__ == "__main__":
-    wavelength, mas_fov, sampling, width, size  = 3.5e-6, 10, 2**8, 0.05, 500
+    wavelength, mas_fov, sampling, width, size  = 3.5e-6, 10, 2**8, 0.05, 2500
     size_Mlambda = size/(wavelength*1e6)
 
     r = Ring(1500, 7900, 19, 140, wavelength)
-    r_model = r.eval_model([1., 135], mas_fov, sampling,\
+    r_model = r.eval_model([1.0, 0], mas_fov, sampling,\
                            inner_radius=1., outer_radius=1+width)
     r_vis = r.eval_vis([1.], sampling, wavelength, size)
     fig, axarr = plt.subplots(2, 3)
@@ -160,6 +160,8 @@ if __name__ == "__main__":
                                                  -size_Mlambda, size_Mlambda],
              aspect=wavelength*1e6)
     fft = FFT(r_model, wavelength, r.pixel_scale, 4)
+    print(np.diff(fft.fftaxis_m)[0])
+
     fft.plot_amp_phase([fig, *axarr[0].flatten()], corr_flux=False,
                        zoom=size, plt_save=False)
 

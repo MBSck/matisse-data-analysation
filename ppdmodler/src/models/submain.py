@@ -11,6 +11,7 @@ from src.models import Gauss2D, Ring, CompoundModel, InclinedDisk, UniformDisk
 # np.set_printoptions(threshold=sys.maxsize)
 
 def check_flux_behaviour(model, wavelength):
+    """Plots the scaling behaviour of the fluxes"""
     lst = []
     pot_lst = [2**i for i in range(1, 10, 1)][3:]
     print(pot_lst)
@@ -26,75 +27,31 @@ def check_flux_behaviour(model, wavelength):
         print("|| ", o[0], ": ", trunc(o[1], 3),
               " || ", lst[~i][0], ": ", trunc(lst[~i][1], 3), " ||")
 
-def plot_all(model, mas_size, wavelength, sampling):
-    mod = model.eval_model([1, 140], mas_size, sampling)
-    flux = model.get_flux(np.inf, 1)
-    tot_flux = model.get_total_flux(np.inf, 1)
-    print(tot_flux, "total flux")
+def check_interpolation(uvcoords, uvcoords_cphase, wavelength):
+    u = CompoundModel(1500, 7900, 19, 140, wavelength)
+    u_mod = u.eval_model([1.5, 135, 1, 1, 4., 0.4, 0.7], 10, 128)
 
-    fourier = FFT(mod, wavelength, pixelscale=1.)
-    ft, amp, phi = fourier.pipeline()
-
-    fr_scale = get_px_scaling(fourier.fftfreq, wavelength)
-    print(fourier.fftfreq, "scaling")
-    print(fr_scale, "fr_scale")
-    corr_scale = fr_scale*sampling/2
-    print(corr_scale, "u_min")
-    u, v = (axis := np.linspace(-corr_scale, corr_scale, sampling)),\
-            axis[:, np.newaxis]
-    corr_flux = amp*tot_flux
-
-
-    # u, v = (axis := np.linspace(-150, 150, sampling)), axis[:, np.newaxis]
-    wavelength = trunc(wavelength*1e06, 2)
-    xvis_curve = np.sqrt(u**2+v**2)[centre := sampling//2]
-    yvis_curve = amp[centre]
-    yvis_curve2 = corr_flux[centre]
-
-    third_max = len(corr_flux)//2 - 3
-
-    fig, (ax, bx, cx, dx, ex) = plt.subplots(1, 5)
-    ax.imshow(mod, vmax=model._max_obj,
-              extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
-    bx.imshow(flux, vmax=model._max_sub_flux, extent=[mas_size/2, -mas_size/2, -mas_size/2, mas_size/2])
-    cx.plot(xvis_curve, yvis_curve)
-    dx.plot(xvis_curve, yvis_curve2)
-    ex.imshow(corr_flux, vmax=corr_flux[third_max, third_max],
-             extent=[corr_scale, -corr_scale, -corr_scale, corr_scale])
-
-    ax.set_title("Object Plane")
-    bx.set_title("Temperature gradient")
-    cx.set_title("Visibilities")
-    dx.set_title("Correlated Fluxes")
-    ex.set_title("Correlated Fluxes")
-    ax.set_xlabel("[mas]")
-    ax.set_ylabel("[mas]")
-    bx.set_xlabel("[mas]")
-    bx.set_ylabel("[mas]")
-    cx.set_xlabel(r"$B_p$ [m]")
-    cx.set_ylabel(r"vis")
-    dx.set_xlabel(r"$B_p$ [m]")
-    dx.set_ylabel(r"Corr Flux [Jy]")
-    ex.set_xlabel(r"$u$ [m]")
-    ex.set_ylabel(r"$v$ [m]")
-    plt.show()
+    # Check previously calculated scaling factor
+    print(10/128, u.pixel_scale)
+    fft = FFT(u_mod, wavelength, 10/128, 5)
+    amp_ip, cphase_ip, xy_coords_ip = fft.get_uv2fft2(uvcoords, uvcoords_cphase,
+                                                      intp=True, corr_flux=True)
+    amp, cphase, xy_coords = fft.get_uv2fft2(uvcoords, uvcoords_cphase,
+                                             intp=False, corr_flux=True)
+    fft.plot_amp_phase(corr_flux=True, uvcoords_lst=xy_coords,
+                       plt_save=True)
+    print("amps_inp", amp_ip, "amps", amp)
+    print("cphases_inp", cphase_ip, "cphase", cphase)
+    print("coords_inp", xy_coords_ip, "coords", xy_coords)
 
 def main():
-    wavelength, pixel_size = 9.5e-6, 10
+    wavelength = 10e-6
     path = "/Users/scheuck/Documents/PhD/matisse_stuff/assets/GTO/hd142666/UTs/nband/TAR-CAL.mat_cal_estimates.2019-05-14T05_28_03.AQUARIUS.2019-05-14T04_52_11.rb/averaged/Final_CAL.fits"
     readout = ReadoutFits(path)
 
     uv = readout.get_uvcoords()
-    cphase_uv = readout.get_t3phi_uvcoords()
-    print(uv, "uv", cphase_uv, "cphase_uv")
-
-#    wavelength, sampling, mas_fov  = 1.65e-6, 513, 10
-#    u = UniformDisk(1500, 7900, 19, 140, wavelength)
-#
-#    u_model = u.eval_model([4, 1.5, 135], mas_fov, sampling)
-#    fft = FFT(u_model, wavelength, u.pixel_scale, 3)
-#    fft.plot_amp_phase(corr_flux=False, zoom=120,
-#                       plt_save=False, uvcoords_lst=[uv, cphase_uv])
+    uv_cphase = readout.get_t3phi_uvcoords()
+    check_interpolation(uv, uv_cphase, wavelength)
 
 if __name__ == "__main__":
     main()

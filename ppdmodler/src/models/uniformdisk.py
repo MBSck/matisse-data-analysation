@@ -109,14 +109,14 @@ class UniformDisk(Model):
         return 2*j1(np.pi*diameter*B)/(np.pi*diameter*B)
 
 if __name__ == "__main__":
-    wavelength, sampling, mas_fov, size  = 1.65e-6, 2**8, 10, 200
+    wavelength, sampling, mas_fov, size  = 1.65e-6, 2**8, 10, 500
     size_Mlambda = size/(wavelength*1e6)
     u = UniformDisk(1500, 7900, 19, 140, wavelength)
 
-    u_model = u.eval_model([4, 1., 0], mas_fov, sampling)
-    fft = FFT(u_model, wavelength, u.pixel_scale, 4)
+    u_model = u.eval_model([2, 1., 0], mas_fov, sampling)
+    fft = FFT(u_model, wavelength, u.pixel_scale, 2)
 
-    u_vis = u.eval_vis([4.], 2**8, wavelength, size)
+    u_vis = u.eval_vis([2.], 2**8, wavelength, size)
     fig, axarr = plt.subplots(2, 3)
     dx, fx, ex = axarr[1].flatten()
     dx.imshow(abs(u_vis), extent=[-size, size, -size_Mlambda, size_Mlambda],
@@ -125,5 +125,5 @@ if __name__ == "__main__":
                                                  -size_Mlambda, size_Mlambda],
              aspect=wavelength*1e6)
     fft.plot_amp_phase([fig, *axarr[0].flatten()], corr_flux=False,
-                       zoom=200, plt_save=False)
+                       zoom=size, plt_save=False)
 
