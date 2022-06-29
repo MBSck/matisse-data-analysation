@@ -37,10 +37,10 @@ def trunc(values, decs=0):
     """Truncates the floating point decimals"""
     return np.trunc(values*10**decs)/(10**decs)
 
-def chi_sq(data: np.ndarray, sigma: np.ndarray,
+def chi_sq(data: np.ndarray, sigma_sq: np.ndarray,
            model: np.ndarray) -> float:
     """The chi square minimisation"""
-    return np.sum((data-model)**2/sigma)
+    return np.log(2*np.pi*sigma_sq) + np.sum((data-model)**2/sigma_sq)
 
 def timeit(func):
     """Simple timer decorator for functions"""
