@@ -40,7 +40,31 @@ def trunc(values, decs=0):
 def chi_sq(data: np.ndarray, sigma_sq: np.ndarray,
            model: np.ndarray) -> float:
     """The chi square minimisation"""
-    return np.log(2*np.pi*sigma_sq) + np.sum((data-model)**2/sigma_sq)
+    return np.sum(np.log(2*np.pi*sigma_sq) + (data-model)**2/sigma_sq)
+
+def get_rndarr_from_bounds(bounds: List):
+    """Initialises a random float/list via a normal distribution from the
+    bounds provided
+
+    Parameters
+    -----------
+    bounds: List
+        Bounds list must be nested list(s) containing the bounds of the form
+        form [lower_bound, upper_bound]
+
+    Returns
+    -------
+    float | np.ndarray
+    """
+    initial = []
+
+    for lower, upper in bounds:
+        if type(lower) is int:
+            initial.append(int(np.random.uniform(lower, upper)))
+        else:
+            initial.append(np.random.uniform(lower, upper))
+    return np.array(initial)
+
 
 def timeit(func):
     """Simple timer decorator for functions"""

@@ -110,7 +110,7 @@ class ReadoutFits:
 
     def get_flux4wl(self, wl_ind: int) -> np.ndarray:
         """Fetches the flux for a specific wavelength"""
-        flux, fluxerr = map(lambda x: np.array([i[wl_ind] for i in x]).flatten(), [self.get_flux()])
+        flux, fluxerr = map(lambda x: x[0][wl_ind], self.get_flux())
         return flux, fluxerr
 
     def get_vis4wl(self, wl_ind: int) -> np.ndarray:
