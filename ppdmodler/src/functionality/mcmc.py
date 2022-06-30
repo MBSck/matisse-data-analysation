@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 """Test file for a 2D-Gaussian PPD model, that is fit with MCMC; The emcee
 package
@@ -49,6 +50,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pathlib import Path
+from schwimmbad import MPIPool
+from multiprocessing import Pool, cpu_count
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import CompoundModel
@@ -357,7 +360,9 @@ def lnprob(theta: np.ndarray, realdata,
 
     return lp + lnlike(theta, realdata, model_param_lst, uvcoords_lst, vis_lst)
 
-def do_mcmc(mcmc_params: List, prior_dynamic, labels, lnprob, args) -> np.array:
+def do_mcmc(mcmc_params: List, prior_dynamic,
+            labels, lnprob, args,
+            cluster: Optional[bool] = False) -> np.array:
     """Runs the emcee fit
 
     The EnsambleSampler recieves the parameters and the args are passed to
@@ -382,19 +387,29 @@ def do_mcmc(mcmc_params: List, prior_dynamic, labels, lnprob, args) -> np.array:
     p0 = [initial +\
           1/np.array(prior_dynamic) *\
                      np.random.rand(ndim) for i in range(nwalkers)]
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=args)
+    if cluster:
+        with MPIPool as pool:
+            if not pool.is_master():
+                pool.wait()
+                sys.exit(0)
+    else:
+        with Pool() as pool:
+            cores = cpu_count()
+            print(f"Executing MCMC with {cores}")
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
+                                            args=args, pool=pool)
 
-    print("initial parameters: ", initial)
-    print("--------------------------------------------------------------")
+            print("initial parameters: ", initial)
+            print("--------------------------------------------------------------")
 
-    print("Running burn-in...")
-    p0, _, _ = sampler.run_mcmc(p0, nburn, progress=True)
-    sampler.reset()
+            print("Running burn-in...")
+            p0, _, _ = sampler.run_mcmc(p0, nburn, progress=True)
+            sampler.reset()
 
-    print("--------------------------------------------------------------")
-    print("Running production...")
-    pos, prob, state = sampler.run_mcmc(p0, niter, progress=True)
-    print("--------------------------------------------------------------")
+            print("--------------------------------------------------------------")
+            print("Running production...")
+            pos, prob, state = sampler.run_mcmc(p0, niter, progress=True)
+            print("--------------------------------------------------------------")
 
     theta_max = (sampler.flatchain)[np.argmax(sampler.flatlnprobability)]
     plotter(sampler, *args, labels)
@@ -420,5 +435,5 @@ if __name__ == "__main__":
                     zero_padding_order=3, bb_params=bb_params,
                     priors=priors, vis2=False)
 
-    do_mcmc(mcmc_params, prior_dynamic, labels, lnprob, data)
+    do_mcmc(mcmc_params, prior_dynamic, labels, lnprob, data, True)
 
