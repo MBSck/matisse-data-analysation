@@ -53,10 +53,11 @@ from typing import Any, Dict, List, Union, Optional
 
 from src.models import CompoundModel
 from src.functionality.fourier import FFT
-from src.functionality.utilities import chi_sq
+from src.functionality.utilities import chi_sq, get_rndarr_from_bounds
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
 
+# TODO: Make function that randomly assigns starting parameters from priors
 
 # FIXME: The code has some difficulties rescaling for higher pixel numbers
 # and does in that case not approximate the right values for the corr_fluxes,
@@ -73,7 +74,6 @@ from src.functionality.genetic_algorithm import genetic_algorithm, decode
 # TODO: Make one plot that shows a model of the start parameters and the
 # uv-points plotted on top, before fitting starts and options to then change
 # them in order to get the best fit (Even multiple times)
-
 
 def get_data(fits_file: Path, model, pixel_size: int,
              sampling: int, flux_file: Path = None,
@@ -188,7 +188,7 @@ def print_values(realdata: List, datamod: List, theta_max: List) -> None:
     print(theta_max)
 
 def plotter(sampler, realdata: List, model_param_lst: List,
-            uvcoords_lst: List, vis_lst: List,
+            uvcoords_lst: List, vis_lst: List, labels,
             plot_px_size: Optional[int] = 2**12) -> None:
     """Plot the samples to get estimate of the density that has been sampled, to
     test if sampling went well"""
@@ -244,17 +244,23 @@ def plotter(sampler, realdata: List, model_param_lst: List,
 
     fig.tight_layout()
 
+    plot_corner(sampler, model_cp, labels, wavelength)
+
     save_path = f"{model_cp.name}_model_after_fit_{wavelength*1e6:.2f}.png"
     plt.savefig(save_path)
     plt.show()
 
-def plot_corner(sampler: np.ndarray, labels: List, wavelength) -> None:
+def plot_corner(sampler: np.ndarray, model, labels: List, wavelength) -> None:
     """Plots the corner plot of the posterior spread"""
     samples = sampler.get_chain(flat=True)
     fig = corner.corner(samples, show_titles=True, labels=labels,
                        plot_datapoints=True, quantiles=[0.16, 0.5, 0.84])
-    save_path = f"{model_init.name}_corner_plot_{wavelength*1e6:.2f}.png"
+    save_path = f"{model.name}_corner_plot_{wavelength*1e6:.2f}.png"
     plt.savefig(save_path)
+
+def plot_chains(sampler: np.ndarray) -> None:
+    """Plots the chains for debugging to see if and how they converge"""
+    ...
 
 def model4fit_numerical(theta: np.ndarray, model_param_lst,
                         uvcoords_lst, vis_lst) -> np.ndarray:
@@ -288,10 +294,10 @@ def lnlike(theta: np.ndarray, realdata,
     amp_mod, cphase_mod = model4fit_numerical(theta, model_param_lst,
                                              uvcoords_lst, vis_lst)
 
-    data_chi_sq = chi_sq(amp, sigma2amp, amp_mod)
+    amp_chi_sq = chi_sq(amp, sigma2amp, amp_mod)
     cphase_chi_sq = chi_sq(cphase, sigma2cphase, cphase_mod)
 
-    return -0.5*(data_chi_sq + cphase_chi_sq)
+    return -0.5*(amp_chi_sq * cphase_chi_sq)
 
 def lnprior(theta, priors):
     """Checks if all variables are within their priors (as well as
@@ -351,7 +357,7 @@ def lnprob(theta: np.ndarray, realdata,
 
     return lp + lnlike(theta, realdata, model_param_lst, uvcoords_lst, vis_lst)
 
-def do_mcmc(mcmc_params: List, lnprob, args) -> np.array:
+def do_mcmc(mcmc_params: List, prior_dynamic, labels, lnprob, args) -> np.array:
     """Runs the emcee fit
 
     The EnsambleSampler recieves the parameters and the args are passed to
@@ -373,8 +379,13 @@ def do_mcmc(mcmc_params: List, lnprob, args) -> np.array:
     state
     """
     initial, ndim, nwalkers, nburn, niter = mcmc_params
-    p0 = [np.array(initial) + np.random.rand(ndim) for i in range(nwalkers)]
+    p0 = [initial +\
+          1/np.array(prior_dynamic) *\
+                     np.random.rand(ndim) for i in range(nwalkers)]
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=args)
+
+    print("initial parameters: ", initial)
+    print("--------------------------------------------------------------")
 
     print("Running burn-in...")
     p0, _, _ = sampler.run_mcmc(p0, nburn, progress=True)
@@ -386,26 +397,28 @@ def do_mcmc(mcmc_params: List, lnprob, args) -> np.array:
     print("--------------------------------------------------------------")
 
     theta_max = (sampler.flatchain)[np.argmax(sampler.flatlnprobability)]
-    plotter(sampler, *args)
+    plotter(sampler, *args, labels)
 
 
 if __name__ == "__main__":
-    initial = [1.5, 135, 1., 1., 100., 3., 0.01, 0.7]
-    priors = [[1., 2.], [0, 180], [0., 2.], [0., 2.], [0., 180.], [1., 10.],
+    priors = [[1., 2.], [0, 180], [0., 2.], [0., 2.], [0, 180], [1., 10.],
               [0., 1.], [0., 1.]]
+    prior_dynamic = [np.ptp(i) for i in priors]
+    initial = get_rndarr_from_bounds(priors)
     labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "MOD_ANGLE", "R_INNER",
               "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
-    mcmc_params = [initial, len(initial), 50, 250, 500]
+    mcmc_params = [initial, len(initial), 20, 750, 1500]
 
-    fits_file = "../../assets/Final_CAL.fits"
+    fits_file = "../../assets/Test_model.fits"
     out_path = "../../assets"
-    flux_file = "../../assets/HD_142666_timmi2.txt"
+    # flux_file = "../../assets/HD_142666_timmi2.txt"
+    flux_file = None
 
     data = get_data(fits_file, CompoundModel, pixel_size=100,
                     sampling=128, flux_file=flux_file, wl_ind=38,
                     zero_padding_order=3, bb_params=bb_params,
                     priors=priors, vis2=False)
 
-    do_mcmc(mcmc_params, lnprob, data)
+    do_mcmc(mcmc_params, prior_dynamic, labels, lnprob, data)
 
