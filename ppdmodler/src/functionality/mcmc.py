@@ -46,17 +46,17 @@ This calls the MCMC fitting
 import os
 import emcee
 import corner
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
 from pathlib import Path
-from schwimmbad import MPIPool
-from multiprocessing import Pool, cpu_count
 from typing import Any, Dict, List, Union, Optional
 
 from src.models import CompoundModel
 from src.functionality.fourier import FFT
-from src.functionality.utilities import chi_sq, get_rndarr_from_bounds
+from src.functionality.utilities import chi_sq, get_rndarr_from_bounds,\
+        plot_txt
 from src.functionality.readout import ReadoutFits, read_single_dish_txt2np
 from src.functionality.genetic_algorithm import genetic_algorithm, decode
 
@@ -77,6 +77,38 @@ from src.functionality.genetic_algorithm import genetic_algorithm, decode
 # TODO: Make one plot that shows a model of the start parameters and the
 # uv-points plotted on top, before fitting starts and options to then change
 # them in order to get the best fit (Even multiple times)
+
+def generate_valid_guess(initial: List, priors: List,
+                         nwalkers: int, frac: float) -> np.ndarray:
+    """Generates a valid guess that is in the bounds of the priors for the
+    start of the MCMC-fitting
+
+    Parameters
+    ----------
+    inital: List
+        The inital guess
+    priors: List
+        The priors that constrain the guess
+    nwalkers: int
+        The number of walkers to be initialised for
+
+    Returns
+    -------
+    p0: np.ndarray
+        A valid guess for the number of walkers according to the number of
+        dimensions
+    """
+    proposal = np.array(initial)
+    prior_dynamic = np.array([np.ptp(i) for i in priors])
+    dyn = 1/prior_dynamic
+
+    # NOTE: Switch to np.rand.normal as it gives negative values as well
+    guess_lst = []
+    for i in range(nwalkers):
+        guess = proposal + frac*dyn*np.random.normal(proposal, dyn)
+        guess_lst.append(guess)
+
+    return guess_lst
 
 def get_data(fits_file: Path, model, pixel_size: int,
              sampling: int, flux_file: Path = None,
@@ -191,10 +223,15 @@ def print_values(realdata: List, datamod: List, theta_max: List) -> None:
     print(theta_max)
 
 def plotter(sampler, realdata: List, model_param_lst: List,
-            uvcoords_lst: List, vis_lst: List, labels,
+            uvcoords_lst: List, vis_lst: List, mcmc_params: List, labels: List,
+            debug: Optional[bool] = False,
             plot_px_size: Optional[int] = 2**12) -> None:
     """Plot the samples to get estimate of the density that has been sampled, to
     test if sampling went well"""
+    initial, nwalkers, nburn, niter = mcmc_params
+    mcmc_dict = {"nwalkers": nwalkers, "burn-in steps": nburn,
+                 "production steps": niter}
+
     amp, cphase = realdata[0]
     amperr, cphaseerr = map(lambda x: x**2, realdata[1])
 
@@ -207,15 +244,25 @@ def plotter(sampler, realdata: List, model_param_lst: List,
     t3phi_baselines = np.sqrt(u_t3phi**2+v_t3phi**2)[2]
 
     theta_max = (sampler.flatchain)[np.argmax(sampler.flatlnprobability)]
+    theta_max_dict = dict(zip(labels, theta_max))
 
     model_cp = model(*bb_params, wavelength)
-    model_img = model_cp.eval_model(theta_max, pixel_size, plot_px_size)
-    amp_mod, cphase_mod = model4fit_numerical(theta_max, model_param_lst,
-                                             uvcoords_lst, vis_lst)
+    model_flux = model_cp.eval_model(theta_max, pixel_size, sampling)
+    fft = FFT(model_flux, wavelength, pixel_size/sampling,
+             zero_padding_order)
+    amp_mod, cphase_mod, xycoords = fft.get_uv2fft2(uvcoords, t3phi_uvcoords,
+                                           corr_flux=vis, vis2=vis2, intp=intp)
+    amp_mod = np.insert(amp_mod, 0, np.sum(model_flux))
 
     print_values([amp_mod, cphase_mod], [amp, cphase], theta_max)
 
-    fig, (ax, bx, cx) = plt.subplots(1, 3)
+    if debug:
+        plot_corner(sampler, model_cp, labels, wavelength)
+        plot_chains(sampler, model_cp, theta_max, labels, wavelength)
+
+    fig, axarr = plt.subplots(2, 3, figsize=(20, 10))
+    ax, bx, cx = axarr[0].flatten()
+    ax2, bx2, cx2 = axarr[1].flatten()
 
     # # Takes a slice of the model and shows vis2-baselines
     # size_model = len(best_fit_model)
@@ -224,46 +271,73 @@ def plotter(sampler, realdata: List, model_param_lst: List,
     # xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
     # yvis_curve = best_fit_model[centre]
 
-    ax.imshow(model_img, vmax=model_cp._max_sub_flux,\
-              extent=[pixel_size//2, -pixel_size//2,\
-                     -pixel_size//2, pixel_size//2])
-    ax.set_title(fr"{model_cp.name}: Temperature gradient, at {wavelength*1e6:.2f}$\mu$m")
-    ax.set_xlabel(f"RA [mas]")
-    ax.set_ylabel(f"DEC [mas]")
+    title_dict = {"": ""}
+    text_dict = {"General params": "",
+                 "---------------------": "",
+                 "blackbody_params": bb_params, "FOV": pixel_size,
+                 "npx": sampling, "z_pad_order": zero_padding_order,
+                 "wavelength": wavelength,
+                 "": "",
+                 "best_fit_values": "",
+                 "---------------------": "",
+                 **theta_max_dict,
+                 "": "",
+                 "mcmc_params": "",
+                 "---------------------": "",
+                 **mcmc_dict}
+
+    plot_txt(ax, title_dict, text_dict)
 
     bx.errorbar(baselines, amp, amperr,
-                color="goldenrod", fmt='o', label="Observed data")
-    bx.scatter(baselines, amp_mod, label="Model fit data")
+                color="goldenrod", fmt='o', label="Observed data", alpha=0.6)
+    bx.scatter(baselines, amp_mod, marker='X', label="Model fit data")
     bx.set_title("Correlated fluxes [Jy]")
     bx.set_xlabel("Baselines [m]")
     bx.legend(loc="upper right")
 
     cx.errorbar(t3phi_baselines, cphase, cphaseerr,
-                color="goldenrod", fmt='o', label="Observed data")
-    cx.scatter(t3phi_baselines, cphase_mod, label="Model fit data")
+                color="goldenrod", fmt='o', label="Observed data", alpha=0.6)
+    cx.scatter(t3phi_baselines, cphase_mod, marker='X', label="Model fit data")
     cx.set_title(fr"Closure Phases [$^\circ$]")
     cx.set_xlabel("Longest baselines [m]")
+    cx.set_ylim([-180, 180])
     cx.legend(loc="upper right")
 
-    fig.tight_layout()
+    fft.plot_amp_phase([fig, ax2, bx2, cx2], corr_flux=True,
+                       uvcoords_lst=xycoords)
 
-    plot_corner(sampler, model_cp, labels, wavelength)
+    plt.tight_layout()
 
-    save_path = f"{model_cp.name}_model_after_fit_{wavelength*1e6:.2f}.png"
+    save_path = f"{model_cp.name}_model_after_fit_{(wavelength*1e6):.2f}.png"
     plt.savefig(save_path)
     plt.show()
 
-def plot_corner(sampler: np.ndarray, model, labels: List, wavelength) -> None:
+def plot_corner(sampler: np.ndarray, model,
+                labels: List, wavelength) -> None:
     """Plots the corner plot of the posterior spread"""
     samples = sampler.get_chain(flat=True)
     fig = corner.corner(samples, show_titles=True, labels=labels,
                        plot_datapoints=True, quantiles=[0.16, 0.5, 0.84])
-    save_path = f"{model.name}_corner_plot_{wavelength*1e6:.2f}.png"
+    save_path = f"{model.name}_corner_plot_{(wavelength*1e6):.2f}.png"
     plt.savefig(save_path)
 
-def plot_chains(sampler: np.ndarray) -> None:
+def plot_chains(sampler: np.ndarray, model, theta: List,
+                labels: List, wavelength) -> None:
     """Plots the chains for debugging to see if and how they converge"""
-    ...
+    fig, axes = plt.subplots(len(theta), figsize=(10, 7), sharex=True)
+    samples = sampler.get_chain()
+    ndim = len(theta)
+
+    for i in range(ndim):
+        ax = axes[i]
+        ax.plot(samples[:, :, i], "k", alpha=0.3)
+        ax.set_xlim(0, len(samples))
+        ax.set_ylabel(labels[i])
+        ax.yaxis.set_label_coords(-0.1, 0.5)
+
+    axes[-1].set_xlabel("step number");
+    save_path = f"{model.name}_chain_plot_{(wavelength*1e6):.2f}.png"
+    plt.savefig(save_path)
 
 def model4fit_numerical(theta: np.ndarray, model_param_lst,
                         uvcoords_lst, vis_lst) -> np.ndarray:
@@ -300,7 +374,7 @@ def lnlike(theta: np.ndarray, realdata,
     amp_chi_sq = chi_sq(amp, sigma2amp, amp_mod)
     cphase_chi_sq = chi_sq(cphase, sigma2cphase, cphase_mod)
 
-    return -0.5*(amp_chi_sq * cphase_chi_sq)
+    return -0.5*(amp_chi_sq + cphase_chi_sq)
 
 def lnprior(theta, priors):
     """Checks if all variables are within their priors (as well as
@@ -360,9 +434,11 @@ def lnprob(theta: np.ndarray, realdata,
 
     return lp + lnlike(theta, realdata, model_param_lst, uvcoords_lst, vis_lst)
 
-def do_mcmc(mcmc_params: List, prior_dynamic,
+def do_mcmc(mcmc_params: List, priors,
             labels, lnprob, args,
-            cluster: Optional[bool] = False) -> np.array:
+            frac: Optional[float] = 1e-4,
+            cluster: Optional[bool] = False,
+            debug: Optional[bool] = False) -> np.array:
     """Runs the emcee fit
 
     The EnsambleSampler recieves the parameters and the args are passed to
@@ -376,31 +452,49 @@ def do_mcmc(mcmc_params: List, prior_dynamic,
     The chain is reset before the production with the state variable being
     passed. 'rstate0' is the state of the internal random number generator
 
-    Returns
-    -------
-    sampler
-    pos
-    prob
-    state
+    Parameters
+    ----------
+    mcmc_params: List
+    priors: List
+    labels: List
+    lnprob
+    args: List
+    frac: float, optional
+    cluster: bool, optional
+    debug: bool, optional
     """
-    initial, ndim, nwalkers, nburn, niter = mcmc_params
-    p0 = [initial +\
-          1/np.array(prior_dynamic) *\
-                     np.random.rand(ndim) for i in range(nwalkers)]
+    initial, nwalkers, nburn, niter = mcmc_params
+    p0 = generate_valid_guess(initial, priors, nwalkers, frac)
+    ndim = len(initial)
+
     if cluster:
+        from schwimmbad import MPIPool
+
         with MPIPool as pool:
             if not pool.is_master():
                 pool.wait()
                 sys.exit(0)
-    else:
-        with Pool() as pool:
-            cores = cpu_count()
-            print(f"Executing MCMC with {cores}")
+
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                             args=args, pool=pool)
 
-            print("initial parameters: ", initial)
+            print("Running burn-in...")
+            p0, _, _ = sampler.run_mcmc(p0, nburn, progress=True)
+            sampler.reset()
+
             print("--------------------------------------------------------------")
+            print("Running production...")
+            pos, prob, state = sampler.run_mcmc(p0, niter, progress=True)
+            print("--------------------------------------------------------------")
+
+    else:
+        from multiprocessing import Pool, cpu_count
+
+        with Pool() as pool:
+            ncores = cpu_count()
+            print(f"Executing MCMC with {ncores} cores.")
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
+                                            args=args, pool=pool)
 
             print("Running burn-in...")
             p0, _, _ = sampler.run_mcmc(p0, nburn, progress=True)
@@ -412,28 +506,29 @@ def do_mcmc(mcmc_params: List, prior_dynamic,
             print("--------------------------------------------------------------")
 
     theta_max = (sampler.flatchain)[np.argmax(sampler.flatlnprobability)]
-    plotter(sampler, *args, labels)
+    plotter(sampler, *args, mcmc_params, labels, debug=debug)
 
 
 if __name__ == "__main__":
-    priors = [[1., 2.], [0, 180], [0., 2.], [0., 2.], [0, 180], [1., 10.],
+    priors = [[1., 2.], [0, 180], [0., 2.], [0, 180], [1., 10.],
               [0., 1.], [0., 1.]]
-    prior_dynamic = [np.ptp(i) for i in priors]
-    initial = get_rndarr_from_bounds(priors)
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "S_AMP", "MOD_ANGLE", "R_INNER",
-              "TAU", "Q"]
+    print(np.load ("theta.npy"), "Model origin")
+    # initial = np.load("theta.npy")
+    initial = get_rndarr_from_bounds(priors, True)
+    labels = ["AXIS_RATIO", "P_A", "C_AMP", "MOD_ANGLE", "R_INNER", "TAU", "Q"]
     bb_params = [1500, 7900, 19, 140]
-    mcmc_params = [initial, len(initial), 20, 750, 1500]
+    mcmc_params = [initial, 50, 25, 25]
 
     fits_file = "../../assets/Test_model.fits"
     out_path = "../../assets"
     # flux_file = "../../assets/HD_142666_timmi2.txt"
     flux_file = None
 
-    data = get_data(fits_file, CompoundModel, pixel_size=100,
-                    sampling=128, flux_file=flux_file, wl_ind=38,
-                    zero_padding_order=3, bb_params=bb_params,
-                    priors=priors, vis2=False)
+    data = get_data(fits_file, CompoundModel, pixel_size=30,
+                    sampling=128, flux_file=flux_file, wl_ind=30,
+                    zero_padding_order=1, bb_params=bb_params,
+                    priors=priors, vis2=False, intp=True)
 
-    do_mcmc(mcmc_params, prior_dynamic, labels, lnprob, data, True)
+    do_mcmc(mcmc_params, priors, labels, lnprob, data,
+            frac=1e-4, cluster=False, debug=True)
 
