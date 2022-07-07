@@ -119,7 +119,10 @@ def get_data(fits_file: Path, model, pixel_size: int,
              vis2: Optional[bool] = False,
              intp: Optional[bool] = False) -> List:
     """Fetches the required info from the '.fits'-files and then returns a
-    tuple containing it
+    tuple containing it.
+
+    If no wavelength index ('wl_ind') is provided, it fetches the data for all
+    the wavelengths (polychromatic)
 
     Parameters
     ----------
@@ -176,11 +179,14 @@ def get_data(fits_file: Path, model, pixel_size: int,
         wavelength = wavelength[wl_ind]
     else:
         if vis2:
-            vis, viserr = readout.get_vis2()
+            vis, viserr, _ = map(lambda x: [list(i) for i in zip(*x)],
+                                 readout.get_vis2())
         else:
-            vis, viserr = readout.get_vis()
+            vis, viserr, _ = map(lambda x: [list(i) for i in zip(*x)],
+                                 readout.get_vis())
 
-        cphase, cphaseerr = readout.get_t3phi()
+        cphase, cphaseerr, _ = map(lambda x: [list(i) for i in zip(*x)],
+                                   readout.get_t3phi())
 
         if flux_file:
             flux, fluxerr = read_single_dish_txt2np(flux_file, wavelength), None
@@ -189,7 +195,7 @@ def get_data(fits_file: Path, model, pixel_size: int,
 
         # NOTE: Fluxerr is just 20% of flux, if no fluxerr is given
         for i, o in enumerate(vis):
-            o  = np.insert(o, 0, flux[i])
+            vis[i] = np.insert(o, 0, flux[i])
             viserr[i] = np.insert(viserr[i], 0, fluxerr[i]) \
                     if fluxerr[i] is not None else \
                     np.insert(viserr[i], 0, flux[i]*0.2)
@@ -237,6 +243,11 @@ def plotter(sampler, realdata: List, model_param_lst: List,
 
     model, pixel_size, sampling, wavelength,\
             zero_padding_order, bb_params, _ = model_param_lst
+
+    bb_labels = ["sublimation temperature", "effective temperature",
+                 "luminosity of star", "distance to star"]
+    bb_params_dict = dict(zip(bb_labels, bb_params))
+
     uvcoords, u, v, t3phi_uvcoords = uvcoords_lst
     vis, vis2, intp = vis_lst
     baselines = np.insert(np.sqrt(u**2+v**2), 0, 0.)
@@ -271,14 +282,17 @@ def plotter(sampler, realdata: List, model_param_lst: List,
     # xvis_curve = np.sqrt(u**2+v**2)[centre := size_model//2]
     # yvis_curve = best_fit_model[centre]
 
-    title_dict = {"": ""}
-    text_dict = {"General params": "",
-                 "---------------------": "",
-                 "blackbody_params": bb_params, "FOV": pixel_size,
-                 "npx": sampling, "z_pad_order": zero_padding_order,
+    title_dict = {"Model Fit Parameters": ""}
+    text_dict = { "FOV": pixel_size,
+                 "npx": sampling,
+                 "zero pad order": zero_padding_order,
                  "wavelength": wavelength,
                  "": "",
-                 "best_fit_values": "",
+                 "blackbody params": "",
+                 "---------------------": "",
+                 **bb_params_dict,
+                 "": "",
+                 "best fit values": "",
                  "---------------------": "",
                  **theta_max_dict,
                  "": "",
@@ -286,7 +300,7 @@ def plotter(sampler, realdata: List, model_param_lst: List,
                  "---------------------": "",
                  **mcmc_dict}
 
-    plot_txt(ax, title_dict, text_dict)
+    plot_txt(ax, title_dict, text_dict, text_font_size=10)
 
     bx.errorbar(baselines, amp, amperr,
                 color="goldenrod", fmt='o', label="Observed data", alpha=0.6)
@@ -512,10 +526,10 @@ def do_mcmc(mcmc_params: List, priors,
 if __name__ == "__main__":
     priors = [[1., 2.], [0, 180], [0., 2.], [0, 180], [1., 10.],
               [0., 1.], [0., 1.]]
-    print(np.load ("theta.npy"), "Model origin")
     # initial = np.load("theta.npy")
     initial = get_rndarr_from_bounds(priors, True)
-    labels = ["AXIS_RATIO", "P_A", "C_AMP", "MOD_ANGLE", "R_INNER", "TAU", "Q"]
+    labels = ["axis ratio", "pos angle", "c amp", "mod angle",
+              "inner radius", "tau", "q"]
     bb_params = [1500, 7900, 19, 140]
     mcmc_params = [initial, 50, 25, 25]
 
@@ -525,7 +539,7 @@ if __name__ == "__main__":
     flux_file = None
 
     data = get_data(fits_file, CompoundModel, pixel_size=30,
-                    sampling=128, flux_file=flux_file, wl_ind=30,
+                    sampling=128, flux_file=flux_file, wl_ind=None,
                     zero_padding_order=1, bb_params=bb_params,
                     priors=priors, vis2=False, intp=True)
 
